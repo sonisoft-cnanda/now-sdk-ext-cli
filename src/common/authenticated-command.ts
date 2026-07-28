@@ -65,23 +65,30 @@ protected instance!:ServiceNowInstance;
     this.flags = flags as Flags<T>
     this.args = args as Args<T>
 
-    this.logger = LogFactory.createLogger(this.ctor.name, this.flags.logLevel || 'info');
-    this.authLogger = LogFactory.createLogger("AuthenticatedCommand", this.flags.logLevel || 'info');
+    // The flag is declared as 'log-level' in baseFlags, so oclif keys the parsed
+    // value under that exact name. Reading `flags.logLevel` always yielded
+    // undefined, silently pinning every command to 'info'.
+    const logLevel = (this.flags['log-level'] as string | undefined) || 'info';
+    this.logger = LogFactory.createLogger(this.ctor.name, logLevel);
+    this.authLogger = LogFactory.createLogger("AuthenticatedCommand", logLevel);
     // const wrapper:CredentialWrapper = new CredentialWrapper();
     // const credential:Creds = await (flags.auth ? wrapper.getStoredCredentialsByAlias(flags.auth) : wrapper.getStoredCredentialsByAlias( 'fluent-default'));
     // const credentialArgs = {"_": "get-credentials", auth: flags.auth || "fluent-default"};
    
-    const credential = await getCredentials(flags.auth || "fluent-default");
-    this.authLogger.debug("Credentials Received: ", credential);
+    const alias = flags.auth || "fluent-default";
+    const credential = await getCredentials(alias);
+    // Never log `credential` or any object containing it (e.g. snSettings) — it
+    // holds the ServiceNow password/token, and these lines run at --log-level
+    // debug, which would write it to the terminal and to CI logs.
+    this.authLogger.debug("Credential lookup complete.", {alias, found: Boolean(credential)});
     if(credential){
        const snSettings:ServiceNowSettingsInstance = {
             alias: flags.auth,
            credential
         }
-        this.authLogger.debug("SN auth settings to instantiate ServiceNowInstance object: ", snSettings);
         this.instance = new ServiceNowInstance(snSettings);
     }else{
-        this.authLogger.error("Either credential not found or no credentials created.", {args: this.args, flags: this.flags});
+        this.authLogger.error("Either credential not found or no credentials created.", {alias});
     }
 
   }
