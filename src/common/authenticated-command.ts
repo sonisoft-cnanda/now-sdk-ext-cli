@@ -71,17 +71,20 @@ protected instance!:ServiceNowInstance;
     // const credential:Creds = await (flags.auth ? wrapper.getStoredCredentialsByAlias(flags.auth) : wrapper.getStoredCredentialsByAlias( 'fluent-default'));
     // const credentialArgs = {"_": "get-credentials", auth: flags.auth || "fluent-default"};
    
-    const credential = await getCredentials(flags.auth || "fluent-default");
-    this.authLogger.debug("Credentials Received: ", credential);
+    const alias = flags.auth || "fluent-default";
+    const credential = await getCredentials(alias);
+    // Never log `credential` or any object containing it (e.g. snSettings) — it
+    // holds the ServiceNow password/token, and these lines run at --log-level
+    // debug, which would write it to the terminal and to CI logs.
+    this.authLogger.debug("Credential lookup complete.", {alias, found: Boolean(credential)});
     if(credential){
        const snSettings:ServiceNowSettingsInstance = {
             alias: flags.auth,
            credential
         }
-        this.authLogger.debug("SN auth settings to instantiate ServiceNowInstance object: ", snSettings);
         this.instance = new ServiceNowInstance(snSettings);
     }else{
-        this.authLogger.error("Either credential not found or no credentials created.", {args: this.args, flags: this.flags});
+        this.authLogger.error("Either credential not found or no credentials created.", {alias});
     }
 
   }
