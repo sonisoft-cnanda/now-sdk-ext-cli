@@ -52,7 +52,7 @@
     "jest-junit": "^16.0.0",
     "oclif": "^4",
     "rimraf": "^6.0.1",
-    "semantic-release": "^24.1.0",
+    "semantic-release": "^25.0.8",
     "shx": "^0.4.0",
     "ts-jest": "^29.2.5",
     "ts-jest-mocker": "^1.0.0",
