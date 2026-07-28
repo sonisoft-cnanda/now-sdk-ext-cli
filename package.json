@@ -11,12 +11,12 @@
     "@oclif/plugin-autocomplete": "^3.2.35",
     "@oclif/plugin-help": "^6.2.10",
     "@oclif/plugin-plugins": "^5.4.6",
-    "@servicenow/glide": "^27.0.4",
-    "@servicenow/sdk": "4.3.0",
-    "@servicenow/sdk-build-core": "4.3.0",
-    "@servicenow/sdk-cli": "4.3.0",
+    "@servicenow/glide": "^27.0.5",
+    "@servicenow/sdk": "4.9.2",
+    "@servicenow/sdk-build-core": "4.9.2",
+    "@servicenow/sdk-cli": "4.9.2",
     "@servicenow/sdk-cli-core": "3.0.3",
-    "@servicenow/sdk-core": "4.3.0",
+    "@servicenow/sdk-core": "4.9.2",
     "@sonisoft/now-sdk-ext-core": "^3.9.0",
     "@ts-morph/common": "^0.24.0",
     "chalk": "^4.1.2",
@@ -61,7 +61,7 @@
     "typescript": "^5.5.4"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=26.0.0"
   },
   "files": [
     "/bin",
