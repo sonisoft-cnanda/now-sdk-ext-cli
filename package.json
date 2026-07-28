@@ -58,7 +58,7 @@
     "ts-jest-mocker": "^1.0.0",
     "ts-node": "10.9.2",
     "tsc-alias": "^1.8.16",
-    "typescript": "^5.5.4"
+    "typescript": "^7.0.2"
   },
   "engines": {
     "node": ">=18.0.0"
