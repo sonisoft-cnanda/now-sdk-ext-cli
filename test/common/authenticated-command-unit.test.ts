@@ -35,6 +35,17 @@ describe('AuthenticatedCommand - Unit Tests', () => {
       const logLevelFlag = AuthenticatedCommand.baseFlags['log-level'] as any
       expect(logLevelFlag.helpGroup).toBe('GLOBAL')
     })
+
+    // Regression guard. init() used to read `this.flags.logLevel`, but oclif keys
+    // parsed flags by their declared name — 'log-level'. That read always yielded
+    // undefined, so every command silently fell back to 'info' and --log-level
+    // did nothing. If the flag is ever renamed to a camelCase key, this fails and
+    // the read site in init() must be updated to match.
+    it('should declare log-level in kebab-case only, never as logLevel', () => {
+      const flagNames = Object.keys(AuthenticatedCommand.baseFlags)
+      expect(flagNames).toContain('log-level')
+      expect(flagNames).not.toContain('logLevel')
+    })
   })
 
   describe('JSON flag support', () => {

@@ -65,8 +65,12 @@ protected instance!:ServiceNowInstance;
     this.flags = flags as Flags<T>
     this.args = args as Args<T>
 
-    this.logger = LogFactory.createLogger(this.ctor.name, this.flags.logLevel || 'info');
-    this.authLogger = LogFactory.createLogger("AuthenticatedCommand", this.flags.logLevel || 'info');
+    // The flag is declared as 'log-level' in baseFlags, so oclif keys the parsed
+    // value under that exact name. Reading `flags.logLevel` always yielded
+    // undefined, silently pinning every command to 'info'.
+    const logLevel = (this.flags['log-level'] as string | undefined) || 'info';
+    this.logger = LogFactory.createLogger(this.ctor.name, logLevel);
+    this.authLogger = LogFactory.createLogger("AuthenticatedCommand", logLevel);
     // const wrapper:CredentialWrapper = new CredentialWrapper();
     // const credential:Creds = await (flags.auth ? wrapper.getStoredCredentialsByAlias(flags.auth) : wrapper.getStoredCredentialsByAlias( 'fluent-default'));
     // const credentialArgs = {"_": "get-credentials", auth: flags.auth || "fluent-default"};
