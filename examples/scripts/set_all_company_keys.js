@@ -1,0 +1,11 @@
+var propertySysId = "c3d06d1a73d32300359ba4038bf6a794";
+var propertyVal = "acme";
+var dbu = new GlideDBUpdate("sys_properties");
+var dbq = new GlideDBQuery("sys_properties");
+dbq.addQuery('sys_id', propertySysId);
+dbu.setQuery(dbq);
+dbu.setValue('value', propertyVal);
+dbu.setMultiple(true);
+dbu.execute();
+dbu.close();
+dbq.close();

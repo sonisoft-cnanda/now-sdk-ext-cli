@@ -1,0 +1,65 @@
+#!/bin/sh
+#
+# Pre-commit hook: ensure package.json and package-lock.json stay in sync.
+# Verifies that the versions will match after this commit, so npm ci
+# won't fail in CI.
+#
+# Install: git config core.hooksPath .githooks
+
+# Check if package.json is in the staged changes
+if git diff --cached --name-only | grep -q '^package\.json$'; then
+    # Get the version from staged package.json
+    PKG_VERSION=$(git show :package.json | node -e "
+        const d = require('fs').readFileSync('/dev/stdin', 'utf8');
+        console.log(JSON.parse(d).version);
+    ")
+
+    # Get the version from package-lock.json (staged if available, otherwise committed)
+    if git diff --cached --name-only | grep -q '^package-lock\.json$'; then
+        # Lock file is staged — use staged version
+        LOCK_VERSION=$(git show :package-lock.json | node -e "
+            const d = require('fs').readFileSync('/dev/stdin', 'utf8');
+            console.log(JSON.parse(d).version);
+        ")
+    else
+        # Lock file is not staged — use the committed version (what CI will see)
+        LOCK_VERSION=$(git show HEAD:package-lock.json 2>/dev/null | node -e "
+            const d = require('fs').readFileSync('/dev/stdin', 'utf8');
+            console.log(JSON.parse(d).version);
+        " 2>/dev/null)
+    fi
+
+    if [ -z "$LOCK_VERSION" ]; then
+        echo ""
+        echo "WARNING: Could not read package-lock.json version. Skipping sync check."
+        echo ""
+    elif [ "$PKG_VERSION" != "$LOCK_VERSION" ]; then
+        echo ""
+        echo "ERROR: package.json and package-lock.json versions will be out of sync after this commit:"
+        echo "  package.json version:      $PKG_VERSION"
+        echo "  package-lock.json version:  $LOCK_VERSION"
+        echo ""
+        echo "Run 'npm install' to sync, then stage both files:"
+        echo "  npm install && git add package.json package-lock.json"
+        echo ""
+        exit 1
+    fi
+fi
+
+# --- Gitleaks: scan staged changes for secrets ---
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+GITLEAKS="$REPO_ROOT/.bin/gitleaks"
+
+if [ -x "$GITLEAKS" ]; then
+    "$GITLEAKS" git --pre-commit --staged --redact --config="$REPO_ROOT/.gitleaks.toml"
+    if [ $? -ne 0 ]; then
+        echo ""
+        echo "ERROR: gitleaks detected secrets in staged changes. Commit aborted."
+        echo "       Review the findings above and remove any credentials before committing."
+        echo ""
+        exit 1
+    fi
+else
+    echo "WARNING: gitleaks not found at $GITLEAKS — skipping secret scan."
+    echo "         Run 'sh scripts/setup-gitleaks.sh' to install it."
+fi

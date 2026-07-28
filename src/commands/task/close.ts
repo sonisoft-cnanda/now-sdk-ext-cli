@@ -1,0 +1,80 @@
+ 
+import { Flags } from '@oclif/core'
+import { TaskOperations } from '@sonisoft/now-sdk-ext-core'
+
+import { AuthenticatedCommand } from '../../common/authenticated-command.js'
+import { isNilOrEmpty } from '../../common/utils.js'
+import { TaskDisplayService } from '../../services/task-display.service.js'
+
+export class Close extends AuthenticatedCommand<typeof Close> {
+
+  static args = {
+  }
+static description = 'Close a ServiceNow incident.\n\n' +
+    'This command closes an incident identified by its number, setting the close notes ' +
+    'and optionally a close code. The incident must be in a state that allows closure.\n\n' +
+    'Features:\n' +
+    '  - Close incidents with close notes\n' +
+    '  - Optionally specify a close code\n' +
+    '  - Auto-resolves incident number to sys_id'
+static examples = [
+    {
+      command: '<%= config.bin %> <%= command.id %> --number INC0010001 --notes "Issue confirmed resolved by user" --auth dev',
+      description: 'Close an incident with close notes',
+    },
+    {
+      command: '<%= config.bin %> <%= command.id %> -n INC0010001 --notes "Closed" --close-code "Solved (Permanently)" --auth dev',
+      description: 'Close with a specific close code',
+    },
+  ]
+static flags = {
+    'close-code': Flags.string({
+      description: 'Close code for the closure',
+      required: false,
+    }),
+    'notes': Flags.string({
+      description: 'Close notes',
+      required: true,
+    }),
+    'number': Flags.string({
+      char: 'n',
+      description: 'Incident number (e.g., INC0010001)',
+      required: true,
+    }),
+  }
+
+  async run(): Promise<void> {
+    const { flags } = await this.parse(Close)
+    const displayService = new TaskDisplayService()
+
+    try {
+      const taskOps = new TaskOperations(this.instance)
+      const number = flags.number as string
+      const notes = flags.notes as string
+      const closeCode = flags['close-code']
+
+      this.log(`Looking up incident ${number}...`)
+      const record = await taskOps.findByNumber('incident', number)
+
+      if (!record || isNilOrEmpty(record.sys_id)) {
+        this.error(`Incident ${number} not found.`)
+        return
+      }
+
+      this.log(`Closing incident ${number}...`)
+      const result = await taskOps.closeIncident({
+        closeCode,
+        closeNotes: notes,
+        sysId: record.sys_id,
+      })
+
+      const lines = displayService.formatTaskResult(result, 'close', (flags.json ?? false) ?? false)
+      for (const line of lines) {
+        (flags.json ?? false) ? console.log(line) : this.log(line)
+      }
+    } catch (error) {
+      this._logger.error("Error occurred when closing incident.", error as Error)
+      this.error(error as Error)
+    }
+  }
+}

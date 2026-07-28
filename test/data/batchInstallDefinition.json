@@ -1,0 +1,19 @@
+{
+    "name": "Application Install",
+    "packages": [
+        {
+            "id": "012fa9ad7367ad6393ae5dea97af6f65",
+            "type": "application",
+            "load_demo_data": true,
+            "requested_version": "25.10.0",
+            "notes": "Customization for CSM App1"
+        },
+        {
+            "id": "579bdb9756234010ce9b4a4bd5381882",
+            "type": "application",
+            "load_demo_data": true,
+            "requested_version": "5.0.3",
+            "notes": "User specific text to describe this application install"
+        }
+    ]
+}

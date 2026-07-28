@@ -1,0 +1,25 @@
+{
+    "applications": [
+        {
+            "name": "My Custom Application",
+            "scope": "x_my_custom_app",
+            "version": "1.0.0",
+            "load_demo_data": false,
+            "notes": "Initial production deployment"
+        },
+        {
+            "name": "Integration Framework",
+            "scope": "x_integration_fw",
+            "version": "2.1.0",
+            "load_demo_data": false,
+            "notes": "Updated to latest stable version"
+        },
+        {
+            "name": "Reporting Tools",
+            "scope": "x_reporting_tools",
+            "version": "1.5.2",
+            "load_demo_data": true,
+            "notes": "Including demo data for development instance"
+        }
+    ]
+}

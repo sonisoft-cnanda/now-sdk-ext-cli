@@ -1,0 +1,53 @@
+lib-cov
+*.seed
+*.log
+*.csv
+*.dat
+*.out
+*.pid
+*.gz
+*.swp
+
+pids
+logs
+results
+tmp
+
+# Coverage reports
+coverage
+
+# API keys and secrets
+.env*
+
+# Dependency directory
+node_modules
+
+# Gitleaks binary
+.bin/
+
+# Editors
+.idea
+*.iml
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Ignore built ts files
+# NOTE: the trailing /**/* anchors this to the repo root. Do NOT simplify to
+# "dist/" — that would also match test/__mocks__/@servicenow/sdk-cli/dist/,
+# silently untracking the getCredentials mock every auth test depends on.
+dist/**/*
+
+# oclif generated manifest (created by prepack, removed by postpack)
+oclif.manifest.json
+
+# ignore yarn.lock
+yarn.lock
+
+junit.xml
+test/tmp
+.jest_cache
+
+tsconfig.tsbuildinfo
+*.tgz
