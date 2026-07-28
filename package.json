@@ -20,7 +20,7 @@
     "@sonisoft/now-sdk-ext-core": "^3.9.0",
     "@ts-morph/common": "^0.24.0",
     "chalk": "^4.1.2",
-    "cometd": "^8.0.4",
+    "cometd": "^9.0.1",
     "cometd-nodejs-client": "^2.0.0",
     "fast-xml-parser": "^4.4.1",
     "fs-extra": "^11.2.0",
