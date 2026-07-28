@@ -16,7 +16,7 @@
     "@servicenow/sdk-build-core": "4.3.0",
     "@servicenow/sdk-cli": "4.3.0",
     "@servicenow/sdk-cli-core": "3.0.3",
-    "@servicenow/sdk-core": "4.3.0",
+    "@servicenow/sdk-core": "4.9.2",
     "@sonisoft/now-sdk-ext-core": "^3.9.0",
     "@ts-morph/common": "^0.24.0",
     "chalk": "^4.1.2",
