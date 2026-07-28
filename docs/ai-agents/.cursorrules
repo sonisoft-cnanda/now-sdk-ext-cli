@@ -1,0 +1,227 @@
+# NEX CLI Rules — ServiceNow Platform Automation
+
+You have access to the `nex` CLI for ServiceNow platform operations. Use these rules when executing ServiceNow tasks.
+
+## Authentication
+
+EVERY `nex` command requires `--auth <alias>` to specify the target instance. Never omit it.
+
+## Global Flags
+
+- `--auth <alias>` (-a): Required. Instance auth alias.
+- `--json` (-j): Output as JSON for programmatic parsing. Pipe to `jq`.
+- `--log-level`: debug, info, warn, error, trace (default: info).
+
+## Shell Quoting
+
+Always single-quote JSON arguments:
+```
+nex flow test -f <id> -o '{"record":"INC001"}' --auth dev
+nex bulk update -t incident -q "active=true" -d '{"priority":"4"}' --auth dev
+```
+
+## Command Reference
+
+### Query & Data
+
+| Command | Description | Key Flags |
+|---------|-------------|-----------|
+| `nex query -t <table>` | Query any table | `-q` query, `-f` fields, `-l` limit, `--display-value` |
+| `nex query app -s <term>` | Search applications | `--active` |
+| `nex query columns -t <table>` | List table columns | `-s` search |
+| `nex query syslog` | Query system logs (one-shot) | `-q` query, `-l` limit |
+| `nex aggregate count -t <table>` | Count records | `-q` filter |
+| `nex aggregate query -t <table>` | Aggregate stats (AVG/MIN/MAX/SUM) | `--count`, `--avg`, `--sum`, `--min`, `--max` |
+| `nex aggregate group -t <table> -g <field>` | Grouped aggregates | `--count`, `--having` |
+
+### Schema
+
+| Command | Description | Key Flags |
+|---------|-------------|-----------|
+| `nex schema -t <table>` | Discover table schema | `--include-choices`, `--include-relationships` |
+| `nex schema field -t <table> -f <field>` | Explain a field | |
+| `nex schema validate-catalog -s <id>` | Validate catalog item | |
+
+### Flow (12 commands)
+
+| Command | Description | Key Flags |
+|---------|-------------|-----------|
+| `nex flow run -n <name>` | Execute published flow | `-i` inputs, `-m` mode (foreground/background) |
+| `nex flow subflow -n <name>` | Execute published subflow | `-i` inputs, `-m` mode |
+| `nex flow action -n <name>` | Execute flow action | `-i` inputs, `-m` mode |
+| `nex flow test -f <id> -o '{...}'` | Test unpublished flow | `--scope`, `--no-synchronous` |
+| `nex flow copy -s <src> -n <name> -t <scope>` | Copy a flow | |
+| `nex flow status -c <ctx>` | Quick state check | States: COMPLETE, ERROR, IN_PROGRESS, WAITING, QUEUED, CANCELLED |
+| `nex flow details -c <ctx>` | Per-action execution breakdown | `--include-definition`, `--scope` |
+| `nex flow logs -c <ctx>` | Execution log entries | `-l` limit, `-o` order (asc/desc) |
+| `nex flow outputs -c <ctx>` | Get flow outputs | |
+| `nex flow error -c <ctx>` | Get error details | |
+| `nex flow cancel -c <ctx>` | Cancel execution | `-r` reason |
+| `nex flow message -c <ctx> -m <msg>` | Send message to paused flow | `-p` payload |
+
+### Flow Diagnostic Decision Tree
+
+| Question | Command |
+|----------|---------|
+| Did it succeed? | `flow status -c <ctx>` |
+| What did each action do? | `flow details -c <ctx>` |
+| Why did it fail? | `flow details` then `flow logs` |
+| What outputs? | `flow outputs -c <ctx>` |
+| Error message? | `flow error -c <ctx>` |
+| Debug trail | `flow logs -c <ctx> --order asc` |
+| Latest error | `flow logs -c <ctx> --limit 5 --order desc` |
+
+### Script Execution
+
+| Command | Description | Key Flags |
+|---------|-------------|-----------|
+| `nex exec <scope> <file>` | Execute script file | `-p` params JSON |
+| `nex exec <scope>` | Start interactive REPL | (no file = REPL) |
+
+### Script Sync
+
+| Command | Description | Key Flags |
+|---------|-------------|-----------|
+| `nex script-sync pull -n <name> -t <type>` | Pull script to local | `-o` output path |
+| `nex script-sync push -n <name> -t <type> -f <file>` | Push to instance | |
+| `nex script-sync sync -d <dir>` | Sync all scripts in directory | `-t` types filter |
+
+Script types: `sys_script_include`, `sys_script`, `sys_ui_script`, `sys_ui_action`, `sys_script_client`
+
+### Task Management
+
+| Command | Description | Key Flags |
+|---------|-------------|-----------|
+| `nex task find -n <number>` | Find task by number | `--table` |
+| `nex task assign -n <number> -u <user>` | Assign task | `-g` group |
+| `nex task comment -n <number> -c <text>` | Add comment | `--work-note` for internal |
+| `nex task resolve -n <number> --notes <text>` | Resolve incident | `--close-code` |
+| `nex task close -n <number> --notes <text>` | Close incident | `--close-code` |
+| `nex task approve -n <number>` | Approve change | `-c` comments |
+
+### Bulk Operations (DRY-RUN BY DEFAULT)
+
+Always run without `--confirm` first to preview, then add `--confirm` to execute.
+
+| Command | Description | Key Flags |
+|---------|-------------|-----------|
+| `nex bulk update -t <tbl> -q <q> -d '{...}'` | Update matching records | `--confirm`, `-l` limit |
+| `nex bulk delete -t <tbl> -q <q>` | Delete matching records | `--confirm`, `-l` limit |
+
+### Batch Operations
+
+| Command | Description | Key Flags |
+|---------|-------------|-----------|
+| `nex batch create -f <file>` | Create records from JSON file | `--transaction` |
+| `nex batch update -f <file>` | Update records from JSON file | `--stop-on-error` |
+
+### Update Sets
+
+| Command | Description | Key Flags |
+|---------|-------------|-----------|
+| `nex update-set` | List update sets | `-q` query, `--limit` |
+| `nex update-set create -n <name>` | Create update set | `-d` description |
+| `nex update-set current` | Get/set current | `-s` sys_id to set |
+| `nex update-set inspect -s <id>` | Inspect components | |
+| `nex update-set clone -s <src> -n <name>` | Clone update set | |
+| `nex update-set move --target <id>` | Move records | `--source`, `--records` |
+
+### App & Store
+
+| Command | Description | Key Flags |
+|---------|-------------|-----------|
+| `nex store search` | Search store apps | `-t` term, `--tab` (installed/updates/available_for_you) |
+| `nex store install -a <id> -v <ver>` | Install store app | `--demo-data`, `--no-wait` |
+| `nex store update -a <id> -v <ver>` | Update store app | `--no-wait` |
+| `nex store validate -f <file>` | Validate batch install file | |
+| `nex app repo-list` | List company repo apps | `--installed`, `--installable` |
+| `nex app repo-install -s <scope>` | Install from company repo | `-v` version |
+| `nex app uninstall -i <id> -s <scope>` | Uninstall an app | |
+| `nex app install -b -d <file>` | Batch install apps | |
+
+### Scope
+
+| Command | Description | Key Flags |
+|---------|-------------|-----------|
+| `nex scope` | Get current scope | `--list` to list all apps |
+| `nex scope set -a <app-id>` | Set current scope | |
+
+### ATF Testing
+
+| Command | Description | Key Flags |
+|---------|-------------|-----------|
+| `nex atf -t <test-id>` | Run single ATF test | |
+| `nex atf -s <suite-id>` | Run test suite by ID | `--wait`, `--browser` |
+| `nex atf -n <suite-name>` | Run test suite by name | `--json` for CI/CD |
+
+### Attachment
+
+| Command | Description | Key Flags |
+|---------|-------------|-----------|
+| `nex attachment list -t <tbl> -r <id>` | List attachments on record | `--limit` |
+| `nex attachment get -s <id>` | Get attachment metadata | |
+| `nex attachment upload -t <tbl> -r <id> -f <file>` | Upload attachment | `--content-type` |
+
+### Search
+
+| Command | Description | Key Flags |
+|---------|-------------|-----------|
+| `nex search -t <term>` | Search platform code | `-s` scope, `-g` group |
+| `nex search groups` | List search groups | |
+| `nex search tables -g <group>` | List tables in group | |
+| `nex search add-table -t <tbl> -f <fields> -g <id>` | Add table to group | |
+
+### Health & Diagnostics
+
+| Command | Description | Key Flags |
+|---------|-------------|-----------|
+| `nex health check` | Instance health check | `--stuck-job-threshold` |
+| `nex log` | Tail logs in real-time | `-f` `"field OPERATOR value"` filter, `-i` interval, `-o` output file |
+
+### Workflow
+
+| Command | Description | Key Flags |
+|---------|-------------|-----------|
+| `nex workflow create -s <spec-file>` | Create workflow from spec | |
+| `nex workflow publish -v <ver-id> -s <start-id>` | Publish workflow | |
+
+### XML
+
+| Command | Description | Key Flags |
+|---------|-------------|-----------|
+| `nex xml export -t <tbl> -s <id>` | Export record as XML | `-o` output file |
+| `nex xml import -f <file> -t <tbl>` | Import XML records | |
+
+## Common Workflows
+
+### Flow Development
+```
+nex flow copy → now-sdk transform → edit → push → nex flow test → nex flow details → nex flow logs → iterate
+```
+
+### Query Investigation
+```
+nex schema -t <table> → nex query columns -t <table> → nex query -t <table> -q "..." → nex aggregate count/group
+```
+
+### Script Development
+```
+nex script-sync pull → edit locally → nex script-sync push → nex exec <scope> <test-file>
+```
+
+### Deployment
+```
+nex update-set create → make changes → nex update-set inspect → nex update-set clone (backup)
+```
+
+### Task Lifecycle
+```
+nex task find → nex task assign → nex task comment → nex task resolve → nex task close
+```
+
+## Key Safety Rules
+
+1. `bulk update` and `bulk delete` are DRY-RUN by default. Always preview first, then `--confirm`.
+2. `nex exec` runs code on the instance. Review scripts before execution.
+3. Always use `--auth` to target the correct instance. Double-check for production.
+4. Use `--json` output for chaining commands programmatically.

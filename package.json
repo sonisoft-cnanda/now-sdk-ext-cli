@@ -1,0 +1,193 @@
+{
+  "name": "@sonisoft/now-sdk-ext-cli",
+  "description": "A CLI extending the functionality of the ServiceNow SDK.",
+  "version": "2.3.2",
+  "author": "Chris Nanda",
+  "bin": {
+    "nex": "./bin/run.js"
+  },
+  "bugs": "https://github.com/sonisoft-cnanda/now-sdk-ext-cli/issues",
+  "dependencies": {
+    "@oclif/plugin-autocomplete": "^3.2.35",
+    "@oclif/plugin-help": "^6.2.10",
+    "@oclif/plugin-plugins": "^5.4.6",
+    "@servicenow/glide": "^27.0.4",
+    "@servicenow/sdk": "4.3.0",
+    "@servicenow/sdk-build-core": "4.3.0",
+    "@servicenow/sdk-cli": "4.3.0",
+    "@servicenow/sdk-cli-core": "3.0.3",
+    "@servicenow/sdk-core": "4.3.0",
+    "@sonisoft/now-sdk-ext-core": "^3.9.0",
+    "@ts-morph/common": "^0.24.0",
+    "chalk": "^4.1.2",
+    "cometd": "^8.0.4",
+    "cometd-nodejs-client": "^2.0.0",
+    "fast-xml-parser": "^4.4.1",
+    "fs-extra": "^11.2.0",
+    "is-null-or-empty": "^0.0.1",
+    "winston": "3.14.2",
+    "ws": "^8.18.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@jest/globals": "^29.7.0",
+    "@oclif/core": "^4.5.1",
+    "@oclif/prettier-config": "^0.2.1",
+    "@oclif/test": "^4",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^11.0.6",
+    "@semantic-release/npm": "^13.1.5",
+    "@supercharge/fs": "^3.4.2",
+    "@types/chai": "^4",
+    "@types/jest": "^29.5.12",
+    "@types/mocha": "^10",
+    "@types/node": "^18",
+    "@typescript-eslint/typescript-estree": "^8.4.0",
+    "chai": "^4",
+    "conventional-changelog-conventionalcommits": "^9.1.0",
+    "eslint": "^9",
+    "eslint-config-oclif": "^6.0.148",
+    "eslint-config-prettier": "^10",
+    "jest": "^29.7.0",
+    "jest-junit": "^16.0.0",
+    "oclif": "^4",
+    "rimraf": "^6.0.1",
+    "semantic-release": "^24.1.0",
+    "shx": "^0.4.0",
+    "ts-jest": "^29.2.5",
+    "ts-jest-mocker": "^1.0.0",
+    "ts-node": "10.9.2",
+    "tsc-alias": "^1.8.16",
+    "typescript": "^5.5.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "/bin",
+    "/dist",
+    "/oclif.manifest.json"
+  ],
+  "homepage": "https://github.com/sonisoft-cnanda/now-sdk-ext-cli#readme",
+  "keywords": [
+    "servicenow",
+    "servicenow-sdk",
+    "cli",
+    "automation",
+    "atf",
+    "automated-testing",
+    "testing",
+    "cicd",
+    "devops",
+    "scripts",
+    "application-management",
+    "now-sdk",
+    "oclif"
+  ],
+  "license": "MIT",
+  "main": "dist/index.js",
+  "type": "module",
+  "oclif": {
+    "bin": "nex",
+    "commands": {
+      "strategy": "pattern",
+      "target": "./dist/commands",
+      "globPatterns": [
+        "**/*.+(js|cjs|mjs|ts|tsx|mts|cts)",
+        "!**/*.+(d.*|test.*|spec.*|helpers.*)?(x)"
+      ]
+    },
+    "plugins": [
+      "@oclif/plugin-help",
+      "@oclif/plugin-plugins",
+      "@oclif/plugin-autocomplete"
+    ],
+    "topicSeparator": " ",
+    "topics": {
+      "atf": {
+        "description": "Execute ATF (Automated Test Framework) tests and test suites on a ServiceNow instance."
+      },
+      "app": {
+        "description": "Operations on ServiceNow Applications."
+      },
+      "exec": {
+        "description": "Execute scripts remotely on a ServiceNow instance. Immitates using Scripts - Background from within ServiceNow."
+      },
+      "log": {
+        "description": "Tail and monitor ServiceNow system logs in real-time."
+      },
+      "search": {
+        "description": "Search platform code across ServiceNow instances."
+      },
+      "schema": {
+        "description": "Discover and inspect ServiceNow table schemas and field definitions."
+      },
+      "script-sync": {
+        "description": "Synchronize scripts between local files and ServiceNow instances."
+      },
+      "task": {
+        "description": "Perform operations on ServiceNow tasks, incidents, and change requests."
+      },
+      "update-set": {
+        "description": "Manage ServiceNow update sets."
+      },
+      "workflow": {
+        "description": "Create and manage ServiceNow workflows."
+      },
+      "attachment": {
+        "description": "Manage attachments on ServiceNow records."
+      },
+      "scope": {
+        "description": "Manage ServiceNow application scopes."
+      },
+      "batch": {
+        "description": "Perform batch create and update operations on ServiceNow records."
+      },
+      "store": {
+        "description": "Search, install, and update applications from the ServiceNow Store."
+      },
+      "query": {
+        "description": "Query ServiceNow tables, search applications, list columns, and read syslog records."
+      },
+      "aggregate": {
+        "description": "Run aggregate statistics (COUNT, AVG, MIN, MAX, SUM) on ServiceNow tables with optional grouping."
+      },
+      "health": {
+        "description": "Run consolidated health checks and diagnostics on a ServiceNow instance."
+      },
+      "bulk": {
+        "description": "Bulk update or delete ServiceNow records matching an encoded query (dry-run by default)."
+      },
+      "flow": {
+        "description": "Execute and manage Flow Designer flows, subflows, and actions on a ServiceNow instance."
+      },
+      "xml": {
+        "description": "Export and import ServiceNow records as XML."
+      }
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sonisoft-cnanda/now-sdk-ext-cli.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "clean": "rimraf dist && rimraf tsconfig.tsbuildinfo",
+    "prepare": "git config core.hooksPath .githooks && sh scripts/setup-gitleaks.sh",
+    "buildts": "tsc -p ./ && tsc-alias -p ./tsconfig.json --resolve-full-paths",
+    "buildp": "npm run buildts && npm run lint",
+    "build": "npm run clean && npm run buildts",
+    "lint": "eslint src/",
+    "postpack": "shx rm -f oclif.manifest.json",
+    "posttest": "npm run lint",
+    "prepack": "oclif manifest && oclif readme",
+    "semantic-release": "semantic-release",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest --forceExit --verbose=true --silent=false --json=false --useStderr=false",
+    "test:unit": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern='(services|common)' --forceExit --coverage --collectCoverage --coverageDirectory=\"./coverage\" --ci --reporters=default --reporters=jest-junit --watchAll=false",
+    "test:integration": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern='commands' --forceExit",
+    "test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --coverage --forceExit"
+  },
+  "types": "dist/index.d.ts"
+}

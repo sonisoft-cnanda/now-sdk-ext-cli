@@ -1,0 +1,33 @@
+{
+    "editor.snippetSuggestions": "top",
+    "jest.runMode": "on-demand",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit"
+    },
+    "eslint.validate": ["javascript", "typescript"],
+    "editor.formatOnSave": true,
+    "[javascript]": {
+      "editor.formatOnSave": false
+    },
+    "[typescript]": {
+      "editor.formatOnSave": false
+    },
+    "[markdown]": {
+      "editor.formatOnSave": false
+    },
+    "search.exclude": {
+      "**/bower_components": true,
+      "**/dist": true,
+      "**/coverage": true
+    },
+    "cSpell.words": [
+      "Creds",
+      "oclif",
+      "sonisoft"
+    ],
+    "jest.useDashedArgs": false,
+    "jest.monitorLongRun": "120000",
+    "jest.outputConfig": "test-results-based",
+    "jest.debugMode": true,
+    "jest.coverageFormatter": "GutterFormatter"
+}
