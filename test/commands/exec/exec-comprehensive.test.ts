@@ -533,8 +533,15 @@ describe('Exec Command - Comprehensive Tests', () => {
     })
 
     it('should verify BackgroundScriptExecutor has executeScript method', () => {
-      const executor = new BackgroundScriptExecutor()
-      
+      // Must be constructed with an instance. Core >=4 resolves a pooled session
+      // in the constructor (SessionManager.getInstance().getRequest), which needs
+      // an alias or host to key the pool by. The no-argument form only ever
+      // worked because 3.x built a ServiceNowRequest directly and never looked.
+      const executor = new BackgroundScriptExecutor(
+        {getAlias: () => 'test', getHost: () => 'https://test.service-now.com'} as any,
+        'global',
+      )
+
       expect(executor.executeScript).toBeDefined()
       expect(typeof executor.executeScript).toBe('function')
     })

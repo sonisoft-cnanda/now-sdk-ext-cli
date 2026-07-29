@@ -13,6 +13,7 @@ describe('Exec Command - Script Execution Logic', () => {
     it('should call BackgroundScriptExecutor with correct parameters', () => {
       // Test that the command would create the executor with the right parameters
       const mockInstance = {
+        getAlias: () => 'test',
         getHost: () => 'https://test.service-now.com',
         getUserName: () => 'admin',
       } as any;
@@ -26,6 +27,7 @@ describe('Exec Command - Script Execution Logic', () => {
     
     it('should handle custom scopes', () => {
       const mockInstance = {
+        getAlias: () => 'test',
         getHost: () => 'https://test.service-now.com',
         getUserName: () => 'admin',
       } as any;
