@@ -1,6 +1,7 @@
 import {Command} from '@oclif/core'
+import {listAliases, loadConfig, PATCHED_ENV_VAR, probeAll} from '@sonisoft/sn-credstore'
 
-import {credstore} from '../../common/credstore.js'
+import {credStoreFlag} from '../../common/cred-store-flag.js'
 
 /**
  * Diagnose credential storage.
@@ -15,15 +16,15 @@ export class AuthDoctor extends Command {
   static description =
     'Diagnose credential storage: whether the SDK shim is active, which backend is in use, and what is stored.'
   static enableJsonFlag = true
-static examples = [
+  static examples = [
     {command: '<%= config.bin %> <%= command.id %>', description: 'Check credential storage health'},
     {command: '<%= config.bin %> <%= command.id %> --json', description: 'Machine-readable output for CI'},
   ]
+static flags = {...credStoreFlag}
 
 
   async run(): Promise<unknown> {
     await this.parse(AuthDoctor)
-    const {listAliases, loadConfig, PATCHED_ENV_VAR, probeAll} = await credstore()
 
     const config = loadConfig()
     const shimActive = process.env[PATCHED_ENV_VAR] === '1'

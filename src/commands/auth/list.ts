@@ -1,6 +1,7 @@
 import {Command} from '@oclif/core'
+import {listAliases} from '@sonisoft/sn-credstore'
 
-import {credstore} from '../../common/credstore.js'
+import {credStoreFlag} from '../../common/cred-store-flag.js'
 
 export class AuthList extends Command {
   static args = {}
@@ -10,15 +11,15 @@ export class AuthList extends Command {
     'which works in non-interactive sessions where the OS keyring cannot be unlocked.\n\n' +
     'Secrets are never printed.'
   static enableJsonFlag = true
-static examples = [
+  static examples = [
     {command: '<%= config.bin %> <%= command.id %>', description: 'List stored credentials'},
     {command: '<%= config.bin %> <%= command.id %> --json', description: 'List as JSON for scripting'},
   ]
+static flags = {...credStoreFlag}
 
 
   async run(): Promise<unknown> {
     await this.parse(AuthList)
-    const {listAliases} = await credstore()
     const summary = await listAliases()
 
     if (this.jsonEnabled()) return summary

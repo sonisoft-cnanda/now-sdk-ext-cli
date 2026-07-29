@@ -1,5 +1,6 @@
 import { expect, describe, it, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals'
 import { runCommand } from '@oclif/test'
+import { loadConfig } from '@sonisoft/sn-credstore'
 import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -65,9 +66,18 @@ function seedStore(): void {
   )
 }
 
-beforeAll(() => {
+beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'nex-auth-test-'))
   blobPath = join(dir, 'credentials.json')
+
+  // Force oclif to finish command discovery before any assertion depends on it.
+  //
+  // oclif.manifest.json is gitignored and only generated at publish time, so in a
+  // dev tree oclif globs dist/commands instead. The first runCommand in a process
+  // races that discovery and returns empty stdout — no error, just nothing — so
+  // whichever test happens to run first fails on an empty string while the other
+  // fourteen pass. Published installs ship the manifest and take the fast path.
+  await runCommand(['--version'])
 })
 
 afterAll(() => {
@@ -92,11 +102,19 @@ beforeEach(async () => {
   // wiped it. The redirection is the safety mechanism, so it gets verified
   // rather than assumed — and verified by asking the command itself, not by
   // re-reading the env var we just set.
-  const { result } = await runCommand(['auth', 'list', '--json'])
-  const resolved = (result as { path?: string } | undefined)?.path
+  // Ask sn-credstore's own resolver, not a command. runCommand executes in this
+  // process, so loadConfig() here reads exactly the environment the commands will
+  // read — but it does not depend on oclif having finished command discovery.
+  //
+  // The first version probed via `runCommand(['auth', 'list', '--json'])` and
+  // failed on the first test of the run with "command auth:list not found":
+  // oclif.manifest.json is gitignored and only generated at publish time, so in
+  // a dev tree oclif globs dist/commands instead, and the first call in a process
+  // races that. Published installs have the manifest and take the fast path.
+  const resolved = loadConfig().blobPath
   if (resolved !== blobPath) {
     throw new Error(
-      `Refusing to run: the credential store resolved to ${resolved ?? '<unknown>'}, ` +
+      `Refusing to run: the credential store resolved to ${resolved}, ` +
         `not the test sandbox at ${blobPath}. These tests mutate the store.`,
     )
   }

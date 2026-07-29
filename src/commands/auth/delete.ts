@@ -1,6 +1,7 @@
 import {Args, Command, Flags} from '@oclif/core'
+import {deleteAlias, deleteAllAliases} from '@sonisoft/sn-credstore'
 
-import {credstore} from '../../common/credstore.js'
+import {credStoreFlag} from '../../common/cred-store-flag.js'
 
 export class AuthDelete extends Command {
   static args = {
@@ -14,12 +15,12 @@ static examples = [
     {command: '<%= config.bin %> <%= command.id %> --all', description: 'Remove every stored credential'},
   ]
 static flags = {
+    ...credStoreFlag,
     all: Flags.boolean({description: 'Remove every stored credential', required: false}),
   }
 
   async run(): Promise<void> {
     const {args, flags} = await this.parse(AuthDelete)
-    const {deleteAlias, deleteAllAliases} = await credstore()
 
     if (flags.all) {
       await deleteAllAliases()

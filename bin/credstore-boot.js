@@ -1,8 +1,6 @@
 /* eslint-disable n/no-process-exit, unicorn/no-process-exit -- this runs before
    oclif exists, so there is no error handler to throw into; an uncaught rejection
    here would print a stack trace instead of the remediation. */
-/* eslint-disable n/no-extraneous-import -- sn-credstore is not published yet, so
-   it cannot be a declared dependency; tolerating its absence is this file's job. */
 
 /**
  * Opt in to headless-safe credential storage.
@@ -21,28 +19,17 @@
  *
  * Imported for its side effect by bin/run.js and bin/dev.js, before oclif.
  *
+ * The import stays dynamic even though sn-credstore is now a declared
+ * dependency, because it must NOT run unless asked: importing
+ * '@sonisoft/sn-credstore/register' installs the shim as a side effect, so a
+ * static import would install it on every invocation regardless of the flag.
+ *
  * argv is read directly rather than through oclif's parser because the shim has
  * to be installed before AuthenticatedCommand.init() resolves credentials, and
  * that runs before any flag this file cares about has been parsed. The flag is
  * still declared in AuthenticatedCommand.baseFlags so it appears in --help and
  * is not rejected as unknown.
- *
- * The import is dynamic because sn-credstore is not published yet, and a static
- * import of a missing package is an unrecoverable module-resolution error — it
- * would break `nex` outright for anyone who has not linked it. Once published and
- * added to dependencies this collapses to a plain conditional import.
  */
-
-/** Absence is normal. A shim that loads and then fails is not. */
-function isNotInstalled(err) {
-    return (
-        err?.code === 'ERR_MODULE_NOT_FOUND' &&
-        // Only OUR specifier missing means "not installed". The same code from a
-        // broken import *inside* sn-credstore means it is installed and broken,
-        // which must not be mistaken for absence.
-        /@sonisoft[/\\]sn-credstore/.test(String(err.message))
-    )
-}
 
 /**
  * True when the user asked for the credential store.
@@ -61,20 +48,13 @@ if (credStoreRequested()) {
     try {
         await import('@sonisoft/sn-credstore/register')
     } catch (error) {
-        if (isNotInstalled(error)) {
-            // Asked for explicitly and not available. Falling back to the keyring
-            // would be the one thing the user just said not to do, and on a
-            // headless host it fails later and far less clearly.
-            process.stderr.write(
-                `nex: --cred-store was requested but @sonisoft/sn-credstore is not installed.\n` +
-                    `\nRemediation: npm install -g @sonisoft/sn-credstore\n`,
-            )
-            process.exit(1)
-        }
-
-        // Installed but unable to patch. Continuing would silently fall back to
-        // the keyring, and the SDK's next write reseeds from a failed read —
-        // wiping every other alias. Refusing to start is the safe outcome.
+        // sn-credstore is a declared dependency now, so there is no "not
+        // installed" case left to tolerate — a failure here is a real failure.
+        //
+        // Continuing would silently fall back to the keyring, which is both the
+        // one thing the user just said not to do and actively unsafe: the SDK's
+        // next credential write reseeds from a failed read, wiping every other
+        // alias. Refusing to start is the safe outcome.
         process.stderr.write(
             `nex: the credential store failed to initialise: ${error?.message ?? error}\n` +
                 `${error?.remediation ? `\nRemediation: ${error.remediation}\n` : ''}` +
