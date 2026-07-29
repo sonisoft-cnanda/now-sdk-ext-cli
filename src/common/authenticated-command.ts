@@ -15,6 +15,16 @@ export abstract class AuthenticatedCommand<T extends typeof Command> extends Com
 //   // define flags that can be inherited by any command that extends BaseCommand
   static baseFlags = {
     'auth': Flags.string({char: 'a', description: 'Auth alias to use.', required: false}),
+    // Declared so it appears in --help and is not rejected as unknown. It is
+    // ACTED ON in bin/credstore-boot.js, which reads argv directly: the shim has
+    // to be installed before init() resolves credentials, and that runs before
+    // oclif has parsed anything.
+    'cred-store': Flags.boolean({
+      description: 'Read credentials from @sonisoft/sn-credstore instead of the OS keyring. ' +
+        'Use this in headless sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.',
+      helpGroup: 'GLOBAL',
+      required: false,
+    }),
     'log-level': Flags.option({
       default: 'info',
       helpGroup: 'GLOBAL',
@@ -125,9 +135,14 @@ protected instance!:ServiceNowInstance;
     ];
 
     if (!shimActive) {
+      // Not necessarily wrong — the keyring is the default and works fine in a
+      // desktop session. But it is the likeliest explanation for "no credentials"
+      // when there is no terminal to unlock the keyring from, and that is exactly
+      // when nobody is around to reason it out.
       suggestions.unshift(
-        'The headless credential store is NOT active, so the SDK is reading the OS keyring — ' +
-        'which non-interactive sessions cannot unlock. Check that SN_CRED_STORE_DISABLE is unset.',
+        'If this is a headless session (SSH, systemd, CI, an agent), the OS keyring cannot be ' +
+        'unlocked and will report no credentials regardless of what is stored. Pass --cred-store ' +
+        'to read from @sonisoft/sn-credstore instead.',
       );
     }
 

@@ -219,9 +219,9 @@ SDK's `KeyChain.getPassword()` swallows the error and returns `null`, so you get
 `Default Credential has not been set` rather than a keyring error.
 
 If you run `nex` over SSH, from a systemd service, from CI, or from an AI agent,
-install [`@sonisoft/sn-credstore`](https://github.com/sonisoft/sn-credstore). `nex`
-picks it up automatically at startup and the SDK then reads from a headless-safe
-store that many concurrent processes can share:
+install [`@sonisoft/sn-credstore`](https://github.com/sonisoft-cnanda/sn-credstore)
+and pass `--cred-store`. The SDK then reads from a headless-safe store that many
+concurrent processes can share:
 
 ```bash
 npm install -g @sonisoft/sn-credstore
@@ -230,18 +230,24 @@ npm install -g @sonisoft/sn-credstore
 # Run this from a desktop session — the keyring will prompt to unlock.
 sn-credstore import --from keyring
 
-nex auth doctor    # confirm the store is active
+nex auth doctor                                    # confirm what is where
+nex aggregate count --table incident --auth my-dev-instance --cred-store
 ```
+
+**This is opt-in.** Without `--cred-store`, `nex` uses the ServiceNow SDK's OS
+keyring exactly as it always has, whether or not sn-credstore is installed. To
+opt in for a whole session instead of per command, export
+`SN_CRED_STORE_ENABLE=1`.
 
 By default the store is encrypted with `systemd-creds --user`, which binds it to
 this host. Containers without systemd should set `SN_CRED_STORE=file`.
 
 | Variable | Description |
 |---|---|
-| `SN_CRED_STORE` | `systemd-creds` (default), `file`, or `auto` |
+| `SN_CRED_STORE_ENABLE` | Opt in without passing `--cred-store` on every command |
+| `SN_CRED_STORE_DISABLE` | Hard off switch; wins over the flag and everything else |
+| `SN_CRED_STORE` | Backend: `systemd-creds` (default), `file`, or `auto` |
 | `SN_CRED_STORE_PATH` | Override the store location |
-| `SN_CRED_STORE_REQUIRE` | Fail at startup if the store is not installed |
-| `SN_CRED_STORE_DISABLE` | Disable the shim and use the OS keyring |
 | `SN_CRED_STORE_DEBUG` | Verbose diagnostics on stderr |
 
 #### Managing stored credentials
