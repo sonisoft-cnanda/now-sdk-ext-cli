@@ -15,6 +15,16 @@ export abstract class AuthenticatedCommand<T extends typeof Command> extends Com
 //   // define flags that can be inherited by any command that extends BaseCommand
   static baseFlags = {
     'auth': Flags.string({char: 'a', description: 'Auth alias to use.', required: false}),
+    // Declared so it appears in --help and is not rejected as unknown. It is
+    // ACTED ON in bin/credstore-boot.js, which reads argv directly: the shim has
+    // to be installed before init() resolves credentials, and that runs before
+    // oclif has parsed anything.
+    'cred-store': Flags.boolean({
+      description: 'Read credentials from @sonisoft/sn-credstore instead of the OS keyring. ' +
+        'Use this in headless sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.',
+      helpGroup: 'GLOBAL',
+      required: false,
+    }),
     'log-level': Flags.option({
       default: 'info',
       helpGroup: 'GLOBAL',
@@ -40,9 +50,11 @@ protected instance!:ServiceNowInstance;
     }
 
   protected async catch(err: Error & {exitCode?: number}): Promise<any> {
-    // add any custom logic to handle errors from the command
-    // or simply return the parent class error handling
-    this.authLogger.error("Globally caught exception occurred.", err);
+    // authLogger is assigned partway through init(), so anything that throws
+    // before that point — a missing required flag, for instance — arrived here
+    // with it still undefined and produced "Cannot read properties of undefined
+    // (reading 'error')", hiding the actual usage error behind a TypeError.
+    this.authLogger?.error("Globally caught exception occurred.", err);
 
     return super.catch(err)
   }
@@ -76,20 +88,69 @@ protected instance!:ServiceNowInstance;
     // const credentialArgs = {"_": "get-credentials", auth: flags.auth || "fluent-default"};
    
     const alias = flags.auth || "fluent-default";
-    const credential = await getCredentials(alias);
+
+    let credential;
+    try {
+      credential = await getCredentials(alias);
+    } catch (error) {
+      // getCredentials throws for an unknown alias, but it also throws when the
+      // store itself is unreachable. Those need different remediation, and
+      // sn-credstore's errors carry their own — so pass it through rather than
+      // replacing it with a generic "check your alias".
+      this.failAuth(alias, error);
+    }
+
     // Never log `credential` or any object containing it (e.g. snSettings) — it
     // holds the ServiceNow password/token, and these lines run at --log-level
     // debug, which would write it to the terminal and to CI logs.
     this.authLogger.debug("Credential lookup complete.", {alias, found: Boolean(credential)});
-    if(credential){
-       const snSettings:ServiceNowSettingsInstance = {
-            alias: flags.auth,
-           credential
-        }
-        this.instance = new ServiceNowInstance(snSettings);
-    }else{
-        this.authLogger.error("Either credential not found or no credentials created.", {alias});
+
+    if (!credential) {
+      // Previously this only logged, leaving this.instance undefined so the
+      // command failed later with an unrelated TypeError. An unusable command
+      // must not start.
+      this.failAuth(alias);
     }
 
+    const snSettings: ServiceNowSettingsInstance = {
+      alias: flags.auth,
+      credential
+    }
+    this.instance = new ServiceNowInstance(snSettings);
+  }
+
+  /**
+   * Fail with remediation the user can act on.
+   *
+   * The keyring failure mode this guards against is silent: in a non-interactive
+   * session the keyring cannot be unlocked, `KeyChain.getPassword()` swallows the
+   * error and returns null, and the SDK reports it as "no credentials" — which is
+   * indistinguishable from genuinely having none. So say which of the two it is.
+   */
+  private failAuth(alias: string, cause?: unknown): never {
+    const shimActive = process.env.NOW_SDK_KEYCHAIN_PATCHED === '1';
+    const suggestions = [
+      'Run "nex auth list" to see stored credentials.',
+      'Run "nex auth doctor" to check credential storage.',
+    ];
+
+    if (!shimActive) {
+      // Not necessarily wrong — the keyring is the default and works fine in a
+      // desktop session. But it is the likeliest explanation for "no credentials"
+      // when there is no terminal to unlock the keyring from, and that is exactly
+      // when nobody is around to reason it out.
+      suggestions.unshift(
+        'If this is a headless session (SSH, systemd, CI, an agent), the OS keyring cannot be ' +
+        'unlocked and will report no credentials regardless of what is stored. Pass --cred-store ' +
+        'to read from @sonisoft/sn-credstore instead.',
+      );
+    }
+
+    // sn-credstore errors carry actionable remediation; a bare message loses it.
+    const remediation = (cause as undefined | {remediation?: string})?.remediation;
+    if (remediation) suggestions.unshift(remediation);
+
+    const detail = cause instanceof Error ? cause.message : `No credentials found for alias "${alias}".`;
+    this.error(detail, {suggestions});
   }
 }

@@ -86,7 +86,13 @@ describe('Update Set Commands - Integration Tests', () => {
       })
 
       it('should support query flag', async () => {
-        const { error } = await runCommand(['update-set', '--query', 'state=in progress', '--auth', 'test'])
+        // The value must be quoted: oclif's runCommand joins the array with
+        // spaces and re-splits it, so an unquoted 'state=in progress' arrives as
+        // two arguments and the command rightly rejects the stray "progress".
+        // This assertion only appeared to pass before because init() failed with
+        // a TypeError first, and that message happened not to contain the
+        // substring under test.
+        const { error } = await runCommand(['update-set', '--query', '"state=in progress"', '--auth', 'test'])
 
         // Command should not error due to unknown flags
         if (error) {

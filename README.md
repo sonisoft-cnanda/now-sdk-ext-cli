@@ -211,6 +211,54 @@ now-sdk auth --list
 
 **Note**: Credentials configured via `now-sdk auth` are automatically available to `nex` commands through the `--auth` flag.
 
+#### Headless and non-interactive use
+
+`now-sdk` stores credentials in the OS keyring, which a non-interactive session
+cannot unlock — even running as the same user. Worse, the failure is silent: the
+SDK's `KeyChain.getPassword()` swallows the error and returns `null`, so you get
+`Default Credential has not been set` rather than a keyring error.
+
+If you run `nex` over SSH, from a systemd service, from CI, or from an AI agent,
+install [`@sonisoft/sn-credstore`](https://github.com/sonisoft-cnanda/sn-credstore)
+and pass `--cred-store`. The SDK then reads from a headless-safe store that many
+concurrent processes can share:
+
+```bash
+npm install -g @sonisoft/sn-credstore
+
+# One-time migration of existing keyring credentials.
+# Run this from a desktop session — the keyring will prompt to unlock.
+sn-credstore import --from keyring
+
+nex auth doctor                                    # confirm what is where
+nex aggregate count --table incident --auth my-dev-instance --cred-store
+```
+
+**This is opt-in.** Without `--cred-store`, `nex` uses the ServiceNow SDK's OS
+keyring exactly as it always has, whether or not sn-credstore is installed. To
+opt in for a whole session instead of per command, export
+`SN_CRED_STORE_ENABLE=1`.
+
+By default the store is encrypted with `systemd-creds --user`, which binds it to
+this host. Containers without systemd should set `SN_CRED_STORE=file`.
+
+| Variable | Description |
+|---|---|
+| `SN_CRED_STORE_ENABLE` | Opt in without passing `--cred-store` on every command |
+| `SN_CRED_STORE_DISABLE` | Hard off switch; wins over the flag and everything else |
+| `SN_CRED_STORE` | Backend: `systemd-creds` (default), `file`, or `auto` |
+| `SN_CRED_STORE_PATH` | Override the store location |
+| `SN_CRED_STORE_DEBUG` | Verbose diagnostics on stderr |
+
+#### Managing stored credentials
+
+```bash
+nex auth list                # list aliases (secrets are never printed)
+nex auth use my-dev-instance # set the default alias
+nex auth delete old-alias    # remove one alias
+nex auth doctor              # diagnose credential storage
+```
+
 ### 2. Run Your First Command
 
 ```bash

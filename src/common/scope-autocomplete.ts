@@ -48,8 +48,19 @@ export async function queryScopes(authAlias: string | undefined, prefix: string 
     // Get credentials
    
     const credential = await getCredentials(authAlias || "fluent-default");
-    
+
     if (!credential) {
+      // Returning no completions is the only sane behaviour here — a shell
+      // completion hook cannot print an error without corrupting the candidate
+      // list. But "no scopes" and "credentials unreadable" look identical, so
+      // leave a breadcrumb for anyone debugging why completion went quiet.
+      if (process.env.SN_CRED_STORE_DEBUG) {
+        process.stderr.write(
+          `[nex] scope completion: no credentials for "${authAlias || 'fluent-default'}"` +
+            `${process.env.NOW_SDK_KEYCHAIN_PATCHED === '1' ? '' : ' (credential shim NOT active)'}\n`,
+        );
+      }
+
       return [];
     }
 
