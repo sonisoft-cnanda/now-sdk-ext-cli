@@ -22,7 +22,14 @@ import { join } from 'node:path'
  * which CI containers do not have.
  */
 
-const OAUTH_EXPIRES_AT = 1_785_338_450 // seconds — the SDK's unit, not ms
+// Seconds, the SDK's unit — and deliberately far in the future.
+//
+// The first version of this fixture expired a few hours out, which happened to
+// land inside the vault's 15-minute refresh window while these tests were being
+// written. Every vault read then took the refresh lease expecting a write to
+// follow, and the reads that bail early left it held until the 30s timer fired —
+// so one test took 30 seconds, and only when run at the wrong time of day.
+const OAUTH_EXPIRES_AT = 2_000_000_000 // 2033-05-18
 
 let dir: string
 let blobPath: string
@@ -67,7 +74,7 @@ afterAll(() => {
   rmSync(dir, { force: true, recursive: true })
 })
 
-beforeEach(() => {
+beforeEach(async () => {
   savedEnv = {
     NOW_SDK_KEYCHAIN_PATCHED: process.env.NOW_SDK_KEYCHAIN_PATCHED,
     SN_CRED_STORE: process.env.SN_CRED_STORE,
@@ -76,6 +83,23 @@ beforeEach(() => {
   process.env.SN_CRED_STORE = 'file'
   process.env.SN_CRED_STORE_PATH = blobPath
   seedStore()
+
+  // Prove the sandbox took effect before any test is allowed to mutate.
+  //
+  // This is not paranoia. An earlier version of this file mocked the store
+  // instead, the mock silently did not apply to the dynamic import, and
+  // `auth delete --all` ran against the developer's REAL credential store and
+  // wiped it. The redirection is the safety mechanism, so it gets verified
+  // rather than assumed — and verified by asking the command itself, not by
+  // re-reading the env var we just set.
+  const { result } = await runCommand(['auth', 'list', '--json'])
+  const resolved = (result as { path?: string } | undefined)?.path
+  if (resolved !== blobPath) {
+    throw new Error(
+      `Refusing to run: the credential store resolved to ${resolved ?? '<unknown>'}, ` +
+        `not the test sandbox at ${blobPath}. These tests mutate the store.`,
+    )
+  }
 })
 
 afterEach(() => {
@@ -108,7 +132,7 @@ describe('auth commands', () => {
       // reports every live token as expired.
       const { stdout } = await runCommand(['auth', 'list'])
 
-      expect(stdout).toContain('2026-')
+      expect(stdout).toContain('2033-')
       expect(stdout).not.toContain(String(OAUTH_EXPIRES_AT))
     })
 
