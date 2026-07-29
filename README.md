@@ -211,6 +211,48 @@ now-sdk auth --list
 
 **Note**: Credentials configured via `now-sdk auth` are automatically available to `nex` commands through the `--auth` flag.
 
+#### Headless and non-interactive use
+
+`now-sdk` stores credentials in the OS keyring, which a non-interactive session
+cannot unlock — even running as the same user. Worse, the failure is silent: the
+SDK's `KeyChain.getPassword()` swallows the error and returns `null`, so you get
+`Default Credential has not been set` rather than a keyring error.
+
+If you run `nex` over SSH, from a systemd service, from CI, or from an AI agent,
+install [`@sonisoft/sn-credstore`](https://github.com/sonisoft/sn-credstore). `nex`
+picks it up automatically at startup and the SDK then reads from a headless-safe
+store that many concurrent processes can share:
+
+```bash
+npm install -g @sonisoft/sn-credstore
+
+# One-time migration of existing keyring credentials.
+# Run this from a desktop session — the keyring will prompt to unlock.
+sn-credstore import --from keyring
+
+nex auth doctor    # confirm the store is active
+```
+
+By default the store is encrypted with `systemd-creds --user`, which binds it to
+this host. Containers without systemd should set `SN_CRED_STORE=file`.
+
+| Variable | Description |
+|---|---|
+| `SN_CRED_STORE` | `systemd-creds` (default), `file`, or `auto` |
+| `SN_CRED_STORE_PATH` | Override the store location |
+| `SN_CRED_STORE_REQUIRE` | Fail at startup if the store is not installed |
+| `SN_CRED_STORE_DISABLE` | Disable the shim and use the OS keyring |
+| `SN_CRED_STORE_DEBUG` | Verbose diagnostics on stderr |
+
+#### Managing stored credentials
+
+```bash
+nex auth list                # list aliases (secrets are never printed)
+nex auth use my-dev-instance # set the default alias
+nex auth delete old-alias    # remove one alias
+nex auth doctor              # diagnose credential storage
+```
+
 ### 2. Run Your First Command
 
 ```bash
