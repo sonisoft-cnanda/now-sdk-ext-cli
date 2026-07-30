@@ -52,11 +52,23 @@ static flags = {...credStoreFlag}
 
     if (this.jsonEnabled()) return report
 
-    this.log(`shim active   : ${shimActive ? 'yes' : 'NO'}`)
+    this.log(`shim active   : ${shimActive ? 'yes' : 'no'}`)
     if (!shimActive) {
+      // "no" is the DEFAULT, not a fault — the shim is opt-in. The previous
+      // wording ("NO", plus a hint to check SN_CRED_STORE_DISABLE) read as though
+      // something were broken, and pointed at the one variable that is almost
+      // never the reason. Say what to do instead.
       this.log('')
-      this.log('  The SDK is reading the OS keyring, which non-interactive sessions cannot unlock.')
-      this.log('  If this is unexpected, check that SN_CRED_STORE_DISABLE is unset.')
+      this.log('  The SDK is reading the OS keyring. That is the default and works fine with an')
+      this.log('  interactive desktop session.')
+      this.log('')
+      this.log('  In a headless session — SSH, systemd, CI, an agent — the keyring cannot be')
+      this.log('  unlocked and will report no credentials whatever is stored. To use the store')
+      this.log('  listed below instead, pass --cred-store or set SN_CRED_STORE_ENABLE=1.')
+      if (process.env.SN_CRED_STORE_DISABLE) {
+        this.log('')
+        this.log('  NOTE: SN_CRED_STORE_DISABLE is set, which overrides both of those.')
+      }
     }
 
     this.log(`store         : ${config.store}`)
