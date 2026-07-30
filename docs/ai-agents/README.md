@@ -65,11 +65,31 @@ Before your agent can use `nex` commands, ensure:
 
 2. **Auth aliases are configured** for your ServiceNow instances
    ```bash
-   now-sdk auth add --alias dev --host https://dev12345.service-now.com
-   now-sdk auth add --alias prod --host https://prod12345.service-now.com
+   now-sdk auth --add dev12345.service-now.com --alias dev --type oauth
+   now-sdk auth --add prod12345.service-now.com --alias prod --type oauth
    ```
 
-3. **Node.js 22+** is available in the environment
+3. **Node.js 26+** is available in the environment
+
+4. **For headless agents**, `@sonisoft/sn-credstore` is installed and the
+   credentials imported — otherwise the agent cannot read them at all
+   ```bash
+   npm install -g @sonisoft/sn-credstore
+
+   # Run this from a desktop session on a TTY; the keyring will prompt to unlock.
+   sn-credstore import --from keyring
+   ```
+
+   Then either add `--cred-store` to each command, or set it once:
+   ```bash
+   export SN_CRED_STORE_ENABLE=1
+   ```
+
+   This matters because the failure without it is silent and misleading. The OS
+   keyring cannot be unlocked from a non-interactive session even as the same
+   user, and the SDK reports it as `Could not find stored credentials for alias:
+   dev` — which looks like a missing alias, so the obvious fix does not help.
+   `nex auth doctor` tells the two apart.
 
 ## Customization
 

@@ -6,7 +6,7 @@
 
 ## Overview
 
-`nex` (`@sonisoft/now-sdk-ext-cli`) is a CLI tool that extends the ServiceNow SDK with 69 commands across 18 topics. It enables programmatic interaction with ServiceNow instances for querying data, executing scripts, managing flows, running tests, deploying applications, and more.
+`nex` (`@sonisoft/now-sdk-ext-cli`) is a CLI tool that extends the ServiceNow SDK with commands across 21 topics. It enables programmatic interaction with ServiceNow instances for querying data, executing scripts, managing flows, running tests, deploying applications, and more.
 
 **Every command requires authentication** via the `--auth <alias>` flag, which specifies the target ServiceNow instance using a pre-configured credential alias.
 
@@ -18,8 +18,56 @@ nex query -t incident --auth dev
 nex flow test -f <id> -o '{}' --auth prod
 
 # Auth aliases are configured via the ServiceNow SDK CLI:
-now-sdk auth add --alias dev --host https://dev12345.service-now.com
+now-sdk auth --add dev12345.service-now.com --alias dev --type oauth
 ```
+
+### Headless sessions: add `--cred-store`
+
+**If you are running without an interactive desktop session — over SSH, from a
+systemd unit, in CI, or as an autonomous agent — add `--cred-store` to every
+command:**
+
+```bash
+nex query -t incident --auth dev --cred-store
+```
+
+The ServiceNow SDK stores credentials in the OS keyring, and a non-interactive
+session cannot unlock it *even running as the same user*. The failure is silent
+and actively misleading — you get:
+
+```
+Could not find stored credentials for alias: dev
+```
+
+which reads as a missing alias rather than a locked keyring, so the obvious next
+step (re-adding the alias) does not help. `--cred-store` reads from
+`@sonisoft/sn-credstore` instead, a store that many concurrent agents can share
+safely.
+
+To avoid passing the flag on every command, set it once in the environment:
+
+```bash
+export SN_CRED_STORE_ENABLE=1
+```
+
+Diagnose which path you are on before assuming credentials are missing:
+
+```bash
+nex auth doctor    # active store, whether the shim is on, what is stored
+nex auth list      # aliases in the credential store
+```
+
+One-time setup, which **must** be run from a desktop session on a TTY because the
+keyring will prompt to unlock:
+
+```bash
+npm install -g @sonisoft/sn-credstore
+sn-credstore import --from keyring
+```
+
+Without `--cred-store` (and without `SN_CRED_STORE_ENABLE`), `nex` uses the OS
+keyring exactly as the stock SDK does. That is the default on purpose, so nothing
+changes for interactive use.
 
 ## Global Flags
 
@@ -30,6 +78,7 @@ These flags are available on every command:
 | `--auth` | `-a` | string | Auth alias for the target ServiceNow instance (required) |
 | `--log-level` | | string | Logging verbosity: `debug`, `info`, `warn`, `error`, `trace` (default: `info`) |
 | `--json` | `-j` | boolean | Output results as structured JSON instead of formatted text |
+| `--cred-store` | | boolean | Read credentials from `@sonisoft/sn-credstore` instead of the OS keyring. **Required in headless sessions** — see Authentication above. |
 
 ## Output Patterns
 
@@ -54,7 +103,7 @@ nex exec global script.js -p '{"table":"incident","query":"active=true"}' --auth
 
 ## Quick Reference
 
-All 69 commands at a glance:
+Every command at a glance:
 
 | Command | Description |
 |---------|-------------|
@@ -69,6 +118,11 @@ All 69 commands at a glance:
 | `nex app uninstall` | Uninstall a ServiceNow application by ID and scope |
 | **ATF** | |
 | `nex atf` | Execute ATF tests or test suites |
+| **Auth** | |
+| `nex auth list` | List credentials in the headless-safe credential store |
+| `nex auth use` | Set the default credential alias |
+| `nex auth delete` | Remove a credential from the store |
+| `nex auth doctor` | Diagnose credential storage |
 | **Attachment** | |
 | `nex attachment get` | Get metadata for a specific attachment |
 | `nex attachment list` | List attachments on a record |
@@ -315,6 +369,74 @@ nex atf -n "Incident Management Tests" --auth dev
 
 # Run a test suite by sys_id with JSON output
 nex atf -s def456abc789012 --json --auth dev
+```
+
+---
+
+### Auth
+
+Manage the headless-safe credential store. These commands read the store
+directly, so they work even when credentials are otherwise unreadable — which is
+what makes `nex auth doctor` useful for diagnosing the failure rather than a
+casualty of it.
+
+`--cred-store` is accepted on these commands and ignored: they always use the
+store.
+
+#### `nex auth list`
+
+List credentials in the store. Secrets are never printed.
+
+| Flag | Short | Type | Required | Default | Description |
+|------|-------|------|----------|---------|-------------|
+| `--json` | `-j` | boolean | no | `false` | Output as JSON |
+
+```bash
+nex auth list
+nex auth list --json
+```
+
+#### `nex auth doctor`
+
+Diagnose credential storage: whether the SDK shim is active, which backend is in
+use, and what is stored. **Run this first when a command reports missing
+credentials** — it distinguishes "no credentials" from "credentials unreadable",
+which every other error conflates.
+
+| Flag | Short | Type | Required | Default | Description |
+|------|-------|------|----------|---------|-------------|
+| `--json` | `-j` | boolean | no | `false` | Output as JSON |
+
+```bash
+nex auth doctor
+nex auth doctor --json
+```
+
+#### `nex auth use`
+
+Set the default credential alias. Commands run without `--auth` use it.
+
+| Flag | Short | Type | Required | Default | Description |
+|------|-------|------|----------|---------|-------------|
+| `<alias>` | | arg | yes | — | Alias to make the default |
+
+```bash
+nex auth use dev
+```
+
+#### `nex auth delete`
+
+Remove a credential from the store. Does not touch the OS keyring, so a copy kept
+there before migrating remains.
+
+| Flag | Short | Type | Required | Default | Description |
+|------|-------|------|----------|---------|-------------|
+| `<alias>` | | arg | no | — | Alias to remove |
+| `--all` | | boolean | no | `false` | Remove every stored credential |
+
+```bash
+nex auth delete old-alias
+nex auth delete --all
 ```
 
 ---
