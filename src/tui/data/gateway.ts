@@ -9,15 +9,18 @@
  * exit path — a useEffect teardown alone is skipped by uncaught exceptions,
  * which is exactly when a live poll would otherwise pin the process open.
  */
+import { AmbientGateway } from './ambient.gateway.js'
 import { RecordsGateway } from './records.gateway.js'
 
 export type DisposeFn = () => void
 
 export class NexGateway {
+  readonly ambient: AmbientGateway
   readonly records: RecordsGateway
   private readonly disposers = new Set<DisposeFn>()
 
   constructor(instance: unknown) {
+    this.ambient = new AmbientGateway(instance)
     this.records = new RecordsGateway(instance)
   }
 
