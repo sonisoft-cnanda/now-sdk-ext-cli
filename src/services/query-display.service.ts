@@ -1,5 +1,8 @@
  
 
+import { computeColumnWidths, deriveColumns, truncateCell } from './shape/record-columns.js';
+import { schemaFieldCells } from './shape/schema-field.js';
+
 export class QueryDisplayService {
   /**
    * Format app search results for display.
@@ -83,14 +86,15 @@ export class QueryDisplayService {
     lines.push("  " + "\u2500".repeat(90));
 
     for (const field of fields) {
+      const cells = schemaFieldCells(field);
       lines.push(
         "  " +
-          (field.name || "").padEnd(25) +
-          (field.label || "").padEnd(25) +
-          (field.internalType || field.type || "").padEnd(15) +
-          String(field.maxLength ?? "").padEnd(12) +
-          String(field.mandatory ?? false).padEnd(12) +
-          String(field.readOnly ?? false)
+          cells.name.padEnd(25) +
+          cells.label.padEnd(25) +
+          cells.type.padEnd(15) +
+          cells.maxLength.padEnd(12) +
+          cells.mandatory.padEnd(12) +
+          cells.readOnly
       );
     }
 
@@ -166,18 +170,11 @@ export class QueryDisplayService {
     lines.push(`\nQuery Results: ${tableName} (${records.length} record${records.length === 1 ? '' : 's'})`);
     lines.push("  " + "\u2500".repeat(90));
 
-    // Determine columns from first record
-    const columns = Object.keys(records[0]).filter(k => k !== 'sys_id');
-    const displayColumns = columns.slice(0, 6); // Cap at 6 columns for readability
-
-    // Calculate column widths (min 10, max 30)
-    const colWidths = displayColumns.map(col => {
-      const maxDataLen = Math.max(
-        col.length,
-        ...records.map(r => String(r[col] ?? '').length)
-      );
-      return Math.min(Math.max(maxDataLen + 2, 10), 30);
-    });
+    // Column choice and width math live in shape/record-columns \u2014 one
+    // definition shared with the TUI. Byte-compatible with the historical
+    // inline logic.
+    const displayColumns = deriveColumns(records);
+    const colWidths = computeColumnWidths(records, displayColumns);
 
     // Header row
     lines.push(
@@ -188,12 +185,9 @@ export class QueryDisplayService {
     // Data rows
     for (const record of records) {
       lines.push(
-        "  " + displayColumns.map((col, i) => {
-          const val = String(record[col] ?? '');
-          return val.length > colWidths[i] - 2
-            ? val.slice(0, Math.max(0, colWidths[i] - 5)) + '...'
-            : val;
-        }).map((val, i) => val.padEnd(colWidths[i])).join('')
+        "  " + displayColumns
+          .map((col, i) => truncateCell(record[col], colWidths[i]))
+          .map((val, i) => val.padEnd(colWidths[i])).join('')
       );
     }
 
