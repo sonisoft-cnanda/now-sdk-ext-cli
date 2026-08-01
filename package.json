@@ -42,7 +42,7 @@
     "@types/chai": "^4",
     "@types/jest": "^29.5.12",
     "@types/mocha": "^10",
-    "@types/node": "^18",
+    "@types/node": "^26.1.2",
     "@typescript-eslint/typescript-estree": "^8.4.0",
     "chai": "^4",
     "conventional-changelog-conventionalcommits": "^9.1.0",
