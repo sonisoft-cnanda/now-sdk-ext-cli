@@ -20,6 +20,7 @@ export interface StartTuiOptions {
   initialTable?: string
   instance: InstanceLike
   readOnly: boolean
+  scrollback?: number
 }
 
 export async function startTui(options: StartTuiOptions): Promise<void> {
@@ -27,6 +28,7 @@ export async function startTui(options: StartTuiOptions): Promise<void> {
     alias: options.alias,
     instance: options.instance,
     readOnly: options.readOnly,
+    scrollback: options.scrollback,
   })
 
   enterAltScreen()
@@ -65,4 +67,12 @@ export async function startTui(options: StartTuiOptions): Promise<void> {
   } finally {
     runCleanup()
   }
+
+  // Hard exit, same precedent and same root cause as the SIGINT handler in
+  // src/commands/log/index.ts: core's tail machinery (poll interval,
+  // keep-alive sockets) does not release the event loop even after
+  // stopTailing(), so a session that ever tailed would hang the process
+  // after quit. Cleanup above has already restored the terminal.
+  // eslint-disable-next-line n/no-process-exit, unicorn/no-process-exit
+  process.exit(0)
 }

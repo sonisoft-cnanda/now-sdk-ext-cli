@@ -63,6 +63,7 @@ export interface CreateSessionOptions {
   alias: string
   instance: InstanceLike
   readOnly: boolean
+  scrollback?: number
 }
 
 export function createSession(options: CreateSessionOptions): TuiSession {
@@ -72,7 +73,7 @@ export function createSession(options: CreateSessionOptions): TuiSession {
   const session: TuiSession = {
     alias: options.alias,
     env,
-    gateway: new NexGateway(options.instance),
+    gateway: new NexGateway(options.instance, { scrollback: options.scrollback }),
     host,
     readOnly: options.readOnly,
     user,

@@ -8,14 +8,22 @@ import type { PaneId } from './commands/registry.js'
 import type { KeyEvent } from './keymap/scope-stack.js'
 
 import { bindingsForPane } from './commands/registry.js'
-import { SessionProvider } from './context/session-context.js'
+import { SessionProvider, useSession } from './context/session-context.js'
 import { UiProvider, useUi } from './context/ui-context.js'
 import { useKeymap } from './hooks/use-keymap.js'
 import { useTerminalSize } from './hooks/use-terminal-size.js'
+import { LogsPane } from './panes/logs/logs-pane.js'
 import { RecordPane } from './panes/records/record-pane.js'
 import { HelpOverlay } from './ui/help-overlay.js'
 import { InstanceBanner } from './ui/instance-banner.js'
 import { theme } from './ui/theme.js'
+
+/** A cross-pane request to open a specific record in the Records pane. */
+export interface OpenRecordRequest {
+  requestId: number
+  sysId: string
+  table: string
+}
 
 export interface AppProps {
   ascii?: boolean
@@ -61,9 +69,29 @@ interface ShellProps {
 function Shell(props: ShellProps): ReactElement {
   const { exit } = useApp()
   const { scopes } = useUi()
+  const session = useSession()
   const size = useTerminalSize()
   const [pane, setPane] = useState<PaneId>(props.initialPane ?? 'records')
   const [helpOpen, setHelpOpen] = useState(false)
+  const [openRequest, setOpenRequest] = useState<OpenRecordRequest | undefined>()
+
+  // Cross-pane jump: a log line names a record → land on its form.
+  const openRecord = (table: string, sysId: string) => {
+    setOpenRequest((previous) => ({ requestId: (previous?.requestId ?? 0) + 1, sysId, table }))
+    setPane('records')
+  }
+
+  // Record numbers (INC0010023) resolve to a sys_id via one filtered fetch.
+  const resolveNumber = (table: string, number: string) => {
+    session.gateway.records
+      .fetchPage({ limit: 1, offset: 0, query: `number=${number}`, table })
+      .then((page) => {
+        if (page.rows.length > 0) openRecord(table, page.rows[0].sysId)
+      })
+      .catch(() => {
+        // resolution is best-effort; the log line stays where it was
+      })
+  }
 
   useInput((input, key) => {
     const event: KeyEvent = {
@@ -145,6 +173,9 @@ function Shell(props: ShellProps): ReactElement {
             height={bodyHeight}
             initialQuery={props.initialQuery}
             initialTable={props.initialTable}
+            onOpenRecord={openRecord}
+            onResolveNumber={resolveNumber}
+            openRequest={openRequest}
             pane={pane}
             width={size.columns}
           />
@@ -161,6 +192,9 @@ interface PaneBodyProps {
   height: number
   initialQuery?: string
   initialTable?: string
+  onOpenRecord(table: string, sysId: string): void
+  onResolveNumber(table: string, number: string): void
+  openRequest?: OpenRecordRequest
   pane: PaneId
   width: number
 }
@@ -168,7 +202,15 @@ interface PaneBodyProps {
 function PaneBody(props: PaneBodyProps): ReactElement {
   switch (props.pane) {
     case 'logs': {
-      return <ComingSoon label="Logs — live syslog tail" phase="2" />
+      return (
+        <LogsPane
+          active
+          height={props.height}
+          onOpenRecord={props.onOpenRecord}
+          onResolveNumber={props.onResolveNumber}
+          width={props.width}
+        />
+      )
     }
 
     case 'ops': {
@@ -182,6 +224,7 @@ function PaneBody(props: PaneBodyProps): ReactElement {
           height={props.height}
           initialQuery={props.initialQuery}
           initialTable={props.initialTable}
+          openRequest={props.openRequest}
           width={props.width}
         />
       )

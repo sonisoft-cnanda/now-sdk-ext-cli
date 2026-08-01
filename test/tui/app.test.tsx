@@ -18,6 +18,20 @@ function fakeSession(overrides: Partial<TuiSession> = {}): TuiSession {
       invalidate() {},
     },
     disposeAll() {},
+    logs: {
+      capacity: 5000,
+      getRules: () => [],
+      getStatus: () => 'connecting',
+      hiddenRatio: () => 0,
+      isTailing: () => true,
+      rawDropped: () => 0,
+      setRules() {},
+      snapshot: () => [],
+      startTail() {},
+      stopTail() {},
+      version: 0,
+      viewSource: () => ({ at: () => { throw new Error('empty') }, length: 0 }),
+    },
     records: {
       countQuery: async () => 2,
       fetchPage: async () => ({
@@ -111,14 +125,16 @@ describe('App shell', () => {
     unmount()
   })
 
-  it('digit keys switch panes', async () => {
+  it('digit keys switch panes — Logs mounts the live pane', async () => {
     const { lastFrame, stdin, unmount } = render(
       createElement(App, { initialTable: 'incident', session: fakeSession() }),
     )
     await flush()
     stdin.write('2')
-    await flush()
-    expect(lastFrame() ?? '').toContain('live syslog tail')
+    await flush(150)
+    const frame = lastFrame() ?? ''
+    expect(frame).toContain('FOLLOW')
+    expect(frame).toContain('Waiting for log traffic')
     unmount()
   })
 })
