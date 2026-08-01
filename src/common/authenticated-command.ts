@@ -112,9 +112,19 @@ protected instance!:ServiceNowInstance;
       this.failAuth(alias);
     }
 
+    // ServiceNowInstance reads host/username from the TOP LEVEL of the
+    // settings object, not from the credential — passing only {alias,
+    // credential} leaves getHost()/getUserName() undefined for every
+    // command. Managers never noticed (they read the credential directly),
+    // but the exec REPL banner, the nex log header, the scope-autocomplete
+    // URL and the TUI banner all consume getHost(). Populate both from the
+    // credential, without ever logging it.
+    const credentialFields = credential as { instanceUrl?: string; username?: string };
     const snSettings: ServiceNowSettingsInstance = {
       alias: flags.auth,
-      credential
+      credential,
+      host: credentialFields.instanceUrl,
+      username: credentialFields.username,
     }
     this.instance = new ServiceNowInstance(snSettings);
   }
