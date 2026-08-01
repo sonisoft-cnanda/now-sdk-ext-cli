@@ -2,6 +2,8 @@ import chalk from 'chalk';
 
 import type { FilterRule } from './log-filter.service.js';
 
+import { classifySeverity, SEVERITY_KEYWORDS } from './shape/log-entry.js';
+
 export interface LogFormatterOptions {
   noColor: boolean;
 }
@@ -89,7 +91,6 @@ export class LogFormatterService {
     const date = new Date(log.sys_created_on as string);
     const timestamp = date.toLocaleString();
     const message = log.message as string;
-    const lowerMessage = message.toLowerCase();
 
     if (this.noColor) {
       const divider = '─'.repeat(80);
@@ -116,27 +117,34 @@ export class LogFormatterService {
 
       let formattedMessage = message;
 
-      if (lowerMessage.includes('error') || lowerMessage.includes('exception') ||
-          lowerMessage.includes('failed') || lowerMessage.includes('failure')) {
-        formattedMessage = this.highlightKeywords(message,
-          ['error', 'exception', 'failed', 'failure', 'ERROR', 'Exception', 'Failed', 'Failure'],
-          chalk.bold.red
-        );
-      } else if (lowerMessage.includes('warn') || lowerMessage.includes('warning') ||
-                 lowerMessage.includes('deprecated')) {
-        formattedMessage = this.highlightKeywords(message,
-          ['warn', 'warning', 'deprecated', 'Warning', 'WARN', 'Deprecated'],
-          chalk.bold.yellow
-        );
-      } else if (lowerMessage.includes('success') || lowerMessage.includes('completed') ||
-                 lowerMessage.includes('finished') || lowerMessage.includes('done')) {
-        formattedMessage = this.highlightKeywords(message,
-          ['success', 'completed', 'finished', 'done', 'Success', 'Completed', 'Finished', 'Done'],
-          chalk.bold.green
-        );
-      } else if (lowerMessage.includes('system') || lowerMessage.includes('user') ||
-                 lowerMessage.includes('transaction') || lowerMessage.includes('request')) {
-        formattedMessage = chalk.blue(message);
+      // The severity decision lives in shape/log-entry (shared with the
+      // TUI); the chalk painting stays here. Byte-compatible with the
+      // historical inline branch chain.
+      const severity = classifySeverity(message);
+      switch (severity) {
+        case 'error': {
+          formattedMessage = this.highlightKeywords(message, SEVERITY_KEYWORDS.error, chalk.bold.red);
+          break;
+        }
+
+        case 'success': {
+          formattedMessage = this.highlightKeywords(message, SEVERITY_KEYWORDS.success, chalk.bold.green);
+          break;
+        }
+
+        case 'system': {
+          formattedMessage = chalk.blue(message);
+          break;
+        }
+
+        case 'warn': {
+          formattedMessage = this.highlightKeywords(message, SEVERITY_KEYWORDS.warn, chalk.bold.yellow);
+          break;
+        }
+
+        default: {
+          break;
+        }
       }
 
       lines.push(chalk.white('💬 ') + formattedMessage);
