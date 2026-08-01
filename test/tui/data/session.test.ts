@@ -5,7 +5,9 @@ import { describe, expect, it, jest } from '@jest/globals'
 jest.unstable_mockModule('@sonisoft/now-sdk-ext-core', () => ({
   AggregateQuery: jest.fn(),
   SchemaDiscovery: jest.fn(),
+  ScopeManager: jest.fn(),
   TableAPIRequest: jest.fn(),
+  UpdateSetManager: jest.fn(),
 }))
 
 const { classifyEnvironment, createSession } = await import('../../../src/tui/boot/session.js')
