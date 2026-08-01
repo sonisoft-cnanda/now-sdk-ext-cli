@@ -61,6 +61,7 @@ export function classifyEnvironment(
 
 export interface CreateSessionOptions {
   alias: string
+  approveAll?: boolean
   instance: InstanceLike
   readOnly: boolean
   scrollback?: number
@@ -73,7 +74,13 @@ export function createSession(options: CreateSessionOptions): TuiSession {
   const session: TuiSession = {
     alias: options.alias,
     env,
-    gateway: new NexGateway(options.instance, { scrollback: options.scrollback }),
+    gateway: new NexGateway(options.instance, {
+      alias: options.alias,
+      approveAll: options.approveAll,
+      env,
+      readOnly: options.readOnly,
+      scrollback: options.scrollback,
+    }),
     host,
     readOnly: options.readOnly,
     user,

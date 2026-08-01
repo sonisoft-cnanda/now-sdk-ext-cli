@@ -8,6 +8,7 @@ import type { PaneId } from './commands/registry.js'
 import type { KeyEvent } from './keymap/scope-stack.js'
 
 import { bindingsForPane } from './commands/registry.js'
+import { ApprovalProvider } from './context/approval-context.js'
 import { SessionProvider, useSession } from './context/session-context.js'
 import { UiProvider, useUi } from './context/ui-context.js'
 import { useKeymap } from './hooks/use-keymap.js'
@@ -17,6 +18,7 @@ import { RecordPane } from './panes/records/record-pane.js'
 import { HelpOverlay } from './ui/help-overlay.js'
 import { InstanceBanner } from './ui/instance-banner.js'
 import { theme } from './ui/theme.js'
+import { ToastProvider } from './ui/toast-host.js'
 
 /** A cross-pane request to open a specific record in the Records pane. */
 export interface OpenRecordRequest {
@@ -44,11 +46,13 @@ export function App(props: AppProps): ReactElement {
   return (
     <SessionProvider session={props.session}>
       <UiProvider ascii={props.ascii}>
-        <Shell
-          initialPane={props.initialPane}
-          initialQuery={props.initialQuery}
-          initialTable={props.initialTable}
-        />
+        <ToastProvider>
+          <Shell
+            initialPane={props.initialPane}
+            initialQuery={props.initialQuery}
+            initialTable={props.initialTable}
+          />
+        </ToastProvider>
       </UiProvider>
     </SessionProvider>
   )
@@ -94,9 +98,9 @@ function Shell(props: ShellProps): ReactElement {
   }
 
   useInput((input, key) => {
-    const event: KeyEvent = {
+    const toEvent = (chunk: string): KeyEvent => ({
       ctrl: key.ctrl,
-      input,
+      input: chunk,
       key: {
         backspace: key.backspace,
         delete: key.delete,
@@ -114,8 +118,20 @@ function Shell(props: ShellProps): ReactElement {
         upArrow: key.upArrow,
       },
       meta: key.meta,
-    }
-    scopes.dispatch(event)
+    })
+
+    // Ink batches stdin: holding a key, fast typing, or a paste all arrive
+    // as ONE event whose input is several characters. Text scopes want the
+    // whole chunk (that IS the paste); command scopes compare single keys
+    // and would silently ignore 'jjjj'.
+    //
+    // So: offer the chunk whole first — an editor/modal scope consumes it —
+    // and only if nobody wanted it, replay it as individual keypresses so
+    // key repeat works in lists.
+    const whole = toEvent(input)
+    if (scopes.dispatch(whole)) return
+    if (input.length <= 1) return
+    for (const ch of input) scopes.dispatch(toEvent(ch))
   })
 
   useKeymap('global', (event) => {
@@ -164,21 +180,27 @@ function Shell(props: ShellProps): ReactElement {
         {helpOpen ? (
           <HelpOverlay
             entries={bindingsForPane(pane)}
+            height={bodyHeight}
             onClose={() => {
               setHelpOpen(false)
             }}
           />
         ) : (
-          <PaneBody
-            height={bodyHeight}
-            initialQuery={props.initialQuery}
-            initialTable={props.initialTable}
-            onOpenRecord={openRecord}
-            onResolveNumber={resolveNumber}
-            openRequest={openRequest}
-            pane={pane}
-            width={size.columns}
-          />
+          // ApprovalProvider renders EXCLUSIVELY: while a write is pending
+          // approval the dialog replaces the pane body, so the user cannot
+          // act on anything else mid-decision.
+          <ApprovalProvider>
+            <PaneBody
+              height={bodyHeight}
+              initialQuery={props.initialQuery}
+              initialTable={props.initialTable}
+              onOpenRecord={openRecord}
+              onResolveNumber={resolveNumber}
+              openRequest={openRequest}
+              pane={pane}
+              width={size.columns}
+            />
+          </ApprovalProvider>
         )}
       </Box>
       <Text dimColor>

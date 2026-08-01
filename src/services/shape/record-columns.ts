@@ -17,6 +17,8 @@ export interface ColumnSpec {
   minWidth?: number
   /** Higher survives longer when the terminal narrows. Default 50. */
   priority: number
+  /** Fixed width, when the column should not size to content. */
+  width?: number
 }
 
 /**
@@ -50,6 +52,23 @@ const FIELD_PRIORITY: Record<string, number> = {
 }
 
 const DEFAULT_PRIORITY = 50
+
+/**
+ * Minimum solved width per field. Identity fields must never truncate —
+ * INC0010001 cut to INC0010… defeats the whole point of the column.
+ */
+const FIELD_MIN_WIDTH: Record<string, number> = {
+  assigned_to: 14,
+  name: 16,
+  number: 12,
+  priority: 10,
+  short_description: 16,
+  state: 12,
+  sys_updated_on: 19,
+  user_name: 12,
+}
+
+const DEFAULT_MIN_WIDTH = 10
 
 /**
  * The CLI's historical column derivation, extracted verbatim from
@@ -115,7 +134,7 @@ export function chooseRecordColumns(
     flex: key === 'short_description' || key === 'name' ? 1 : undefined,
     header: key,
     key,
-    minWidth: 8,
+    minWidth: FIELD_MIN_WIDTH[key] ?? DEFAULT_MIN_WIDTH,
     priority: FIELD_PRIORITY[key] ?? DEFAULT_PRIORITY,
   }))
 }

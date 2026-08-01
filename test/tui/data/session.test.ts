@@ -8,6 +8,7 @@ jest.unstable_mockModule('@sonisoft/now-sdk-ext-core', () => ({
   ScopeManager: jest.fn(),
   SyslogReader: jest.fn(),
   TableAPIRequest: jest.fn(),
+  TaskOperations: jest.fn(),
   UpdateSetManager: jest.fn(),
 }))
 

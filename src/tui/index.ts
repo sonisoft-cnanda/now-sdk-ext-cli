@@ -14,6 +14,7 @@ import { enterAltScreen, exitAltScreen, registerCleanup, runCleanup } from './bo
 
 export interface StartTuiOptions {
   alias: string
+  approveAll?: boolean
   ascii?: boolean
   initialPane?: PaneId
   initialQuery?: string
@@ -26,6 +27,7 @@ export interface StartTuiOptions {
 export async function startTui(options: StartTuiOptions): Promise<void> {
   const session = createSession({
     alias: options.alias,
+    approveAll: options.approveAll,
     instance: options.instance,
     readOnly: options.readOnly,
     scrollback: options.scrollback,
