@@ -15,8 +15,9 @@ import { NexGateway } from '../data/gateway.js'
 
 /** Structural view of core's ServiceNowInstance — the two methods used. */
 export interface InstanceLike {
-  getHost(): string
-  getUserName(): string
+  getHost(): string | undefined
+  // OAuth credentials carry no username at all — undefined is legitimate.
+  getUserName(): string | undefined
 }
 
 export interface TuiSession {
@@ -65,8 +66,8 @@ export interface CreateSessionOptions {
 }
 
 export function createSession(options: CreateSessionOptions): TuiSession {
-  const host = options.instance.getHost()
-  const user = options.instance.getUserName()
+  const host = options.instance.getHost() ?? ''
+  const user = options.instance.getUserName() ?? ''
   const env = classifyEnvironment(options.alias, host)
   const session: TuiSession = {
     alias: options.alias,

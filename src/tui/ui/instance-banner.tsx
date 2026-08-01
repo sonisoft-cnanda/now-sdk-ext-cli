@@ -48,8 +48,12 @@ export function InstanceBanner(props: InstanceBannerProps): ReactElement {
   const envColor = theme.env[session.env]
 
   const state = ambient.resource
-  const scope = state.status === 'ready' ? state.data.scope : '…'
-  const setName = state.status === 'ready' ? state.data.updateSetName : '…'
+  // Real update-set names run long ("Telegram Compliance Demo - SAM…") and a
+  // wrapped banner breaks the whole frame-height budget — clamp both values.
+  const clamp = (value: string, max: number) =>
+    value.length > max ? value.slice(0, max - 1) + glyphs.ellipsis : value
+  const scope = clamp(state.status === 'ready' ? state.data.scope : '…', 24)
+  const setName = clamp(state.status === 'ready' ? state.data.updateSetName : '…', 28)
   const setWarn = state.status === 'ready' && state.data.updateSetIsDefault
 
   const host = session.host.replace(/^https?:\/\//, '')
@@ -58,7 +62,8 @@ export function InstanceBanner(props: InstanceBannerProps): ReactElement {
 
   const body = [
     `${session.alias}  ${host}`,
-    ...(narrow ? [] : [session.user]),
+    // OAuth credentials have no username — omit rather than print blank.
+    ...(narrow || !session.user ? [] : [session.user]),
     `scope ${scope}`,
     `set ${setName}${setWarn ? ` ${glyphs.warn}` : ''}`,
     ...(session.readOnly ? ['READ-ONLY'] : []),

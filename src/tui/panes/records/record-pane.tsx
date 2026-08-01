@@ -186,6 +186,13 @@ export function RecordPane(props: RecordPaneProps): ReactElement {
     props.active && !pickerOpen && !editingQuery && !inForm,
   )
 
+  const commitQuery = useCallback((value: string) => {
+    setQuery(value)
+    setQueryDraft(null)
+    setOffset(0)
+    setCursor(0)
+  }, [])
+
   // Query editing — an 'editor' scope that owns the keyboard while open.
   useKeymap(
     'editor',
@@ -196,10 +203,7 @@ export function RecordPane(props: RecordPaneProps): ReactElement {
       }
 
       if (event.key.return) {
-        setQuery(queryDraft ?? '')
-        setQueryDraft(null)
-        setOffset(0)
-        setCursor(0)
+        commitQuery(queryDraft ?? '')
         return 'handled'
       }
 
@@ -209,7 +213,20 @@ export function RecordPane(props: RecordPaneProps): ReactElement {
       }
 
       if (event.input && !event.ctrl && !event.meta) {
-        setQueryDraft((d) => (d ?? '') + event.input)
+        // Fast typing and pastes arrive as ONE multi-char event, possibly
+        // with an embedded newline — ink batches stdin chunks. Text before
+        // the first newline is appended; the newline commits. Control
+        // characters never reach the draft (a stray \r inside an encoded
+        // query silently corrupts the API call).
+        const [first, ...rest] = event.input.split(/[\n\r]/)
+        // eslint-disable-next-line no-control-regex
+        const clean = first.replaceAll(/[\u0000-\u001F\u007F]/g, '')
+        if (rest.length > 0) {
+          commitQuery((queryDraft ?? '') + clean)
+        } else if (clean.length > 0) {
+          setQueryDraft((d) => (d ?? '') + clean)
+        }
+
         return 'handled'
       }
 
@@ -300,7 +317,11 @@ export function RecordPane(props: RecordPaneProps): ReactElement {
           cursor={Math.min(cursor, Math.max(0, tableRows.length - 1))}
           emptyState={
             <Text dimColor>
-              {page.resource.status === 'loading' ? 'Loading…' : table ? 'No records match' : 'Pick a table with t'}
+              {page.resource.status === 'ready'
+                ? 'No records match'
+                : table
+                  ? 'Loading…'
+                  : 'Pick a table with t'}
             </Text>
           }
           height={props.height - 3}
