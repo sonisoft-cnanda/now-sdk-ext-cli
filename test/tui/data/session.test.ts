@@ -4,6 +4,8 @@ import { describe, expect, it, jest } from '@jest/globals'
 // unstable_mockModule + dynamic import is the working pattern.
 jest.unstable_mockModule('@sonisoft/now-sdk-ext-core', () => ({
   AggregateQuery: jest.fn(),
+  ATFTestExecutor: jest.fn(),
+  FlowManager: jest.fn(),
   BackgroundScriptExecutor: jest.fn(),
   SchemaDiscovery: jest.fn(),
   ScopeManager: jest.fn(),

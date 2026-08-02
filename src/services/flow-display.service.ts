@@ -1,5 +1,7 @@
 import type { FlowContextDetailsResult, FlowLogResult } from '@sonisoft/now-sdk-ext-core'
 
+import { sortFlowReports, stepLabel } from './shape/flow-report.js'
+
 export interface FlowCopyResult {
   success: boolean;
   newFlowSysId?: string;
@@ -306,15 +308,15 @@ export class FlowDisplayService {
     if (report) {
       const actionReports = Object.values(report.actionOperationsReports ?? {});
       const subflowReports = Object.values(report.subflowOperationsReports ?? {});
-      const allReports = [...actionReports, ...subflowReports].sort(
-        (a, b) => (parseInt(a.operationsCore.order, 10) || 0) - (parseInt(b.operationsCore.order, 10) || 0)
-      );
+      // Step ordering lives in shape/flow-report — shared with the TUI's
+      // execution tree so both agree on what "step 3" means.
+      const allReports = sortFlowReports(actionReports, subflowReports);
 
       if (allReports.length > 0) {
         lines.push("");
         lines.push("  Action Results:");
         allReports.forEach((action, idx) => {
-          const label = action.stepLabel ?? action.actionTypeName ?? `Action ${action.actionName}`;
+          const label = stepLabel(action);
           const state = action.operationsCore.state;
           const runTime = action.operationsCore.runTime;
           lines.push(`    ${idx + 1}. ${label}  [${state}, ${runTime}ms]`);
