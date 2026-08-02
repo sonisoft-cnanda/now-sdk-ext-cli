@@ -548,6 +548,8 @@ nex bulk update --table incident --query "state=7" --data '{"active":"false"}' -
 * [Add credentials (interactive - will prompt for username/password)](#add-credentials-interactive---will-prompt-for-usernamepassword)
 * [Set as default (optional)](#set-as-default-optional)
 * [List configured authentication profiles](#list-configured-authentication-profiles)
+* [One-time migration of existing keyring credentials.](#one-time-migration-of-existing-keyring-credentials)
+* [Run this from a desktop session — the keyring will prompt to unlock.](#run-this-from-a-desktop-session--the-keyring-will-prompt-to-unlock)
 * [Start interactive REPL](#start-interactive-repl)
 * [Execute an ATF test](#execute-an-atf-test)
 * [List repository applications](#list-repository-applications)
@@ -580,6 +582,20 @@ nex bulk update --table incident --query "state=7" --data '{"active":"false"}' -
 * [Check only version and stuck jobs](#check-only-version-and-stuck-jobs)
 * [Health check with custom stuck job threshold (60 minutes)](#health-check-with-custom-stuck-job-threshold-60-minutes)
 * [JSON output for monitoring/alerting](#json-output-for-monitoringalerting)
+* [Execute a flow in foreground (waits for completion)](#execute-a-flow-in-foreground-waits-for-completion)
+* [Execute with inputs](#execute-with-inputs)
+* [Execute a subflow](#execute-a-subflow)
+* [Execute an action](#execute-an-action)
+* [Check flow status](#check-flow-status)
+* [Retrieve flow outputs](#retrieve-flow-outputs)
+* [Check for errors](#check-for-errors)
+* [Cancel a running flow](#cancel-a-running-flow)
+* [Send a message to a waiting flow (e.g., approval)](#send-a-message-to-a-waiting-flow-eg-approval)
+* [Dry-run: preview which records would be updated (safe default)](#dry-run-preview-which-records-would-be-updated-safe-default)
+* [Confirm bulk update (actually modifies records)](#confirm-bulk-update-actually-modifies-records)
+* [Dry-run: preview which records would be deleted](#dry-run-preview-which-records-would-be-deleted)
+* [Confirm bulk delete with limit](#confirm-bulk-delete-with-limit)
+* [JSON output for scripting](#json-output-for-scripting)
 * [Usage](#usage)
 * [Commands](#commands)
 * [Global scope](#global-scope)
@@ -658,7 +674,7 @@ nex bulk update --table incident --query "state=7" --data '{"active":"false"}' -
 * [Clone the repository](#clone-the-repository)
 * [Install dependencies](#install-dependencies)
 * [Build](#build)
-* [Run tests (960+ tests)](#run-tests-864-tests)
+* [Run tests (960+ tests)](#run-tests-960-tests)
 * [Run linter](#run-linter)
 * [Test locally](#test-locally)
 * [All tests](#all-tests)
@@ -673,7 +689,7 @@ $ npm install -g @sonisoft/now-sdk-ext-cli
 $ nex COMMAND
 running command...
 $ nex (--version)
-@sonisoft/now-sdk-ext-cli/2.0.0-alpha.0 linux-x64 node-v22.16.0
+@sonisoft/now-sdk-ext-cli/5.0.1 linux-x64 node-v26.5.0
 $ nex --help [COMMAND]
 USAGE
   $ nex COMMAND
@@ -695,6 +711,10 @@ USAGE
 * [`nex attachment get`](#nex-attachment-get)
 * [`nex attachment list`](#nex-attachment-list)
 * [`nex attachment upload`](#nex-attachment-upload)
+* [`nex auth delete [ALIAS]`](#nex-auth-delete-alias)
+* [`nex auth doctor`](#nex-auth-doctor)
+* [`nex auth list`](#nex-auth-list)
+* [`nex auth use ALIAS`](#nex-auth-use-alias)
 * [`nex autocomplete [SHELL]`](#nex-autocomplete-shell)
 * [`nex batch create`](#nex-batch-create)
 * [`nex batch update`](#nex-batch-update)
@@ -703,12 +723,16 @@ USAGE
 * [`nex exec SCOPE [FILE]`](#nex-exec-scope-file)
 * [`nex flow action`](#nex-flow-action)
 * [`nex flow cancel`](#nex-flow-cancel)
+* [`nex flow copy`](#nex-flow-copy)
+* [`nex flow details`](#nex-flow-details)
 * [`nex flow error`](#nex-flow-error)
+* [`nex flow logs`](#nex-flow-logs)
 * [`nex flow message`](#nex-flow-message)
 * [`nex flow outputs`](#nex-flow-outputs)
 * [`nex flow run`](#nex-flow-run)
 * [`nex flow status`](#nex-flow-status)
 * [`nex flow subflow`](#nex-flow-subflow)
+* [`nex flow test`](#nex-flow-test)
 * [`nex health check`](#nex-health-check)
 * [`nex help [COMMAND]`](#nex-help-command)
 * [`nex log`](#nex-log)
@@ -748,6 +772,7 @@ USAGE
 * [`nex task comment`](#nex-task-comment)
 * [`nex task find`](#nex-task-find)
 * [`nex task resolve`](#nex-task-resolve)
+* [`nex tui`](#nex-tui)
 * [`nex update-set`](#nex-update-set)
 * [`nex update-set clone`](#nex-update-set-clone)
 * [`nex update-set create`](#nex-update-set-create)
@@ -756,6 +781,8 @@ USAGE
 * [`nex update-set move`](#nex-update-set-move)
 * [`nex workflow create`](#nex-workflow-create)
 * [`nex workflow publish`](#nex-workflow-publish)
+* [`nex xml export`](#nex-xml-export)
+* [`nex xml import`](#nex-xml-import)
 
 ## `nex aggregate count`
 
@@ -763,7 +790,8 @@ Count records in a ServiceNow table.
 
 ```
 USAGE
-  $ nex aggregate count -t <value> [-j] [-a <value>] [--log-level debug|warn|error|info|trace] [-q <value>]
+  $ nex aggregate count -t <value> [-j] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace] [-q
+    <value>]
 
 FLAGS
   -a, --auth=<value>   Auth alias to use.
@@ -772,6 +800,8 @@ FLAGS
   -t, --table=<value>  (required) ServiceNow table name to count records in
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
 
@@ -799,7 +829,7 @@ EXAMPLES
     $ nex aggregate count --table incident --query "active=true" --json --auth dev
 ```
 
-_See code: [src/commands/aggregate/count.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/aggregate/count.ts)_
+_See code: [src/commands/aggregate/count.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/aggregate/count.ts)_
 
 ## `nex aggregate group`
 
@@ -807,8 +837,9 @@ Run a grouped aggregate query on a ServiceNow table.
 
 ```
 USAGE
-  $ nex aggregate group -t <value> -g <value>... [-j] [-a <value>] [--log-level debug|warn|error|info|trace] [-q
-    <value>] [-c] [--avg <value>...] [--min <value>...] [--max <value>...] [--sum <value>...] [--having <value>] [-d]
+  $ nex aggregate group -t <value> -g <value>... [-j] [-a <value>] [--cred-store] [--log-level
+    debug|warn|error|info|trace] [-q <value>] [-c] [--avg <value>...] [--min <value>...] [--max <value>...] [--sum
+    <value>...] [--having <value>] [-d]
 
 FLAGS
   -a, --auth=<value>         Auth alias to use.
@@ -825,6 +856,8 @@ FLAGS
       --sum=<value>...       Comma-separated field names to compute SUM on per group
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
 
@@ -856,7 +889,7 @@ EXAMPLES
     $ nex aggregate group --table incident --group-by priority --count --having "count>10" --auth dev
 ```
 
-_See code: [src/commands/aggregate/group.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/aggregate/group.ts)_
+_See code: [src/commands/aggregate/group.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/aggregate/group.ts)_
 
 ## `nex aggregate query`
 
@@ -864,8 +897,8 @@ Run aggregate statistics on a ServiceNow table.
 
 ```
 USAGE
-  $ nex aggregate query -t <value> [-j] [-a <value>] [--log-level debug|warn|error|info|trace] [-q <value>] [-c]
-    [--avg <value>...] [--min <value>...] [--max <value>...] [--sum <value>...]
+  $ nex aggregate query -t <value> [-j] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace] [-q
+    <value>] [-c] [--avg <value>...] [--min <value>...] [--max <value>...] [--sum <value>...]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
@@ -879,6 +912,8 @@ FLAGS
       --sum=<value>...  Comma-separated field names to compute SUM on
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
 
@@ -908,7 +943,7 @@ EXAMPLES
     $ nex aggregate query --table incident --sum reassignment_count --json --auth dev
 ```
 
-_See code: [src/commands/aggregate/query.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/aggregate/query.ts)_
+_See code: [src/commands/aggregate/query.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/aggregate/query.ts)_
 
 ## `nex app`
 
@@ -916,7 +951,8 @@ Manage ServiceNow applications: uninstall applications from your instance.
 
 ```
 USAGE
-  $ nex app [--json] [-a <value>] [--log-level debug|warn|error|info|trace] [-u] [-i <value>] [-s <value>]
+  $ nex app [--json] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace] [-u] [-i
+    <value>] [-s <value>]
 
 FLAGS
   -a, --auth=<value>           Auth alias to use.
@@ -925,6 +961,8 @@ FLAGS
   -u, --uninstall              Uninstall the app
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -960,7 +998,7 @@ EXAMPLES
     $ nex app -u -i a1b2c3d4e5f6 -s x_my_custom_app -a dev-instance
 ```
 
-_See code: [src/commands/app/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/app/index.ts)_
+_See code: [src/commands/app/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/app/index.ts)_
 
 ## `nex app install`
 
@@ -968,7 +1006,8 @@ Install or upgrade multiple ServiceNow applications from a batch definition file
 
 ```
 USAGE
-  $ nex app install [--json] [-a <value>] [--log-level debug|warn|error|info|trace] [-b] [-d <value>]
+  $ nex app install [--json] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace] [-b] [-d
+    <value>]
 
 FLAGS
   -a, --auth=<value>            Auth alias to use.
@@ -976,6 +1015,8 @@ FLAGS
   -d, --definitionPath=<value>  Path to JSON batch definition file containing applications to install
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -1017,7 +1058,7 @@ EXAMPLES
     $ nex app install -b -d ./apps.json -a dev-instance --log-level debug
 ```
 
-_See code: [src/commands/app/install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/app/install.ts)_
+_See code: [src/commands/app/install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/app/install.ts)_
 
 ## `nex app repo-install`
 
@@ -1025,8 +1066,8 @@ Install an application from your ServiceNow company repository.
 
 ```
 USAGE
-  $ nex app repo-install -s <value> [--json] [-a <value>] [--log-level debug|warn|error|info|trace] [-w]
-    [--poll-interval <value>] [-t <value>] [-v <value>]
+  $ nex app repo-install -s <value> [--json] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace]
+    [-w] [--poll-interval <value>] [-t <value>] [-v <value>]
 
 FLAGS
   -a, --auth=<value>           Auth alias to use.
@@ -1037,6 +1078,8 @@ FLAGS
       --poll-interval=<value>  [default: 5000] Polling interval in milliseconds (default: 5000)
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -1091,7 +1134,7 @@ EXAMPLES
     $ nex app repo-install -s x_my_app -a dev-instance --log-level debug
 ```
 
-_See code: [src/commands/app/repo-install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/app/repo-install.ts)_
+_See code: [src/commands/app/repo-install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/app/repo-install.ts)_
 
 ## `nex app repo-list`
 
@@ -1099,7 +1142,7 @@ List applications available in your ServiceNow company repository.
 
 ```
 USAGE
-  $ nex app repo-list [-j] [-a <value>] [--log-level debug|warn|error|info|trace] [-n] [-i]
+  $ nex app repo-list [-j] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace] [-n] [-i]
 
 FLAGS
   -a, --auth=<value>  Auth alias to use.
@@ -1108,6 +1151,8 @@ FLAGS
   -n, --installable   Show only applications that can be installed (not yet installed)
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
 
@@ -1155,7 +1200,7 @@ EXAMPLES
     $ nex app repo-list -a dev-instance
 ```
 
-_See code: [src/commands/app/repo-list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/app/repo-list.ts)_
+_See code: [src/commands/app/repo-list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/app/repo-list.ts)_
 
 ## `nex app uninstall`
 
@@ -1163,7 +1208,8 @@ Uninstall a ServiceNow application from your instance.
 
 ```
 USAGE
-  $ nex app uninstall -i <value> -s <value> [--json] [-a <value>] [--log-level debug|warn|error|info|trace]
+  $ nex app uninstall -i <value> -s <value> [--json] [-a <value>] [--cred-store] [--log-level
+    debug|warn|error|info|trace]
 
 FLAGS
   -a, --auth=<value>           Auth alias to use.
@@ -1171,6 +1217,8 @@ FLAGS
   -s, --scope=<value>          (required) Scope of application
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -1206,7 +1254,7 @@ EXAMPLES
     $ nex app uninstall -i a1b2c3d4e5f6 -s x_my_custom_app -a dev-instance
 ```
 
-_See code: [src/commands/app/uninstall.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/app/uninstall.ts)_
+_See code: [src/commands/app/uninstall.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/app/uninstall.ts)_
 
 ## `nex atf`
 
@@ -1214,9 +1262,9 @@ Execute ATF (Automated Test Framework) tests or test suites on a ServiceNow inst
 
 ```
 USAGE
-  $ nex atf [-j] [-a <value>] [--log-level debug|warn|error|info|trace] [-t <value> | -s <value> | -n
-    <value>] [-w] [-p <value>] [-b <value>] [--browser-version <value>] [--os-name <value>] [--os-version <value>]
-    [--performance] [--cloud]
+  $ nex atf [-j] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace] [-t <value> | -s
+    <value> | -n <value>] [-w] [-p <value>] [-b <value>] [--browser-version <value>] [--os-name <value>] [--os-version
+    <value>] [--performance] [--cloud]
 
 FLAGS
   -a, --auth=<value>             Auth alias to use.
@@ -1234,6 +1282,8 @@ FLAGS
       --performance              Run as performance test
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
 
@@ -1278,7 +1328,7 @@ EXAMPLES
     $ nex atf --suite-id e077e00b83103210621e78c6feaad383 --poll-interval 10000 --auth dev-instance
 ```
 
-_See code: [src/commands/atf/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/atf/index.ts)_
+_See code: [src/commands/atf/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/atf/index.ts)_
 
 ## `nex attachment get`
 
@@ -1286,13 +1336,15 @@ Get metadata for a specific attachment.
 
 ```
 USAGE
-  $ nex attachment get -s <value> [--json] [-a <value>] [--log-level debug|warn|error|info|trace]
+  $ nex attachment get -s <value> [--json] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
   -s, --sys-id=<value>  (required) Sys ID of the attachment
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -1310,7 +1362,7 @@ EXAMPLES
     $ nex attachment get -s att123 --json --auth dev
 ```
 
-_See code: [src/commands/attachment/get.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/attachment/get.ts)_
+_See code: [src/commands/attachment/get.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/attachment/get.ts)_
 
 ## `nex attachment list`
 
@@ -1318,8 +1370,8 @@ List attachments on a ServiceNow record.
 
 ```
 USAGE
-  $ nex attachment list -t <value> -r <value> [--json] [-a <value>] [--log-level debug|warn|error|info|trace]
-    [--limit <value>]
+  $ nex attachment list -r <value> -t <value> [--json] [-a <value>] [--cred-store] [--log-level
+    debug|warn|error|info|trace] [--limit <value>]
 
 FLAGS
   -a, --auth=<value>       Auth alias to use.
@@ -1328,6 +1380,8 @@ FLAGS
       --limit=<value>      [default: 20] Maximum number of attachments to return
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -1345,7 +1399,7 @@ EXAMPLES
     $ nex attachment list -t incident -r abc123 --limit 50 --json --auth dev
 ```
 
-_See code: [src/commands/attachment/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/attachment/list.ts)_
+_See code: [src/commands/attachment/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/attachment/list.ts)_
 
 ## `nex attachment upload`
 
@@ -1353,7 +1407,7 @@ Upload a file as an attachment to a ServiceNow record.
 
 ```
 USAGE
-  $ nex attachment upload -t <value> -r <value> -f <value> [--json] [-a <value>] [--log-level
+  $ nex attachment upload -f <value> -r <value> -t <value> [--json] [-a <value>] [--cred-store] [--log-level
     debug|warn|error|info|trace] [--content-type <value>]
 
 FLAGS
@@ -1364,6 +1418,8 @@ FLAGS
       --content-type=<value>  MIME content type of the file
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -1381,7 +1437,131 @@ EXAMPLES
     $ nex attachment upload -t incident -r abc123 -f ./data.csv --content-type text/csv --auth dev
 ```
 
-_See code: [src/commands/attachment/upload.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/attachment/upload.ts)_
+_See code: [src/commands/attachment/upload.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/attachment/upload.ts)_
+
+## `nex auth delete [ALIAS]`
+
+Remove a credential from the store.
+
+```
+USAGE
+  $ nex auth delete [ALIAS] [--cred-store] [--all]
+
+ARGUMENTS
+  [ALIAS]  Alias to remove
+
+FLAGS
+  --all  Remove every stored credential
+
+GLOBAL FLAGS
+  --cred-store  Accepted for symmetry with other commands and ignored — the auth commands always use
+                @sonisoft/sn-credstore.
+
+DESCRIPTION
+  Remove a credential from the store.
+
+  This does not touch the OS keyring — a copy stored there before migrating remains.
+
+EXAMPLES
+  Remove one alias
+
+    $ nex auth delete dev206299
+
+  Remove every stored credential
+
+    $ nex auth delete --all
+```
+
+_See code: [src/commands/auth/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/auth/delete.ts)_
+
+## `nex auth doctor`
+
+Diagnose credential storage: whether the SDK shim is active, which backend is in use, and what is stored.
+
+```
+USAGE
+  $ nex auth doctor [--json] [--cred-store]
+
+GLOBAL FLAGS
+  --cred-store  Accepted for symmetry with other commands and ignored — the auth commands always use
+                @sonisoft/sn-credstore.
+  --json        Format output as json.
+
+DESCRIPTION
+  Diagnose credential storage: whether the SDK shim is active, which backend is in use, and what is stored.
+
+EXAMPLES
+  Check credential storage health
+
+    $ nex auth doctor
+
+  Machine-readable output for CI
+
+    $ nex auth doctor --json
+```
+
+_See code: [src/commands/auth/doctor.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/auth/doctor.ts)_
+
+## `nex auth list`
+
+List credentials in the headless-safe credential store.
+
+```
+USAGE
+  $ nex auth list [--json] [--cred-store]
+
+GLOBAL FLAGS
+  --cred-store  Accepted for symmetry with other commands and ignored — the auth commands always use
+                @sonisoft/sn-credstore.
+  --json        Format output as json.
+
+DESCRIPTION
+  List credentials in the headless-safe credential store.
+
+  These are the credentials the ServiceNow SDK reads via the sn-credstore shim, which works in non-interactive sessions
+  where the OS keyring cannot be unlocked.
+
+  Secrets are never printed.
+
+EXAMPLES
+  List stored credentials
+
+    $ nex auth list
+
+  List as JSON for scripting
+
+    $ nex auth list --json
+```
+
+_See code: [src/commands/auth/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/auth/list.ts)_
+
+## `nex auth use ALIAS`
+
+Set the default credential alias.
+
+```
+USAGE
+  $ nex auth use ALIAS [--cred-store]
+
+ARGUMENTS
+  ALIAS  Alias to make the default
+
+GLOBAL FLAGS
+  --cred-store  Accepted for symmetry with other commands and ignored — the auth commands always use
+                @sonisoft/sn-credstore.
+
+DESCRIPTION
+  Set the default credential alias.
+
+  Commands run without --auth use this alias.
+
+EXAMPLES
+  Make dev206299 the default
+
+    $ nex auth use dev206299
+```
+
+_See code: [src/commands/auth/use.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/auth/use.ts)_
 
 ## `nex autocomplete [SHELL]`
 
@@ -1392,7 +1572,7 @@ USAGE
   $ nex autocomplete [SHELL] [-r]
 
 ARGUMENTS
-  SHELL  (zsh|bash|powershell) Shell type
+  [SHELL]  (zsh|bash|powershell) Shell type
 
 FLAGS
   -r, --refresh-cache  Refresh cache (ignores displaying instructions)
@@ -1412,7 +1592,7 @@ EXAMPLES
   $ nex autocomplete --refresh-cache
 ```
 
-_See code: [@oclif/plugin-autocomplete](https://github.com/oclif/plugin-autocomplete/blob/v3.2.35/src/commands/autocomplete/index.ts)_
+_See code: [@oclif/plugin-autocomplete](https://github.com/oclif/plugin-autocomplete/blob/v3.2.54/src/commands/autocomplete/index.ts)_
 
 ## `nex batch create`
 
@@ -1420,7 +1600,8 @@ Batch create records on a ServiceNow instance from a JSON file.
 
 ```
 USAGE
-  $ nex batch create -f <value> [--json] [-a <value>] [--log-level debug|warn|error|info|trace] [--transaction]
+  $ nex batch create -f <value> [--json] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace]
+    [--transaction]
 
 FLAGS
   -a, --auth=<value>  Auth alias to use.
@@ -1428,6 +1609,8 @@ FLAGS
       --transaction   Stop on first error (transactional)
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -1445,7 +1628,7 @@ EXAMPLES
     $ nex batch create --file ./records.json --no-transaction --auth dev
 ```
 
-_See code: [src/commands/batch/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/batch/create.ts)_
+_See code: [src/commands/batch/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/batch/create.ts)_
 
 ## `nex batch update`
 
@@ -1453,7 +1636,8 @@ Batch update records on a ServiceNow instance from a JSON file.
 
 ```
 USAGE
-  $ nex batch update -f <value> [--json] [-a <value>] [--log-level debug|warn|error|info|trace] [--stop-on-error]
+  $ nex batch update -f <value> [--json] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace]
+    [--stop-on-error]
 
 FLAGS
   -a, --auth=<value>   Auth alias to use.
@@ -1461,6 +1645,8 @@ FLAGS
       --stop-on-error  Stop processing on first error
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -1478,7 +1664,7 @@ EXAMPLES
     $ nex batch update --file ./updates.json --stop-on-error --auth dev
 ```
 
-_See code: [src/commands/batch/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/batch/update.ts)_
+_See code: [src/commands/batch/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/batch/update.ts)_
 
 ## `nex bulk delete`
 
@@ -1486,8 +1672,8 @@ Bulk delete records matching an encoded query.
 
 ```
 USAGE
-  $ nex bulk delete -t <value> -q <value> [-j] [-a <value>] [--log-level debug|warn|error|info|trace] [--confirm]
-    [-l <value>]
+  $ nex bulk delete -t <value> -q <value> [-j] [-a <value>] [--cred-store] [--log-level
+    debug|warn|error|info|trace] [--confirm] [-l <value>]
 
 FLAGS
   -a, --auth=<value>   Auth alias to use.
@@ -1498,6 +1684,8 @@ FLAGS
       --confirm        Execute the delete (without this flag, performs a dry run)
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
 
@@ -1532,7 +1720,7 @@ EXAMPLES
     $ nex bulk delete --table u_staging --query "processed=true" --confirm --json --auth dev
 ```
 
-_See code: [src/commands/bulk/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/bulk/delete.ts)_
+_See code: [src/commands/bulk/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/bulk/delete.ts)_
 
 ## `nex bulk update`
 
@@ -1540,8 +1728,8 @@ Bulk update records matching an encoded query.
 
 ```
 USAGE
-  $ nex bulk update -t <value> -q <value> -d <value> [-j] [-a <value>] [--log-level debug|warn|error|info|trace]
-    [--confirm] [-l <value>]
+  $ nex bulk update -t <value> -q <value> -d <value> [-j] [-a <value>] [--cred-store] [--log-level
+    debug|warn|error|info|trace] [--confirm] [-l <value>]
 
 FLAGS
   -a, --auth=<value>   Auth alias to use.
@@ -1553,6 +1741,8 @@ FLAGS
       --confirm        Execute the update (without this flag, performs a dry run)
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
 
@@ -1590,7 +1780,7 @@ EXAMPLES
     $ nex bulk update --table incident --query "active=true" --data '{"state":"6"}' --confirm --json --auth dev
 ```
 
-_See code: [src/commands/bulk/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/bulk/update.ts)_
+_See code: [src/commands/bulk/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/bulk/update.ts)_
 
 ## `nex exec SCOPE [FILE]`
 
@@ -1598,17 +1788,20 @@ Execute JavaScript on a ServiceNow instance remotely using Scripts - Background.
 
 ```
 USAGE
-  $ nex exec SCOPE [FILE] [--json] [-a <value>] [--log-level debug|warn|error|info|trace] [-p <value>]
+  $ nex exec SCOPE [FILE] [--json] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace]
+    [-p <value>]
 
 ARGUMENTS
-  SCOPE  Scope to execute script in. Use "global" for global scope.
-  FILE   File to execute in scripts background. If omitted, starts REPL mode.
+  SCOPE   Scope to execute script in. Use "global" for global scope.
+  [FILE]  File to execute in scripts background. If omitted, starts REPL mode.
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
   -p, --params=<value>  JSON object of parameters to replace in script file. Use {paramName} syntax in your script.
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -1709,7 +1902,7 @@ EXAMPLES
     $ nex exec global ./script.js --auth dev-instance --params '{"token":"abc123","env":"dev"}'
 ```
 
-_See code: [src/commands/exec/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/exec/index.ts)_
+_See code: [src/commands/exec/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/exec/index.ts)_
 
 ## `nex flow action`
 
@@ -1717,8 +1910,8 @@ Execute a Flow Designer action by scoped name.
 
 ```
 USAGE
-  $ nex flow action -n <value> [-j] [-a <value>] [--log-level debug|warn|error|info|trace] [-i <value>] [-m
-    foreground|background] [--scope <value>] [--quick]
+  $ nex flow action -n <value> [-j] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace] [-i
+    <value>] [-m foreground|background] [--scope <value>] [--quick]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
@@ -1731,6 +1924,8 @@ FLAGS
       --scope=<value>   Scope context for script execution
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
 
@@ -1752,7 +1947,7 @@ EXAMPLES
       '{"table":"incident","values":{"short_description":"Test"}}' --auth dev
 ```
 
-_See code: [src/commands/flow/action.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/flow/action.ts)_
+_See code: [src/commands/flow/action.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/flow/action.ts)_
 
 ## `nex flow cancel`
 
@@ -1760,8 +1955,8 @@ Cancel a running or paused flow execution.
 
 ```
 USAGE
-  $ nex flow cancel -c <value> [-j] [-a <value>] [--log-level debug|warn|error|info|trace] [-r <value>] [--scope
-    <value>]
+  $ nex flow cancel -c <value> [-j] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace] [-r
+    <value>] [--scope <value>]
 
 FLAGS
   -a, --auth=<value>        Auth alias to use.
@@ -1771,6 +1966,8 @@ FLAGS
       --scope=<value>       Scope context for script execution
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
 
@@ -1789,7 +1986,117 @@ EXAMPLES
     $ nex flow cancel --context-id abc123def456 --reason "No longer needed" --auth dev
 ```
 
-_See code: [src/commands/flow/cancel.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/flow/cancel.ts)_
+_See code: [src/commands/flow/cancel.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/flow/cancel.ts)_
+
+## `nex flow copy`
+
+Copy an existing flow into a target scoped application.
+
+```
+USAGE
+  $ nex flow copy -s <value> -n <value> -t <value> [-j] [-a <value>] [--cred-store] [--log-level
+    debug|warn|error|info|trace]
+
+FLAGS
+  -a, --auth=<value>            Auth alias to use.
+  -j, --json                    Output results as JSON
+  -n, --name=<value>            (required) Display name for the new copied flow
+  -s, --source-flow-id=<value>  (required) Source flow sys_id or scoped name (e.g. global.change__standard)
+  -t, --target-scope=<value>    (required) Scope sys_id of the target application (use `nex scope` to find scope
+                                sys_ids)
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+
+DESCRIPTION
+  Copy an existing flow into a target scoped application.
+
+  This is the ServiceNow best practice before modifying any flow — OOB and shared flows must never be modified directly;
+  always copy first. The copied flow lands in draft/unpublished state in the target scope.
+
+  Enables the full CLI-driven flow development lifecycle:
+  copy → pull (now-sdk transform) → modify → push → test → publish
+
+  Features:
+  • Copy flows by sys_id or scoped name
+  • Specify a display name for the new copy
+  • Target any scoped application by sys_id
+  • Returns the new flow sys_id for use in subsequent commands
+
+EXAMPLES
+  Copy an OOB flow into your app scope
+
+    $ nex flow copy --source-flow-id e89e3ade731310108ef62d2b04f6a744 --name "Copy of Change - Standard" \
+      --target-scope 4a5a6115402946939ee48e3fe80f60f8 --auth dev
+
+  Copy by scoped name
+
+    $ nex flow copy -s global.change__standard -n "My Custom Change Flow" -t 4a5a6115402946939ee48e3fe80f60f8 --auth \
+      dev
+
+  Copy with JSON output for scripting
+
+    $ nex flow copy -s e89e3ade731310108ef62d2b04f6a744 -n "Copy" -t 4a5a6115402946939ee48e3fe80f60f8 --json --auth \
+      dev
+```
+
+_See code: [src/commands/flow/copy.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/flow/copy.ts)_
+
+## `nex flow details`
+
+Get rich execution details for a flow context.
+
+```
+USAGE
+  $ nex flow details -c <value> [-j] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace]
+    [--scope <value>] [-d]
+
+FLAGS
+  -a, --auth=<value>        Auth alias to use.
+  -c, --context-id=<value>  (required) Flow context sys_id returned by flow test, flow run, flow subflow, or flow action
+  -d, --include-definition  Include the full flow definition snapshot in the response
+  -j, --json                Output results as JSON
+      --scope=<value>       Scope sys_id for the ProcessFlow API transaction scope parameter
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+
+DESCRIPTION
+  Get rich execution details for a flow context.
+
+  Returns per-action timing, inputs, outputs, and high-level metadata (state, runtime, who ran it, test vs production).
+  This is the primary diagnostic command after flow test or flow run.
+
+  Uses the ProcessFlow operations API (GET /api/now/processflow/operations/flow/context/{id}), the same endpoint Flow
+  Designer uses to display execution details.
+
+  NOTE: Requires flow operations logging to be enabled on the instance. If the execution report is unavailable, a notice
+  will explain why.
+
+  Typical workflow:
+  flow test → flow details → diagnose → modify flow → flow test again
+
+EXAMPLES
+  Get execution details after testing a flow
+
+    $ nex flow details --context-id d4e5f6789012345678abcdef01234567 --auth dev
+
+  Get details with explicit scope
+
+    $ nex flow details -c d4e5f6789012345678abcdef01234567 --scope x_myapp --auth dev
+
+  Get details with JSON output for scripting
+
+    $ nex flow details -c d4e5f6789012345678abcdef01234567 --json --auth dev
+```
+
+_See code: [src/commands/flow/details.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/flow/details.ts)_
 
 ## `nex flow error`
 
@@ -1797,7 +2104,8 @@ Retrieve error details from a failed flow execution.
 
 ```
 USAGE
-  $ nex flow error -c <value> [-j] [-a <value>] [--log-level debug|warn|error|info|trace] [--scope <value>]
+  $ nex flow error -c <value> [-j] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace]
+    [--scope <value>]
 
 FLAGS
   -a, --auth=<value>        Auth alias to use.
@@ -1806,6 +2114,8 @@ FLAGS
       --scope=<value>       Scope context for script execution
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
 
@@ -1820,7 +2130,57 @@ EXAMPLES
     $ nex flow error --context-id abc123def456 --auth dev
 ```
 
-_See code: [src/commands/flow/error.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/flow/error.ts)_
+_See code: [src/commands/flow/error.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/flow/error.ts)_
+
+## `nex flow logs`
+
+Retrieve flow execution log entries for a given context.
+
+```
+USAGE
+  $ nex flow logs -c <value> [-j] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace] [-l
+    <value>] [-o asc|desc]
+
+FLAGS
+  -a, --auth=<value>        Auth alias to use.
+  -c, --context-id=<value>  (required) Flow context sys_id returned by flow test, flow run, flow subflow, or flow action
+  -j, --json                Output results as JSON
+  -l, --limit=<value>       [default: 100] Maximum number of log entries to return
+  -o, --order=<option>      [default: asc] Order direction: asc (oldest first) or desc (newest first)
+                            <options: asc|desc>
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+
+DESCRIPTION
+  Retrieve flow execution log entries for a given context.
+
+  Log entries include error messages, step-level debug output, and cancellation reasons. Use this alongside flow details
+  to get the full picture of what happened during an execution.
+
+  Queries sys_flow_log entries and maps numeric log levels to human-readable names (ERROR, WARN, INFO, DEBUG).
+
+  NOTE: Log entries may be empty for simple successful executions, or if the flow reporting level is set to NONE. Errors
+  and warnings are always logged regardless of the reporting level setting.
+
+EXAMPLES
+  Get flow execution logs
+
+    $ nex flow logs --context-id d4e5f6789012345678abcdef01234567 --auth dev
+
+  Get latest 10 log entries in reverse order
+
+    $ nex flow logs -c d4e5f6789012345678abcdef01234567 --limit 10 --order desc --auth dev
+
+  Get logs with JSON output for scripting
+
+    $ nex flow logs -c d4e5f6789012345678abcdef01234567 --json --auth dev
+```
+
+_See code: [src/commands/flow/logs.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/flow/logs.ts)_
 
 ## `nex flow message`
 
@@ -1828,8 +2188,8 @@ Send a message to a paused flow execution.
 
 ```
 USAGE
-  $ nex flow message -c <value> -m <value> [-j] [-a <value>] [--log-level debug|warn|error|info|trace] [-p
-    <value>] [--scope <value>]
+  $ nex flow message -c <value> -m <value> [-j] [-a <value>] [--cred-store] [--log-level
+    debug|warn|error|info|trace] [-p <value>] [--scope <value>]
 
 FLAGS
   -a, --auth=<value>        Auth alias to use.
@@ -1840,6 +2200,8 @@ FLAGS
       --scope=<value>       Scope context for script execution
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
 
@@ -1859,7 +2221,7 @@ EXAMPLES
     $ nex flow message --context-id abc123def456 --message "data_ready" --payload '{"status":"ok"}' --auth dev
 ```
 
-_See code: [src/commands/flow/message.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/flow/message.ts)_
+_See code: [src/commands/flow/message.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/flow/message.ts)_
 
 ## `nex flow outputs`
 
@@ -1867,7 +2229,8 @@ Retrieve outputs from a completed flow execution.
 
 ```
 USAGE
-  $ nex flow outputs -c <value> [-j] [-a <value>] [--log-level debug|warn|error|info|trace] [--scope <value>]
+  $ nex flow outputs -c <value> [-j] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace]
+    [--scope <value>]
 
 FLAGS
   -a, --auth=<value>        Auth alias to use.
@@ -1876,6 +2239,8 @@ FLAGS
       --scope=<value>       Scope context for script execution
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
 
@@ -1894,16 +2259,16 @@ EXAMPLES
     $ nex flow outputs --context-id abc123def456 --json --auth dev
 ```
 
-_See code: [src/commands/flow/outputs.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/flow/outputs.ts)_
+_See code: [src/commands/flow/outputs.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/flow/outputs.ts)_
 
 ## `nex flow run`
 
-Execute a Flow Designer flow by scoped name.
+Execute a published Flow Designer flow by scoped name.
 
 ```
 USAGE
-  $ nex flow run -n <value> [-j] [-a <value>] [--log-level debug|warn|error|info|trace] [-i <value>] [-m
-    foreground|background] [--scope <value>] [--quick]
+  $ nex flow run -n <value> [-j] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace] [-i
+    <value>] [-m foreground|background] [--scope <value>] [--quick]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
@@ -1916,14 +2281,19 @@ FLAGS
       --scope=<value>   Scope context for script execution (e.g. global, x_myapp)
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
 
 DESCRIPTION
-  Execute a Flow Designer flow by scoped name.
+  Execute a published Flow Designer flow by scoped name.
 
   Runs a flow using the sn_fd.FlowAPI ScriptableFlowRunner. Supports foreground (synchronous) and background
   (asynchronous) execution modes.
+
+  Note: This command requires the flow to be published. For testing flows that are not yet published (draft/saved
+  state), use `flow test` instead.
 
   Features:
   • Execute flows by scoped name (e.g. global.my_flow)
@@ -1946,7 +2316,7 @@ EXAMPLES
     $ nex flow run --name global.my_flow --mode background --auth dev
 ```
 
-_See code: [src/commands/flow/run.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/flow/run.ts)_
+_See code: [src/commands/flow/run.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/flow/run.ts)_
 
 ## `nex flow status`
 
@@ -1954,7 +2324,8 @@ Get the status of a flow execution context.
 
 ```
 USAGE
-  $ nex flow status -c <value> [-j] [-a <value>] [--log-level debug|warn|error|info|trace] [--scope <value>]
+  $ nex flow status -c <value> [-j] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace]
+    [--scope <value>]
 
 FLAGS
   -a, --auth=<value>        Auth alias to use.
@@ -1963,6 +2334,8 @@ FLAGS
       --scope=<value>       Scope context for script execution
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
 
@@ -1979,16 +2352,16 @@ EXAMPLES
     $ nex flow status --context-id abc123def456 --auth dev
 ```
 
-_See code: [src/commands/flow/status.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/flow/status.ts)_
+_See code: [src/commands/flow/status.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/flow/status.ts)_
 
 ## `nex flow subflow`
 
-Execute a Flow Designer subflow by scoped name.
+Execute a published Flow Designer subflow by scoped name.
 
 ```
 USAGE
-  $ nex flow subflow -n <value> [-j] [-a <value>] [--log-level debug|warn|error|info|trace] [-i <value>] [-m
-    foreground|background] [--scope <value>] [--quick]
+  $ nex flow subflow -n <value> [-j] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace] [-i
+    <value>] [-m foreground|background] [--scope <value>] [--quick]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
@@ -2001,13 +2374,18 @@ FLAGS
       --scope=<value>   Scope context for script execution
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
 
 DESCRIPTION
-  Execute a Flow Designer subflow by scoped name.
+  Execute a published Flow Designer subflow by scoped name.
 
   Runs a subflow using the sn_fd.FlowAPI ScriptableFlowRunner.
+
+  Note: This command requires the subflow to be published. For testing flows that are not yet published (draft/saved
+  state), use `flow test` instead.
 
   Features:
   • Execute subflows by scoped name
@@ -2025,7 +2403,61 @@ EXAMPLES
     $ nex flow subflow --name x_myapp.process_record --inputs '{"table":"incident","sys_id":"abc123"}' --auth dev
 ```
 
-_See code: [src/commands/flow/subflow.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/flow/subflow.ts)_
+_See code: [src/commands/flow/subflow.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/flow/subflow.ts)_
+
+## `nex flow test`
+
+Test a Flow Designer flow without requiring it to be published.
+
+```
+USAGE
+  $ nex flow test -f <value> -o <value> [-j] [-a <value>] [--cred-store] [--log-level
+    debug|warn|error|info|trace] [--scope <value>] [--synchronous]
+
+FLAGS
+  -a, --auth=<value>        Auth alias to use.
+  -f, --flow-id=<value>     (required) Flow sys_id or scoped name (e.g. x_myapp.my_flow)
+  -j, --json                Output results as JSON
+  -o, --output-map=<value>  (required) JSON mapping of trigger output variable names to test values (e.g.
+                            '{"current":"<sys_id>","table_name":"change_request"}')
+      --scope=<value>       Scope sys_id for transaction scope (auto-resolved from flow definition if omitted)
+      --[no-]synchronous    Run test synchronously (default: true)
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+
+DESCRIPTION
+  Test a Flow Designer flow without requiring it to be published.
+
+  Invokes the same API as the "Test" button in Flow Designer, running the flow in its current saved (draft) state.
+  Unlike `flow run` which requires a published flow and uses sn_fd.FlowAPI, `flow test` works on unpublished drafts via
+  the ProcessFlow REST API.
+
+  Features:
+  • Test flows by sys_id or scoped name
+  • Pass trigger output values as JSON via --output-map
+  • Auto-resolves scope from flow definition if not provided
+  • Synchronous or asynchronous execution
+
+EXAMPLES
+  Test a flow by sys_id
+
+    $ nex flow test --flow-id 887dda5583237210fdb8f7b6feaad32c --output-map \
+      '{"current":"0ecd7552db252200a6a2b31be0b8f5e6","table_name":"change_request"}' --auth dev
+
+  Test a flow by scoped name with explicit scope
+
+    $ nex flow test -f x_myapp.my_flow -o '{"current":"abc123","table_name":"incident"}' --scope x_myapp --auth dev
+
+  Test with JSON output
+
+    $ nex flow test -f 887dda5583237210fdb8f7b6feaad32c -o '{"current":"abc123"}' --json --auth dev
+```
+
+_See code: [src/commands/flow/test.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/flow/test.ts)_
 
 ## `nex health check`
 
@@ -2033,8 +2465,8 @@ Run a consolidated health check on a ServiceNow instance.
 
 ```
 USAGE
-  $ nex health check [-j] [-a <value>] [--log-level debug|warn|error|info|trace] [--include-version]
-    [--include-cluster] [--include-stuck-jobs] [--include-semaphores] [--include-operational-counts]
+  $ nex health check [-j] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace]
+    [--include-version] [--include-cluster] [--include-stuck-jobs] [--include-semaphores] [--include-operational-counts]
     [--stuck-job-threshold <value>]
 
 FLAGS
@@ -2048,6 +2480,8 @@ FLAGS
       --stuck-job-threshold=<value>      [default: 30] Minutes threshold for a job to be considered stuck
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
 
@@ -2085,7 +2519,7 @@ EXAMPLES
     $ nex health check --json --auth dev
 ```
 
-_See code: [src/commands/health/check.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/health/check.ts)_
+_See code: [src/commands/health/check.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/health/check.ts)_
 
 ## `nex help [COMMAND]`
 
@@ -2096,7 +2530,7 @@ USAGE
   $ nex help [COMMAND...] [-n]
 
 ARGUMENTS
-  COMMAND...  Command to show help for.
+  [COMMAND...]  Command to show help for.
 
 FLAGS
   -n, --nested-commands  Include all nested commands in the output.
@@ -2105,7 +2539,7 @@ DESCRIPTION
   Display help for nex.
 ```
 
-_See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v6.2.32/src/commands/help.ts)_
+_See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/6.2.55/src/commands/help.ts)_
 
 ## `nex log`
 
@@ -2113,8 +2547,8 @@ Tail and monitor ServiceNow system logs in real-time with beautiful formatting.
 
 ```
 USAGE
-  $ nex log [--json] [-a <value>] [--log-level debug|warn|error|info|trace] [-o <value>] [-i <value>]
-    [--no-color] [-f <value>...]
+  $ nex log [--json] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace] [-o <value>]
+    [-i <value>] [--no-color] [-f <value>...]
 
 FLAGS
   -a, --auth=<value>       Auth alias to use.
@@ -2127,6 +2561,8 @@ FLAGS
       --no-color           Disable colored output
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -2210,7 +2646,7 @@ EXAMPLES
     $ nex log --no-color --auth dev-instance
 ```
 
-_See code: [src/commands/log/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/log/index.ts)_
+_See code: [src/commands/log/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/log/index.ts)_
 
 ## `nex plugins`
 
@@ -2233,7 +2669,7 @@ EXAMPLES
   $ nex plugins
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.46/src/commands/plugins/index.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/5.4.86/src/commands/plugins/index.ts)_
 
 ## `nex plugins add PLUGIN`
 
@@ -2307,7 +2743,7 @@ EXAMPLES
   $ nex plugins inspect myplugin
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.46/src/commands/plugins/inspect.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/5.4.86/src/commands/plugins/inspect.ts)_
 
 ## `nex plugins install PLUGIN`
 
@@ -2356,7 +2792,7 @@ EXAMPLES
     $ nex plugins install someuser/someplugin
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.46/src/commands/plugins/install.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/5.4.86/src/commands/plugins/install.ts)_
 
 ## `nex plugins link PATH`
 
@@ -2387,7 +2823,7 @@ EXAMPLES
   $ nex plugins link myplugin
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.46/src/commands/plugins/link.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/5.4.86/src/commands/plugins/link.ts)_
 
 ## `nex plugins remove [PLUGIN]`
 
@@ -2398,7 +2834,7 @@ USAGE
   $ nex plugins remove [PLUGIN...] [-h] [-v]
 
 ARGUMENTS
-  PLUGIN...  plugin to uninstall
+  [PLUGIN...]  plugin to uninstall
 
 FLAGS
   -h, --help     Show CLI help.
@@ -2428,7 +2864,7 @@ FLAGS
   --reinstall  Reinstall all plugins after uninstalling.
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.46/src/commands/plugins/reset.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/5.4.86/src/commands/plugins/reset.ts)_
 
 ## `nex plugins uninstall [PLUGIN]`
 
@@ -2439,7 +2875,7 @@ USAGE
   $ nex plugins uninstall [PLUGIN...] [-h] [-v]
 
 ARGUMENTS
-  PLUGIN...  plugin to uninstall
+  [PLUGIN...]  plugin to uninstall
 
 FLAGS
   -h, --help     Show CLI help.
@@ -2456,7 +2892,7 @@ EXAMPLES
   $ nex plugins uninstall myplugin
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.46/src/commands/plugins/uninstall.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/5.4.86/src/commands/plugins/uninstall.ts)_
 
 ## `nex plugins unlink [PLUGIN]`
 
@@ -2467,7 +2903,7 @@ USAGE
   $ nex plugins unlink [PLUGIN...] [-h] [-v]
 
 ARGUMENTS
-  PLUGIN...  plugin to uninstall
+  [PLUGIN...]  plugin to uninstall
 
 FLAGS
   -h, --help     Show CLI help.
@@ -2500,7 +2936,7 @@ DESCRIPTION
   Update installed plugins.
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.46/src/commands/plugins/update.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/5.4.86/src/commands/plugins/update.ts)_
 
 ## `nex query`
 
@@ -2508,8 +2944,8 @@ Query any ServiceNow table using the Table API.
 
 ```
 USAGE
-  $ nex query -t <value> [-j] [-a <value>] [--log-level debug|warn|error|info|trace] [-q <value>] [-f
-    <value>] [-d] [-l <value>]
+  $ nex query -t <value> [-j] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace] [-q
+    <value>] [-f <value>] [-d] [-l <value>]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
@@ -2521,6 +2957,8 @@ FLAGS
   -t, --table=<value>   (required) ServiceNow table name to query
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
 
@@ -2552,7 +2990,7 @@ EXAMPLES
     $ nex query --table sys_user --query "active=true" --limit 5 --json --auth dev
 ```
 
-_See code: [src/commands/query/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/query/index.ts)_
+_See code: [src/commands/query/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/query/index.ts)_
 
 ## `nex query app`
 
@@ -2560,7 +2998,8 @@ Search for applications by name across scoped apps and plugins.
 
 ```
 USAGE
-  $ nex query app -s <value> [-j] [-a <value>] [--log-level debug|warn|error|info|trace] [-a] [-l <value>]
+  $ nex query app -s <value> [-j] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace] [-a]
+    [-l <value>]
 
 FLAGS
   -a, --active          Only show active applications
@@ -2570,6 +3009,8 @@ FLAGS
   -s, --search=<value>  (required) Application name search term
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
 
@@ -2594,7 +3035,7 @@ EXAMPLES
     $ nex query app --search "HR" --active --auth dev
 ```
 
-_See code: [src/commands/query/app.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/query/app.ts)_
+_See code: [src/commands/query/app.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/query/app.ts)_
 
 ## `nex query columns`
 
@@ -2602,7 +3043,8 @@ List and search columns (fields) on a ServiceNow table.
 
 ```
 USAGE
-  $ nex query columns -t <value> [-j] [-a <value>] [--log-level debug|warn|error|info|trace] [-s <value>]
+  $ nex query columns -t <value> [-j] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace] [-s
+    <value>]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
@@ -2611,6 +3053,8 @@ FLAGS
   -t, --table=<value>   (required) ServiceNow table name to list columns for
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
 
@@ -2638,7 +3082,7 @@ EXAMPLES
     $ nex query columns --table incident --json --auth dev
 ```
 
-_See code: [src/commands/query/columns.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/query/columns.ts)_
+_See code: [src/commands/query/columns.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/query/columns.ts)_
 
 ## `nex query syslog`
 
@@ -2646,7 +3090,8 @@ Query ServiceNow system logs (one-shot, non-tailing).
 
 ```
 USAGE
-  $ nex query syslog [-j] [-a <value>] [--log-level debug|warn|error|info|trace] [-q <value>] [-l <value>]
+  $ nex query syslog [-j] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace] [-q <value>] [-l
+    <value>]
 
 FLAGS
   -a, --auth=<value>   Auth alias to use.
@@ -2655,6 +3100,8 @@ FLAGS
   -q, --query=<value>  ServiceNow encoded query string for filtering syslog records
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
 
@@ -2684,7 +3131,7 @@ EXAMPLES
     $ nex query syslog --query "sourceLIKEincident" --json --auth dev
 ```
 
-_See code: [src/commands/query/syslog.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/query/syslog.ts)_
+_See code: [src/commands/query/syslog.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/query/syslog.ts)_
 
 ## `nex schema`
 
@@ -2692,8 +3139,8 @@ Discover and inspect a ServiceNow table schema including fields, types, and rela
 
 ```
 USAGE
-  $ nex schema -t <value> [-j] [-a <value>] [--log-level debug|warn|error|info|trace] [--include-choices]
-    [--include-relationships] [--include-ui-policies] [--include-business-rules]
+  $ nex schema -t <value> [-j] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace]
+    [--include-choices] [--include-relationships] [--include-ui-policies] [--include-business-rules]
 
 FLAGS
   -a, --auth=<value>            Auth alias to use.
@@ -2705,6 +3152,8 @@ FLAGS
       --include-ui-policies     Include UI policies in the schema output
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
 
@@ -2732,7 +3181,7 @@ EXAMPLES
     $ nex schema --table incident --include-choices --include-relationships --auth dev
 ```
 
-_See code: [src/commands/schema/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/schema/index.ts)_
+_See code: [src/commands/schema/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/schema/index.ts)_
 
 ## `nex schema field`
 
@@ -2740,7 +3189,8 @@ Get detailed information about a specific field on a ServiceNow table.
 
 ```
 USAGE
-  $ nex schema field -t <value> -f <value> [-j] [-a <value>] [--log-level debug|warn|error|info|trace]
+  $ nex schema field -t <value> -f <value> [-j] [-a <value>] [--cred-store] [--log-level
+    debug|warn|error|info|trace]
 
 FLAGS
   -a, --auth=<value>   Auth alias to use.
@@ -2749,6 +3199,8 @@ FLAGS
   -t, --table=<value>  (required) ServiceNow table name
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
 
@@ -2768,7 +3220,7 @@ EXAMPLES
     $ nex schema field --table incident --field priority --json --auth dev
 ```
 
-_See code: [src/commands/schema/field.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/schema/field.ts)_
+_See code: [src/commands/schema/field.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/schema/field.ts)_
 
 ## `nex schema validate-catalog`
 
@@ -2776,7 +3228,7 @@ Validate a ServiceNow catalog item configuration for common issues.
 
 ```
 USAGE
-  $ nex schema validate-catalog -s <value> [-j] [-a <value>] [--log-level debug|warn|error|info|trace]
+  $ nex schema validate-catalog -s <value> [-j] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
@@ -2784,6 +3236,8 @@ FLAGS
   -s, --sys-id=<value>  (required) Catalog item sys_id to validate
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
 
@@ -2803,7 +3257,7 @@ EXAMPLES
     $ nex schema validate-catalog --sys-id a1b2c3d4e5f6 --json --auth dev
 ```
 
-_See code: [src/commands/schema/validate-catalog.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/schema/validate-catalog.ts)_
+_See code: [src/commands/schema/validate-catalog.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/schema/validate-catalog.ts)_
 
 ## `nex scope`
 
@@ -2811,13 +3265,15 @@ Get the current application scope or list available applications.
 
 ```
 USAGE
-  $ nex scope [--json] [-a <value>] [--log-level debug|warn|error|info|trace] [-l]
+  $ nex scope [--json] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace] [-l]
 
 FLAGS
   -a, --auth=<value>  Auth alias to use.
   -l, --list          List all available applications
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -2839,7 +3295,7 @@ EXAMPLES
     $ nex scope -l --json --auth dev
 ```
 
-_See code: [src/commands/scope/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/scope/index.ts)_
+_See code: [src/commands/scope/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/scope/index.ts)_
 
 ## `nex scope set`
 
@@ -2847,13 +3303,15 @@ Set the current application scope on a ServiceNow instance.
 
 ```
 USAGE
-  $ nex scope set -a <value> [--json] [-a <value>] [--log-level debug|warn|error|info|trace]
+  $ nex scope set -a <value> [--json] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace]
 
 FLAGS
   -a, --app-id=<value>  (required) 32-char sys_id of application
   -a, --auth=<value>    Auth alias to use.
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -2871,7 +3329,7 @@ EXAMPLES
     $ nex scope set -a abc123def456ghi789jkl012mno345pq --json --auth dev
 ```
 
-_See code: [src/commands/scope/set.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/scope/set.ts)_
+_See code: [src/commands/scope/set.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/scope/set.ts)_
 
 ## `nex script-sync pull`
 
@@ -2880,7 +3338,7 @@ Pull a script from a ServiceNow instance to a local file.
 ```
 USAGE
   $ nex script-sync pull -n <value> -t sys_script_include|sys_script|sys_ui_script|sys_ui_action|sys_script_client
-    [--json] [-a <value>] [--log-level debug|warn|error|info|trace] [-o <value>]
+    [--json] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace] [-o <value>]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
@@ -2890,6 +3348,8 @@ FLAGS
                         <options: sys_script_include|sys_script|sys_ui_script|sys_ui_action|sys_script_client>
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -2920,7 +3380,7 @@ EXAMPLES
     $ nex script-sync pull -n MyClientScript -t sys_script_client --json --auth dev-instance
 ```
 
-_See code: [src/commands/script-sync/pull.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/script-sync/pull.ts)_
+_See code: [src/commands/script-sync/pull.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/script-sync/pull.ts)_
 
 ## `nex script-sync push`
 
@@ -2929,7 +3389,7 @@ Push a local script file to a ServiceNow instance.
 ```
 USAGE
   $ nex script-sync push -n <value> -t sys_script_include|sys_script|sys_ui_script|sys_ui_action|sys_script_client -f
-    <value> [--json] [-a <value>] [--log-level debug|warn|error|info|trace]
+    <value> [--json] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace]
 
 FLAGS
   -a, --auth=<value>   Auth alias to use.
@@ -2939,6 +3399,8 @@ FLAGS
                        <options: sys_script_include|sys_script|sys_ui_script|sys_ui_action|sys_script_client>
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -2970,7 +3432,7 @@ EXAMPLES
     $ nex script-sync push -n MyUIScript -t sys_ui_script -f ./scripts/ui-script.js --json --auth dev-instance
 ```
 
-_See code: [src/commands/script-sync/push.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/script-sync/push.ts)_
+_See code: [src/commands/script-sync/push.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/script-sync/push.ts)_
 
 ## `nex script-sync sync`
 
@@ -2978,7 +3440,7 @@ Synchronize all scripts in a directory with a ServiceNow instance.
 
 ```
 USAGE
-  $ nex script-sync sync -d <value> [--json] [-a <value>] [--log-level debug|warn|error|info|trace] [-t
+  $ nex script-sync sync -d <value> [--json] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace] [-t
     sys_script_include|sys_script|sys_ui_script|sys_ui_action|sys_script_client...]
 
 FLAGS
@@ -2988,6 +3450,8 @@ FLAGS
                            <options: sys_script_include|sys_script|sys_ui_script|sys_ui_action|sys_script_client>
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -3018,7 +3482,7 @@ EXAMPLES
     $ nex script-sync sync -d ./scripts --json --auth dev-instance
 ```
 
-_See code: [src/commands/script-sync/sync.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/script-sync/sync.ts)_
+_See code: [src/commands/script-sync/sync.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/script-sync/sync.ts)_
 
 ## `nex search`
 
@@ -3026,8 +3490,8 @@ Search platform code across a ServiceNow instance.
 
 ```
 USAGE
-  $ nex search -t <value> [--json] [-a <value>] [--log-level debug|warn|error|info|trace] [-s <value>]
-    [--table <value>] [-g <value>] [-l <value>]
+  $ nex search -t <value> [--json] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace] [-l
+    <value>] [-s <value>] [-g <value>] [--table <value>]
 
 FLAGS
   -a, --auth=<value>          Auth alias to use.
@@ -3038,6 +3502,8 @@ FLAGS
       --table=<value>         Table name to search within (requires --search-group)
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -3074,7 +3540,7 @@ EXAMPLES
     $ nex search --term "GlideRecord" --limit 10 --json --auth dev-instance
 ```
 
-_See code: [src/commands/search/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/search/index.ts)_
+_See code: [src/commands/search/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/search/index.ts)_
 
 ## `nex search add-table`
 
@@ -3082,7 +3548,7 @@ Add a table to a code search group on a ServiceNow instance.
 
 ```
 USAGE
-  $ nex search add-table -t <value> -f <value> -g <value> [--json] [-a <value>] [--log-level
+  $ nex search add-table -f <value> -g <value> -t <value> [--json] [-a <value>] [--cred-store] [--log-level
     debug|warn|error|info|trace]
 
 FLAGS
@@ -3092,6 +3558,8 @@ FLAGS
   -t, --table=<value>          (required) Table name to add to the search group
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -3124,7 +3592,7 @@ EXAMPLES
       dev-instance
 ```
 
-_See code: [src/commands/search/add-table.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/search/add-table.ts)_
+_See code: [src/commands/search/add-table.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/search/add-table.ts)_
 
 ## `nex search groups`
 
@@ -3132,12 +3600,14 @@ List all available code search groups on a ServiceNow instance.
 
 ```
 USAGE
-  $ nex search groups [--json] [-a <value>] [--log-level debug|warn|error|info|trace]
+  $ nex search groups [--json] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace]
 
 FLAGS
   -a, --auth=<value>  Auth alias to use.
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -3162,7 +3632,7 @@ EXAMPLES
     $ nex search groups --json --auth dev-instance
 ```
 
-_See code: [src/commands/search/groups.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/search/groups.ts)_
+_See code: [src/commands/search/groups.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/search/groups.ts)_
 
 ## `nex search tables`
 
@@ -3170,13 +3640,15 @@ List tables configured for a specific code search group.
 
 ```
 USAGE
-  $ nex search tables -g <value> [--json] [-a <value>] [--log-level debug|warn|error|info|trace]
+  $ nex search tables -g <value> [--json] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace]
 
 FLAGS
   -a, --auth=<value>          Auth alias to use.
   -g, --search-group=<value>  (required) Search group name to list tables for
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -3202,7 +3674,7 @@ EXAMPLES
     $ nex search tables --search-group "Business Rules" --json --auth dev-instance
 ```
 
-_See code: [src/commands/search/tables.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/search/tables.ts)_
+_See code: [src/commands/search/tables.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/search/tables.ts)_
 
 ## `nex store install`
 
@@ -3210,8 +3682,8 @@ Install an application from the ServiceNow Store.
 
 ```
 USAGE
-  $ nex store install -a <value> -v <value> [--json] [-a <value>] [--log-level debug|warn|error|info|trace]
-    [--demo-data] [--no-wait] [--poll-interval <value>] [--timeout <value>]
+  $ nex store install -a <value> -v <value> [--json] [-a <value>] [--cred-store] [--log-level
+    debug|warn|error|info|trace] [--demo-data] [--no-wait] [--poll-interval <value>] [--timeout <value>]
 
 FLAGS
   -a, --app-id=<value>         (required) Store application sys_id
@@ -3223,6 +3695,8 @@ FLAGS
       --timeout=<value>        [default: 1800000] Installation timeout in milliseconds
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -3244,7 +3718,7 @@ EXAMPLES
     $ nex store install -a abc123 -v 1.0.0 --demo-data --auth dev
 ```
 
-_See code: [src/commands/store/install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/store/install.ts)_
+_See code: [src/commands/store/install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/store/install.ts)_
 
 ## `nex store search`
 
@@ -3252,8 +3726,8 @@ Search for applications in the ServiceNow Store.
 
 ```
 USAGE
-  $ nex store search [--json] [-a <value>] [--log-level debug|warn|error|info|trace] [--limit <value>] [--tab
-    available_for_you|installed|updates] [-t <value>]
+  $ nex store search [--json] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace] [--limit
+    <value>] [--tab available_for_you|installed|updates] [-t <value>]
 
 FLAGS
   -a, --auth=<value>   Auth alias to use.
@@ -3263,6 +3737,8 @@ FLAGS
                        <options: available_for_you|installed|updates>
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -3284,7 +3760,7 @@ EXAMPLES
     $ nex store search --tab updates --limit 10 --auth dev
 ```
 
-_See code: [src/commands/store/search.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/store/search.ts)_
+_See code: [src/commands/store/search.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/store/search.ts)_
 
 ## `nex store update`
 
@@ -3292,8 +3768,8 @@ Update a ServiceNow Store application to a new version.
 
 ```
 USAGE
-  $ nex store update -a <value> -v <value> [--json] [-a <value>] [--log-level debug|warn|error|info|trace]
-    [--no-wait] [--poll-interval <value>] [--timeout <value>]
+  $ nex store update -a <value> -v <value> [--json] [-a <value>] [--cred-store] [--log-level
+    debug|warn|error|info|trace] [--no-wait] [--poll-interval <value>] [--timeout <value>]
 
 FLAGS
   -a, --app-id=<value>         (required) Store application sys_id
@@ -3304,6 +3780,8 @@ FLAGS
       --timeout=<value>        [default: 1800000] Update timeout in milliseconds
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -3325,7 +3803,7 @@ EXAMPLES
     $ nex store update -a abc123 -v 2.0.0 --timeout 3600000 --auth dev
 ```
 
-_See code: [src/commands/store/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/store/update.ts)_
+_See code: [src/commands/store/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/store/update.ts)_
 
 ## `nex store validate`
 
@@ -3333,13 +3811,15 @@ Validate a batch installation definition file.
 
 ```
 USAGE
-  $ nex store validate -f <value> [--json] [-a <value>] [--log-level debug|warn|error|info|trace]
+  $ nex store validate -f <value> [--json] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace]
 
 FLAGS
   -a, --auth=<value>  Auth alias to use.
   -f, --file=<value>  (required) Path to batch definition JSON file
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -3353,7 +3833,7 @@ EXAMPLES
     $ nex store validate --file ./batch-definition.json --auth dev
 ```
 
-_See code: [src/commands/store/validate.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/store/validate.ts)_
+_See code: [src/commands/store/validate.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/store/validate.ts)_
 
 ## `nex task approve`
 
@@ -3361,7 +3841,8 @@ Approve a ServiceNow change request.
 
 ```
 USAGE
-  $ nex task approve -n <value> [--json] [-a <value>] [--log-level debug|warn|error|info|trace] [-c <value>]
+  $ nex task approve -n <value> [--json] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace] [-c
+    <value>]
 
 FLAGS
   -a, --auth=<value>      Auth alias to use.
@@ -3369,6 +3850,8 @@ FLAGS
   -n, --number=<value>    (required) Change request number (e.g., CHG0010001)
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -3393,7 +3876,7 @@ EXAMPLES
     $ nex task approve -n CHG0010001 -c "Looks good, approved" --auth dev
 ```
 
-_See code: [src/commands/task/approve.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/task/approve.ts)_
+_See code: [src/commands/task/approve.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/task/approve.ts)_
 
 ## `nex task assign`
 
@@ -3401,8 +3884,8 @@ Assign a ServiceNow task to a user or group.
 
 ```
 USAGE
-  $ nex task assign -n <value> -u <value> [--json] [-a <value>] [--log-level debug|warn|error|info|trace]
-    [--table <value>] [-g <value>]
+  $ nex task assign -n <value> -u <value> [--json] [-a <value>] [--cred-store] [--log-level
+    debug|warn|error|info|trace] [-g <value>] [--table <value>]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
@@ -3412,6 +3895,8 @@ FLAGS
       --table=<value>   [default: task] ServiceNow table name
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -3443,7 +3928,7 @@ EXAMPLES
     $ nex task assign --number CHG0010001 --table change_request --user admin --auth dev
 ```
 
-_See code: [src/commands/task/assign.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/task/assign.ts)_
+_See code: [src/commands/task/assign.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/task/assign.ts)_
 
 ## `nex task close`
 
@@ -3451,8 +3936,8 @@ Close a ServiceNow incident.
 
 ```
 USAGE
-  $ nex task close -n <value> --notes <value> [--json] [-a <value>] [--log-level debug|warn|error|info|trace]
-    [--close-code <value>]
+  $ nex task close --notes <value> -n <value> [--json] [-a <value>] [--cred-store] [--log-level
+    debug|warn|error|info|trace] [--close-code <value>]
 
 FLAGS
   -a, --auth=<value>        Auth alias to use.
@@ -3461,6 +3946,8 @@ FLAGS
       --notes=<value>       (required) Close notes
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -3486,7 +3973,7 @@ EXAMPLES
     $ nex task close -n INC0010001 --notes "Closed" --close-code "Solved (Permanently)" --auth dev
 ```
 
-_See code: [src/commands/task/close.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/task/close.ts)_
+_See code: [src/commands/task/close.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/task/close.ts)_
 
 ## `nex task comment`
 
@@ -3494,8 +3981,8 @@ Add a comment or work note to a ServiceNow task.
 
 ```
 USAGE
-  $ nex task comment -n <value> -c <value> [--json] [-a <value>] [--log-level debug|warn|error|info|trace]
-    [--table <value>] [--work-note]
+  $ nex task comment -c <value> -n <value> [--json] [-a <value>] [--cred-store] [--log-level
+    debug|warn|error|info|trace] [--table <value>] [--work-note]
 
 FLAGS
   -a, --auth=<value>     Auth alias to use.
@@ -3505,6 +3992,8 @@ FLAGS
       --work-note        Add as work note instead of comment
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -3535,7 +4024,7 @@ EXAMPLES
     $ nex task comment --number CHG0010001 --table change_request --comment "Approved" --auth dev
 ```
 
-_See code: [src/commands/task/comment.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/task/comment.ts)_
+_See code: [src/commands/task/comment.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/task/comment.ts)_
 
 ## `nex task find`
 
@@ -3543,7 +4032,8 @@ Find a ServiceNow task by its number.
 
 ```
 USAGE
-  $ nex task find -n <value> [--json] [-a <value>] [--log-level debug|warn|error|info|trace] [--table <value>]
+  $ nex task find -n <value> [--json] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace]
+    [--table <value>]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
@@ -3551,6 +4041,8 @@ FLAGS
       --table=<value>   [default: task] ServiceNow table name
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -3580,7 +4072,7 @@ EXAMPLES
     $ nex task find -n INC0010001 --json --auth dev
 ```
 
-_See code: [src/commands/task/find.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/task/find.ts)_
+_See code: [src/commands/task/find.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/task/find.ts)_
 
 ## `nex task resolve`
 
@@ -3588,8 +4080,8 @@ Resolve a ServiceNow incident with resolution notes.
 
 ```
 USAGE
-  $ nex task resolve -n <value> --notes <value> [--json] [-a <value>] [--log-level debug|warn|error|info|trace]
-    [--close-code <value>]
+  $ nex task resolve --notes <value> -n <value> [--json] [-a <value>] [--cred-store] [--log-level
+    debug|warn|error|info|trace] [--close-code <value>]
 
 FLAGS
   -a, --auth=<value>        Auth alias to use.
@@ -3598,6 +4090,8 @@ FLAGS
       --notes=<value>       (required) Resolution notes
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -3623,7 +4117,57 @@ EXAMPLES
     $ nex task resolve -n INC0010001 --notes "Fixed" --close-code "Solved (Permanently)" --auth dev
 ```
 
-_See code: [src/commands/task/resolve.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/task/resolve.ts)_
+_See code: [src/commands/task/resolve.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/task/resolve.ts)_
+
+## `nex tui`
+
+Open the full-screen ServiceNow workspace.
+
+```
+USAGE
+  $ nex tui [--json] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace] [--pane
+    records|logs|scripts|ops|project] [--table <value>] [--query <value>] [--read-only] [--approve-all] [--ascii]
+    [--scrollback <value>]
+
+FLAGS
+  -a, --auth=<value>        Auth alias to use.
+      --approve-all         Pre-approve routine writes for a dev loop. Refuses to engage on prod or unclassified
+                            instances, and never covers bulk or destructive operations.
+      --ascii               Use ASCII glyphs instead of Unicode.
+      --pane=<option>       Pane to open on.
+                            <options: records|logs|scripts|ops|project>
+      --query=<value>       Encoded query to prefill in the Records pane.
+      --read-only           Refuse every write for this session (enforced in the data gateway).
+      --scrollback=<value>  [default: 5000] Log-tail buffer capacity in lines (bounds memory; oldest lines drop).
+      --table=<value>       Open the Records pane on this table.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --json                Format output as json.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+
+DESCRIPTION
+  Open the full-screen ServiceNow workspace.
+
+  An interactive terminal UI over the same core managers the CLI uses: records, logs, scripts, flows/ATF/update sets —
+  with the target instance, scope and current update set always visible.
+
+  Requires an interactive terminal (both stdin and stdout must be TTYs). For scripting and agents, use the individual
+  nex commands with --json.
+
+EXAMPLES
+  Open the workspace
+
+    $ nex tui --auth dev
+
+  Inspect the workspace descriptor without a terminal
+
+    $ nex tui --auth dev --json
+```
+
+_See code: [src/commands/tui.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/tui.ts)_
 
 ## `nex update-set`
 
@@ -3631,7 +4175,8 @@ List update sets on a ServiceNow instance.
 
 ```
 USAGE
-  $ nex update-set [--json] [-a <value>] [--log-level debug|warn|error|info|trace] [-q <value>] [--limit <value>]
+  $ nex update-set [--json] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace] [--limit
+    <value>] [-q <value>]
 
 FLAGS
   -a, --auth=<value>   Auth alias to use.
@@ -3639,6 +4184,8 @@ FLAGS
       --limit=<value>  [default: 20] Maximum number of update sets to return
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -3660,7 +4207,7 @@ EXAMPLES
     $ nex update-set --json --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/update-set/index.ts)_
+_See code: [src/commands/update-set/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/update-set/index.ts)_
 
 ## `nex update-set clone`
 
@@ -3668,7 +4215,8 @@ Clone an update set and its records.
 
 ```
 USAGE
-  $ nex update-set clone -s <value> -n <value> [--json] [-a <value>] [--log-level debug|warn|error|info|trace]
+  $ nex update-set clone -n <value> -s <value> [--json] [-a <value>] [--cred-store] [--log-level
+    debug|warn|error|info|trace]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
@@ -3676,6 +4224,8 @@ FLAGS
   -s, --source=<value>  (required) Source update set sys_id
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -3693,7 +4243,7 @@ EXAMPLES
     $ nex update-set clone --source us-001 --name "Cloned Set" --json --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/clone.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/update-set/clone.ts)_
+_See code: [src/commands/update-set/clone.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/update-set/clone.ts)_
 
 ## `nex update-set create`
 
@@ -3701,8 +4251,8 @@ Create a new update set.
 
 ```
 USAGE
-  $ nex update-set create -n <value> [--json] [-a <value>] [--log-level debug|warn|error|info|trace] [-d <value>]
-    [--application <value>]
+  $ nex update-set create -n <value> [--json] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace]
+    [--application <value>] [-d <value>]
 
 FLAGS
   -a, --auth=<value>         Auth alias to use.
@@ -3711,6 +4261,8 @@ FLAGS
       --application=<value>  Application scope for the new update set
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -3732,7 +4284,7 @@ EXAMPLES
     $ nex update-set create --name "My Feature Set" --application x_my_app --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/update-set/create.ts)_
+_See code: [src/commands/update-set/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/update-set/create.ts)_
 
 ## `nex update-set current`
 
@@ -3740,13 +4292,15 @@ Get or set the current update set.
 
 ```
 USAGE
-  $ nex update-set current [--json] [-a <value>] [--log-level debug|warn|error|info|trace] [-s <value>]
+  $ nex update-set current [--json] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace] [-s <value>]
 
 FLAGS
   -a, --auth=<value>  Auth alias to use.
   -s, --set=<value>   sys_id of update set to make current
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -3768,7 +4322,7 @@ EXAMPLES
     $ nex update-set current --json --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/current.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/update-set/current.ts)_
+_See code: [src/commands/update-set/current.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/update-set/current.ts)_
 
 ## `nex update-set inspect`
 
@@ -3776,13 +4330,15 @@ Inspect the components of an update set.
 
 ```
 USAGE
-  $ nex update-set inspect -s <value> [--json] [-a <value>] [--log-level debug|warn|error|info|trace]
+  $ nex update-set inspect -s <value> [--json] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
   -s, --sys-id=<value>  (required) sys_id of the update set to inspect
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -3800,7 +4356,7 @@ EXAMPLES
     $ nex update-set inspect --sys-id us-001 --json --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/inspect.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/update-set/inspect.ts)_
+_See code: [src/commands/update-set/inspect.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/update-set/inspect.ts)_
 
 ## `nex update-set move`
 
@@ -3808,8 +4364,8 @@ Move records between update sets.
 
 ```
 USAGE
-  $ nex update-set move --target <value> [--json] [-a <value>] [--log-level debug|warn|error|info|trace] [--source
-    <value>] [--records <value>]
+  $ nex update-set move --target <value> [--json] [-a <value>] [--cred-store] [--log-level
+    debug|warn|error|info|trace] [--records <value>] [--source <value>]
 
 FLAGS
   -a, --auth=<value>     Auth alias to use.
@@ -3818,6 +4374,8 @@ FLAGS
       --target=<value>   (required) Target update set sys_id
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -3839,7 +4397,7 @@ EXAMPLES
     $ nex update-set move --target us-002 --source us-001 --json --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/move.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/update-set/move.ts)_
+_See code: [src/commands/update-set/move.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/update-set/move.ts)_
 
 ## `nex workflow create`
 
@@ -3847,13 +4405,15 @@ Create a complete workflow from a JSON specification file.
 
 ```
 USAGE
-  $ nex workflow create -s <value> [--json] [-a <value>] [--log-level debug|warn|error|info|trace]
+  $ nex workflow create -s <value> [--json] [-a <value>] [--cred-store] [--log-level debug|warn|error|info|trace]
 
 FLAGS
   -a, --auth=<value>  Auth alias to use.
   -s, --spec=<value>  (required) Path to workflow JSON specification file
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -3871,7 +4431,7 @@ EXAMPLES
     $ nex workflow create -s ./workflow.json --json --auth dev
 ```
 
-_See code: [src/commands/workflow/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/workflow/create.ts)_
+_See code: [src/commands/workflow/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/workflow/create.ts)_
 
 ## `nex workflow publish`
 
@@ -3879,7 +4439,8 @@ Publish a workflow version.
 
 ```
 USAGE
-  $ nex workflow publish -v <value> -s <value> [--json] [-a <value>] [--log-level debug|warn|error|info|trace]
+  $ nex workflow publish -s <value> -v <value> [--json] [-a <value>] [--cred-store] [--log-level
+    debug|warn|error|info|trace]
 
 FLAGS
   -a, --auth=<value>            Auth alias to use.
@@ -3887,6 +4448,8 @@ FLAGS
   -v, --version-id=<value>      (required) Sys ID of the workflow version to publish
 
 GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
   --json                Format output as json.
   --log-level=<option>  [default: info] Specify level for logging.
                         <options: debug|warn|error|info|trace>
@@ -3904,7 +4467,101 @@ EXAMPLES
     $ nex workflow publish -v wfv-001 -s act-001 --json --auth dev
 ```
 
-_See code: [src/commands/workflow/publish.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/workflow/publish.ts)_
+_See code: [src/commands/workflow/publish.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/workflow/publish.ts)_
+
+## `nex xml export`
+
+Export a single ServiceNow record as XML.
+
+```
+USAGE
+  $ nex xml export -t <value> -s <value> [-j] [-a <value>] [--cred-store] [--log-level
+    debug|warn|error|info|trace] [-o <value>]
+
+FLAGS
+  -a, --auth=<value>    Auth alias to use.
+  -j, --json            Output results as JSON
+  -o, --output=<value>  File path to write the exported XML to. If omitted, XML is printed to stdout.
+  -s, --sys-id=<value>  (required) Sys ID of the record to export
+  -t, --table=<value>   (required) Table name of the record to export
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+
+DESCRIPTION
+  Export a single ServiceNow record as XML.
+
+  Downloads the XML representation of a specific record from a ServiceNow table. Without --output, the XML is printed to
+  stdout. With --output, the XML is written to the specified file path.
+
+  Features:
+  • Export any record by table and sys_id
+  • Print XML to stdout for piping to other tools
+  • Save directly to a file with --output
+  • JSON output mode for CI/CD integration
+
+EXAMPLES
+  Export a record to stdout
+
+    $ nex xml export --table sys_script_include --sys-id abc123def456 --auth dev
+
+  Export and save to a file
+
+    $ nex xml export --table incident --sys-id abc123 --output ./export.xml --auth dev
+
+  Export as JSON metadata
+
+    $ nex xml export --table sys_script --sys-id abc123 --json --auth dev
+```
+
+_See code: [src/commands/xml/export.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/xml/export.ts)_
+
+## `nex xml import`
+
+Import XML records into a ServiceNow instance.
+
+```
+USAGE
+  $ nex xml import -f <value> -t <value> [-j] [-a <value>] [--cred-store] [--log-level
+    debug|warn|error|info|trace]
+
+FLAGS
+  -a, --auth=<value>   Auth alias to use.
+  -f, --file=<value>   (required) Path to the XML file to import
+  -j, --json           Output results as JSON
+  -t, --table=<value>  (required) Target table to import records into
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+
+DESCRIPTION
+  Import XML records into a ServiceNow instance.
+
+  Reads an XML file and imports its contents into the specified target table. The XML should be in ServiceNow unload
+  format.
+
+  Features:
+  • Import from local XML files
+  • Target a specific table
+  • JSON output mode for CI/CD integration
+
+EXAMPLES
+  Import records from an XML file
+
+    $ nex xml import --file ./export.xml --table sys_script_include --auth dev
+
+  Import with JSON output
+
+    $ nex xml import --file ./records.xml --table incident --json --auth dev
+```
+
+_See code: [src/commands/xml/import.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.0.1/src/commands/xml/import.ts)_
 <!-- commandsstop -->
 
 ---

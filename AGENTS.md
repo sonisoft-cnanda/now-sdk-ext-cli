@@ -88,6 +88,40 @@ The unit/integration split is by path pattern, not directory intent:
 A test in `test/helpers/` or `test/util/` matches **neither** and runs in no CI
 job. Put unit tests for `bin/` code under `test/common/`.
 
+**`test:unit` now matches `(services|common|tui)`.** A TUI test outside
+`test/tui/` runs in no job either. Do not park one under `test/services/` — it
+works by substring accident and lies about what it is.
+
+### 7. `src/tui/` has its own rules
+
+The TUI is a second layer over the same core, and four of its invariants are
+enforced by tooling rather than trust — if you fight one of these, you are
+probably about to break something the CLI depends on.
+
+- **Only `src/commands/tui.ts` may live under `src/commands/`.** Command
+  discovery is by file path over `dist/commands/**`, so anything else emitted
+  there becomes a command and fails at load. TUI code lives in `src/tui/`.
+- **Only `src/tui/data/**` may import core.** An eslint `no-restricted-imports`
+  rule enforces it. Panes take normalized DTOs from the gateway; they never
+  see `TableAPIRequest` or a core envelope.
+- **The TUI never resolves a credential.** It receives only `this.instance`
+  from `AuthenticatedCommand`; importing `@servicenow/sdk-cli/dist/auth` from
+  `src/tui/**` is a lint error. This is why there is no in-session "switch
+  instance" — relaunching is the supported path.
+- **Every gateway write requires an `ApprovalToken`.** The type can only be
+  minted by the approval dialog, is single-use, and carries a hash of the
+  approved spec. Forgetting to ask is a compile error, not a review miss.
+
+Two more that are conventions rather than rules, but cost real time when
+missed:
+
+- **No hardcoded widths.** The CLI's display services pad to fixed columns and
+  wrap at any other size; the TUI solves columns against the real terminal
+  width. Never render a display service's `string[]` inside `<Text>`.
+- **A plain-letter binding must not see a Ctrl-chord.** Chords arrive as
+  `event.chord` with `input` empty, precisely so a `k` binding cannot swallow
+  `^K`. Compare `event.chord === 'k'`, never `event.ctrl && event.input === 'k'`.
+
 ---
 
 ## Conventions that are easy to get wrong

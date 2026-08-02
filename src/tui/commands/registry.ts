@@ -29,6 +29,7 @@ export const BINDINGS: BindingEntry[] = [
   { group: 'Records', key: 'x / X / -', label: 'select / select all / clear', pane: 'records' },
   { group: 'Records', key: '⏎', label: 'open record', pane: 'records' },
   { group: 'Records', key: 'r', label: 'refresh', pane: 'records' },
+  { group: 'Records', key: 'b', label: 'bulk update the selected rows (dry run, then approval)', pane: 'records' },
   { group: 'Record form', key: '↑↓ / j k', label: 'move field cursor', pane: 'records' },
   { group: 'Record form', key: 'e', label: 'edit field (stages locally)', pane: 'records' },
   { group: 'Record form', key: '^S', label: 'save staged changes (asks for approval)', pane: 'records' },
