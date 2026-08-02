@@ -15,6 +15,12 @@ export interface PickerItem {
 }
 
 export interface PickerProps {
+  /**
+   * Shown when the SOURCE is empty, as opposed to the filter excluding
+   * everything. "No matches" under a blank filter reads as "your typing
+   * was wrong" when the real answer is "there is nothing to choose here."
+   */
+  emptyMessage?: string
   height: number
   items: PickerItem[]
   onCancel(): void
@@ -109,7 +115,11 @@ export function Picker(props: PickerProps): ReactElement {
       </Box>
       <Viewport
         cursor={clampedCursor}
-        emptyState={<Text dimColor>No matches</Text>}
+        emptyState={
+          <Text color={props.items.length === 0 && props.emptyMessage ? theme.state.warn : undefined} dimColor>
+            {props.items.length === 0 && props.emptyMessage ? props.emptyMessage : 'No matches'}
+          </Text>
+        }
         height={listHeight}
         renderItem={(item: PickerItem, _index, selected) => (
           <Text bold={selected} inverse={selected}>

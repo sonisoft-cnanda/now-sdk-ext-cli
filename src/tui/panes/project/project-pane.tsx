@@ -3,17 +3,26 @@ import type { ReactElement } from 'react'
 import { Box, Text } from 'ink'
 import { existsSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import type { ApprovalSpec } from '../../data/approvals.js'
-import type { BuildRecord } from '../../data/project-health.js'
+import type { ProjectInfo } from '../../data/project-detect.js'
+import type { AppIdentity, BuildRecord } from '../../data/project-health.js'
+import type { RecordsGateway } from '../../data/records.gateway.js'
 import type { SdkCommand, SdkFlag } from '../../data/sdk-manifest.js'
 import type { PickerItem } from '../../ui/picker.js'
 
 import { useApproval } from '../../context/approval-context.js'
 import { useSession } from '../../context/session-context.js'
 import { useUi } from '../../context/ui-context.js'
-import { describeReadiness, findShadowingXml, installReadiness, keysFileDirty } from '../../data/project-health.js'
+import {
+  compareAppIdentity,
+  describeAppIdentity,
+  describeReadiness,
+  findShadowingXml,
+  installReadiness,
+  keysFileDirty,
+} from '../../data/project-health.js'
 import { buildArgv, SDK_COMMANDS, validateFlagValue } from '../../data/sdk-manifest.js'
 import { useKeymap } from '../../hooks/use-keymap.js'
 import { Picker } from '../../ui/picker.js'
@@ -28,6 +37,59 @@ export interface ProjectPaneProps {
 }
 
 type Stage = 'commands' | 'flags' | 'output' | 'picking'
+
+/**
+ * Does the project on disk match the app on the instance in the banner?
+ *
+ * One `sys_app` lookup by scopeId, once, at mount. Cheap, and the answer is
+ * wanted BEFORE the install approval rather than inside it.
+ */
+function useAppIdentity(
+  project: ProjectInfo | undefined,
+  records: RecordsGateway,
+): AppIdentity {
+  const [identity, setIdentity] = useState<AppIdentity>({ kind: 'unknown' })
+
+  useEffect(() => {
+    const scopeId = project?.config.scopeId
+    if (!project || !scopeId) return
+    let live = true
+    records
+      .fetchPage({
+        fields: ['sys_id', 'name', 'scope', 'version'],
+        limit: 1,
+        offset: 0,
+        query: `sys_id=${scopeId}`,
+        // sys_scope, NOT sys_app. sys_app holds custom apps only and is
+        // empty on a fresh PDI, so a sys_app lookup can only ever answer
+        // "absent". sys_scope is its parent and covers store and plugin
+        // scopes too — which is what makes the mismatch case reachable:
+        // a scopeId that resolves to SOME other scope here is the
+        // wrong-instance signal, whatever kind of app it belongs to.
+        table: 'sys_scope',
+      })
+      .then((page) => {
+        if (!live) return
+        const row = page.rows[0]
+        setIdentity(compareAppIdentity(project, row && {
+          name: row.cells.name?.displayValue,
+          scope: row.cells.scope?.displayValue,
+          version: row.cells.version?.displayValue,
+        }))
+      })
+      .catch(() => {
+        // A failed lookup is unknowable, not a warning. Never claim "not
+        // installed" because the query broke — that would send someone
+        // installing onto an instance that already has the app.
+        if (live) setIdentity({ kind: 'unknown' })
+      })
+    return () => {
+      live = false
+    }
+  }, [project, records])
+
+  return identity
+}
 
 /**
  * The now-sdk surface.
@@ -58,6 +120,11 @@ export function ProjectPane(props: ProjectPaneProps): ReactElement {
   const [running, setRunning] = useState(false)
   const [lastBuild, setLastBuild] = useState<BuildRecord | undefined>()
   const [health, setHealth] = useState<string[]>([])
+  const identity = useAppIdentity(project, session.gateway.records)
+  const identityNote = useMemo(
+    () => (project ? describeAppIdentity(identity, project, session.host) : undefined),
+    [identity, project, session.host],
+  )
 
   const command: SdkCommand | undefined = SDK_COMMANDS[commandCursor]
 
@@ -159,7 +226,10 @@ export function ProjectPane(props: ProjectPaneProps): ReactElement {
 
     if (command.risk === 'instance') {
       const detail = [{ after: preview, label: 'command' }]
-      const staleNote = readiness ? describeReadiness(readiness) : undefined
+      // Both dangers, severest first: which app you are about to touch on
+      // which instance matters more than whether the build is current.
+      const dangers = [identityNote, readiness && describeReadiness(readiness)].filter(Boolean)
+      const staleNote = dangers.length > 0 ? dangers.join(' · ') : undefined
       const spec: ApprovalSpec = {
         actionKind: 'app.install',
         detail,
@@ -212,7 +282,7 @@ export function ProjectPane(props: ProjectPaneProps): ReactElement {
     }
 
     toast(run.ok ? 'success' : 'error', `${command.name} exited ${run.code}`)
-  }, [approve, command, project, readiness, running, sdk, session, toast, values])
+  }, [approve, command, identityNote, project, readiness, running, sdk, session, toast, values])
 
   useKeymap(
     'pane',
@@ -314,6 +384,7 @@ export function ProjectPane(props: ProjectPaneProps): ReactElement {
   if (stage === 'picking' && pickerFlag) {
     return (
       <Picker
+        emptyMessage={emptyMessageFor(pickerFlag, session.host)}
         height={props.height}
         items={pickerItems}
         onCancel={() => {
@@ -358,6 +429,11 @@ export function ProjectPane(props: ProjectPaneProps): ReactElement {
         <Text dimColor> ({sdk.binary?.origin ?? 'missing'})</Text>
       </Box>
 
+      {identityNote ? (
+        <Text color={identity.kind === 'mismatch' ? theme.state.error : theme.state.warn} wrap="truncate">
+          {glyphs.warn} {identityNote}
+        </Text>
+      ) : null}
       {readiness && readiness.kind !== 'ok' ? (
         <Text color={theme.state.warn} wrap="truncate">
           {glyphs.warn} {describeReadiness(readiness)}
@@ -441,6 +517,30 @@ export function ProjectPane(props: ProjectPaneProps): ReactElement {
 }
 
 /** Aliases out of `now-sdk auth --list` output. */
+/**
+ * Why a picker came back with nothing.
+ *
+ * `sys_app` holds CUSTOM applications only — a fresh PDI has none at all,
+ * so "No matches" under an empty filter reads as a broken search when the
+ * instance simply has nothing to bootstrap from. Say so, and point at the
+ * other form the SDK documents: `init --from <path_to_repo>`.
+ */
+export function emptyMessageFor(flag: SdkFlag, host: string): string | undefined {
+  switch (flag.picker) {
+    case 'app-scope': {
+      return `no custom applications on ${host} — init --from also accepts a path to a repo with XML metadata`
+    }
+
+    case 'auth-alias': {
+      return 'now-sdk has no configured auth aliases — add one with `now-sdk auth --add`'
+    }
+
+    default: {
+      return undefined
+    }
+  }
+}
+
 export function parseAuthAliases(lines: string[]): string[] {
   const aliases: string[] = []
   for (const line of lines) {

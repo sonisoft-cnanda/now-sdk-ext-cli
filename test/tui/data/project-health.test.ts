@@ -12,6 +12,8 @@ import type { ProjectInfo } from '../../../src/tui/data/project-detect.js'
 
 import { detectProject } from '../../../src/tui/data/project-detect.js'
 import {
+  compareAppIdentity,
+  describeAppIdentity,
   describeReadiness,
   findShadowingXml,
   installReadiness,
@@ -123,6 +125,47 @@ describe('keysFileDirty — "updates become inserts" guard', () => {
 
     write('src/fluent/generated/keys.ts', 'export const a = 2')
     expect(keysFileDirty(root)).toBe(true)
+  })
+})
+
+describe('compareAppIdentity — is this the instance you think it is?', () => {
+  const withVersion = (version: string) => {
+    write('now.config.json', JSON.stringify({ scope: 'x_acme_app', scopeId: 'a'.repeat(32), version }))
+    return project()
+  }
+
+  it('reports absent when the instance has no app with that scopeId', () => {
+    const p = project()
+    expect(compareAppIdentity(p, undefined)).toEqual({ kind: 'absent' })
+    expect(describeAppIdentity({ kind: 'absent' }, p, 'dev1')).toMatch(/not installed on dev1/)
+  })
+
+  it('reports mismatch when the scopeId belongs to a DIFFERENT scope — the wrong-instance catch', () => {
+    const p = project()
+    const identity = compareAppIdentity(p, { scope: 'x_other_app', version: '2.0.0' })
+    expect(identity).toEqual({ kind: 'mismatch', remoteScope: 'x_other_app' })
+    expect(describeAppIdentity(identity, p, 'prod')).toMatch(/wrong instance/)
+  })
+
+  it('matches without drift when the versions agree, and says nothing', () => {
+    const p = withVersion('1.0.0')
+    const identity = compareAppIdentity(p, { scope: 'x_acme_app', version: '1.0.0' })
+    expect(identity).toEqual({ drift: false, kind: 'match', remoteVersion: '1.0.0' })
+    expect(describeAppIdentity(identity, p, 'dev1')).toBeUndefined()
+  })
+
+  it('matches WITH drift when the installed version differs, and shows both', () => {
+    const p = withVersion('1.2.0')
+    const identity = compareAppIdentity(p, { scope: 'x_acme_app', version: '1.0.0' })
+    expect(identity).toEqual({ drift: true, kind: 'match', remoteVersion: '1.0.0' })
+    expect(describeAppIdentity(identity, p, 'dev1')).toBe('installed on dev1 at 1.0.0 · local is 1.2.0')
+  })
+
+  it('is unknown without a scopeId — an unanswerable question is not a warning', () => {
+    write('now.config.json', JSON.stringify({ scope: 'x_acme_app' }))
+    const p = project()
+    expect(compareAppIdentity(p, { scope: 'x_other' })).toEqual({ kind: 'unknown' })
+    expect(describeAppIdentity({ kind: 'unknown' }, p, 'dev1')).toBeUndefined()
   })
 })
 

@@ -84,3 +84,22 @@ describe('--auth is only appended where the command accepts it', () => {
     expect(gw.previewOf({ argv: ['build'], auth: true, cwd: '/tmp', npmScript: 'build' })).toBe('npm run build')
   })
 })
+
+describe('empty-picker messages explain WHY, not just "no matches"', () => {
+  it('says the instance has no custom apps — sys_app is empty on a fresh PDI', async () => {
+    const { emptyMessageFor } = await import('../../../src/tui/panes/project/project-pane.js')
+    const { findCommand } = await import('../../../src/tui/data/sdk-manifest.js')
+    const from = findCommand('init')!.flags.find((f) => f.name === 'from')!
+    const message = emptyMessageFor(from, 'dev1.service-now.com')
+    expect(message).toContain('no custom applications on dev1.service-now.com')
+    // Must point at the documented alternative, or the flow is a dead end.
+    expect(message).toContain('path to a repo')
+  })
+
+  it('has nothing to add for pickers whose emptiness is self-explanatory', async () => {
+    const { emptyMessageFor } = await import('../../../src/tui/panes/project/project-pane.js')
+    const { findCommand } = await import('../../../src/tui/data/sdk-manifest.js')
+    const table = findCommand('transform')!.flags.find((f) => f.name === 'table')!
+    expect(emptyMessageFor(table, 'dev1')).toBeUndefined()
+  })
+})

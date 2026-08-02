@@ -66,6 +66,79 @@ export function describeReadiness(readiness: InstallReadiness): string | undefin
   }
 }
 
+/** The `sys_app` row for this project's scopeId, if the instance has one. */
+export interface RemoteApp {
+  name?: string
+  scope?: string
+  version?: string
+}
+
+export type AppIdentity =
+  /** Same app. `drift` when the installed version differs from the local one. */
+  | { drift: boolean; kind: 'match'; remoteVersion?: string }
+  /** No sys_app with that sys_id here — installing will CREATE the app. */
+  | { kind: 'absent' }
+  /** The scopeId resolves to a DIFFERENT app. Almost always wrong instance. */
+  | { kind: 'mismatch'; remoteScope: string }
+  /** No scopeId in the config, or the lookup failed. Not a warning. */
+  | { kind: 'unknown' }
+
+/**
+ * Does the project in this directory match the app on the connected instance?
+ *
+ * `now.config.json` carries both `scope` and `scopeId`, so the answer is a
+ * single `sys_app` lookup — and it is worth making BEFORE the approval
+ * dialog has to. The three answers mean different things:
+ *
+ * - absent   — install creates the app. Fine on a fresh dev instance, and
+ *              exactly what you do NOT want to discover on a shared one.
+ * - mismatch — the sys_id exists here but belongs to a different scope. The
+ *              banner alias and the project disagree about what this app is;
+ *              this is the "wrong instance" case the check exists for.
+ * - match    — same app. `drift` when the installed version differs from the
+ *              local one, which is normal mid-development but is the thing
+ *              you want to see before overwriting someone else's work.
+ */
+export function compareAppIdentity(project: ProjectInfo, remote: RemoteApp | undefined): AppIdentity {
+  if (!project.config.scopeId) return { kind: 'unknown' }
+  if (!remote) return { kind: 'absent' }
+  if (remote.scope && remote.scope !== project.config.scope) {
+    return { kind: 'mismatch', remoteScope: remote.scope }
+  }
+
+  return {
+    drift: Boolean(remote.version && project.config.version && remote.version !== project.config.version),
+    kind: 'match',
+    remoteVersion: remote.version,
+  }
+}
+
+/** One-line identity summary for the pane header / approval body. */
+export function describeAppIdentity(
+  identity: AppIdentity,
+  project: ProjectInfo,
+  host: string,
+): string | undefined {
+  switch (identity.kind) {
+    case 'absent': {
+      return `${project.config.scope} is not installed on ${host} — installing will create it`
+    }
+
+    case 'match': {
+      if (!identity.drift) return undefined
+      return `installed on ${host} at ${identity.remoteVersion} · local is ${project.config.version}`
+    }
+
+    case 'mismatch': {
+      return `scopeId belongs to "${identity.remoteScope}" on ${host}, not "${project.config.scope}" — wrong instance?`
+    }
+
+    case 'unknown': {
+      return undefined
+    }
+  }
+}
+
 /**
  * Is keys.ts modified but uncommitted?
  *
