@@ -14,6 +14,7 @@ import { enterAltScreen, exitAltScreen, registerCleanup, runCleanup } from './bo
 
 export interface StartTuiOptions {
   alias: string
+  approveAll?: boolean
   ascii?: boolean
   initialPane?: PaneId
   initialQuery?: string
@@ -26,6 +27,7 @@ export interface StartTuiOptions {
 export async function startTui(options: StartTuiOptions): Promise<void> {
   const session = createSession({
     alias: options.alias,
+    approveAll: options.approveAll,
     instance: options.instance,
     readOnly: options.readOnly,
     scrollback: options.scrollback,
@@ -45,9 +47,22 @@ export async function startTui(options: StartTuiOptions): Promise<void> {
     session.gateway.disposeAll()
   })
 
+  // The $EDITOR pop-out needs to clear Ink out of the way and put it back.
+  // Ink has no "pause" — clear() blanks the frame and a re-render restores
+  // it, which is what suspend/resume mean here.
+  const foregroundHost = {
+    resume() {
+      app.clear()
+    },
+    suspend() {
+      app.clear()
+    },
+  }
+
   const app = render(
     createElement(App, {
       ascii: options.ascii,
+      foregroundHost,
       initialPane: options.initialPane,
       initialQuery: options.initialQuery,
       initialTable: options.initialTable,

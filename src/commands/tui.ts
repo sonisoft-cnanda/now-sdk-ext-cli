@@ -43,6 +43,11 @@ export class Tui extends AuthenticatedCommand<typeof Tui> {
       default: false,
       description: 'Refuse every write for this session (enforced in the data gateway).',
     }),
+    'approve-all': Flags.boolean({
+      default: false,
+      description: 'Pre-approve routine writes for a dev loop. Refuses to engage on prod or ' +
+        'unclassified instances, and never covers bulk or destructive operations.',
+    }),
     'ascii': Flags.boolean({
       default: false,
       description: 'Use ASCII glyphs instead of Unicode.',
@@ -89,6 +94,7 @@ export class Tui extends AuthenticatedCommand<typeof Tui> {
     const { startTui } = await import('../tui/index.js')
     await startTui({
       alias: descriptor.alias,
+      approveAll: flags['approve-all'],
       ascii: flags.ascii,
       initialPane: flags.pane,
       initialQuery: flags.query,

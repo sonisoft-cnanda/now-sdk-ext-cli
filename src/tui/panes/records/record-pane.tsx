@@ -51,6 +51,7 @@ export function RecordPane(props: RecordPaneProps): ReactElement {
   const [selection, setSelection] = useState<ReadonlySet<string>>(new Set())
   const [pickerOpen, setPickerOpen] = useState(!props.initialTable)
   const [stack, setStack] = useState<FormTarget[]>([])
+  const [formDirty, setFormDirty] = useState(false)
 
   const page = useAsyncResource<RecordPage>()
   const count = useAsyncResource<number>()
@@ -277,15 +278,17 @@ export function RecordPane(props: RecordPaneProps): ReactElement {
           <Text color={theme.fg.accent}>
             {stack.map((t) => `${t.table}`).join(' ▸ ')}
           </Text>
-          <Text dimColor>  Esc back  o open reference</Text>
+          {formDirty ? <Text color={theme.edit.dirty}>  ● unsaved</Text> : null}
         </Box>
         <RecordForm
           active={props.active}
           height={props.height - 1}
           key={`${target.table}:${target.sysId}`}
           onBack={() => {
+            setFormDirty(false)
             setStack((s) => s.slice(0, -1))
           }}
+          onDirtyChange={setFormDirty}
           onOpenReference={(refTable, refSysId) => {
             setStack((s) => [...s, { sysId: refSysId, table: refTable }])
           }}
