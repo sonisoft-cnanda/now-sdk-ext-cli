@@ -3,6 +3,7 @@ import type { ReactElement } from 'react'
 import { Box, Text } from 'ink'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import type { PaneIntent } from '../../commands/palette-actions.js'
 import type { RecordPage } from '../../data/types.js'
 import type { PickerItem } from '../../ui/picker.js'
 
@@ -14,6 +15,8 @@ import { useKeymap } from '../../hooks/use-keymap.js'
 import { DataTable } from '../../ui/data-table.js'
 import { Picker } from '../../ui/picker.js'
 import { theme } from '../../ui/theme.js'
+import { useToast } from '../../ui/toast-host.js'
+import { BulkWizard } from './bulk-wizard.js'
 import { RecordForm } from './record-form.js'
 
 export interface RecordPaneProps {
@@ -21,6 +24,8 @@ export interface RecordPaneProps {
   height: number
   initialQuery?: string
   initialTable?: string
+  /** An action raised from the command palette. */
+  intent?: { serial: number; value: PaneIntent }
   /** Cross-pane jump: open this record's form directly (from Logs). */
   openRequest?: { requestId: number; sysId: string; table: string }
   width: number
@@ -50,6 +55,12 @@ export function RecordPane(props: RecordPaneProps): ReactElement {
   const [cursor, setCursor] = useState(0)
   const [selection, setSelection] = useState<ReadonlySet<string>>(new Set())
   const [pickerOpen, setPickerOpen] = useState(!props.initialTable)
+  const [bulkOpen, setBulkOpen] = useState(false)
+  const toast = useToast()
+
+  // Palette intents. Keyed on the serial so asking twice fires twice.
+  const intentSerial = props.intent?.serial
+  const intentValue = props.intent?.value
   const [stack, setStack] = useState<FormTarget[]>([])
   const [formDirty, setFormDirty] = useState(false)
 
@@ -65,6 +76,19 @@ export function RecordPane(props: RecordPaneProps): ReactElement {
     runPage(() => session.gateway.records.fetchPage({ limit: PAGE_LIMIT, offset, query, table }))
     runCount(() => session.gateway.records.countQuery(table, query))
   }, [runPage, runCount, session, table, query, offset])
+
+  useEffect(() => {
+    if (intentSerial === undefined || !intentValue) return
+    switch (intentValue.kind) {
+      case 'bulk': { if (selection.size > 0) setBulkOpen(true); break }
+      case 'edit-query': { setQueryDraft(query); break }
+      case 'pick-table': { setPickerOpen(true); break }
+      case 'refresh': { refresh(); break }
+      default: { break }
+    }
+    // Fires per SERIAL, not per value — repeating an action must repeat it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intentSerial])
 
   useEffect(() => {
     refresh()
@@ -190,6 +214,16 @@ export function RecordPane(props: RecordPaneProps): ReactElement {
         return 'handled'
       }
 
+      if (event.input === 'b') {
+        if (selection.size === 0) {
+          toast('info', 'select rows with x first — bulk always targets an explicit list')
+          return 'handled'
+        }
+
+        setBulkOpen(true)
+        return 'handled'
+      }
+
       if (event.key.return && rows[cursor]) {
         setStack([{ sysId: rows[cursor].sysId, table }])
         return 'handled'
@@ -197,7 +231,7 @@ export function RecordPane(props: RecordPaneProps): ReactElement {
 
       return 'pass'
     },
-    props.active && !pickerOpen && !editingQuery && !inForm,
+    props.active && !pickerOpen && !editingQuery && !inForm && !bulkOpen,
   )
 
   const commitQuery = useCallback((value: string) => {
@@ -248,6 +282,21 @@ export function RecordPane(props: RecordPaneProps): ReactElement {
     },
     props.active && editingQuery,
   )
+
+  if (bulkOpen) {
+    return (
+      <BulkWizard
+        height={props.height}
+        ids={[...selection]}
+        onClose={() => {
+          setBulkOpen(false)
+          setSelection(new Set())
+          refresh()
+        }}
+        table={table!}
+      />
+    )
+  }
 
   if (pickerOpen) {
     return (

@@ -4,20 +4,24 @@ import { Box, Text, useApp, useInput } from 'ink'
 import { useMemo, useState } from 'react'
 
 import type { TuiSession } from './boot/session.js'
+import type { PaneIntent } from './commands/palette-actions.js'
 import type { PaneId } from './commands/registry.js'
 import type { KeyEvent } from './keymap/scope-stack.js'
 
+import { buildPaletteActions, INTENT_OWNER } from './commands/palette-actions.js'
 import { bindingsForPane } from './commands/registry.js'
 import { ApprovalProvider } from './context/approval-context.js'
 import { SessionProvider, useSession } from './context/session-context.js'
 import { UiProvider, useUi } from './context/ui-context.js'
 import { useKeymap } from './hooks/use-keymap.js'
 import { useTerminalSize } from './hooks/use-terminal-size.js'
+import { useTopScope } from './hooks/use-top-scope.js'
 import { LogsPane } from './panes/logs/logs-pane.js'
 import { OpsPane } from './panes/ops/ops-pane.js'
 import { ProjectPane } from './panes/project/project-pane.js'
 import { RecordPane } from './panes/records/record-pane.js'
 import { ScriptsPane } from './panes/scripts/scripts-pane.js'
+import { CommandPalette } from './ui/command-palette.js'
 import { HelpOverlay } from './ui/help-overlay.js'
 import { InstanceBanner } from './ui/instance-banner.js'
 import { theme } from './ui/theme.js'
@@ -88,6 +92,7 @@ function Shell(props: ShellProps): ReactElement {
   const session = useSession()
   const toast = useToast()
   const size = useTerminalSize()
+  const topScope = useTopScope()
   const [pane, setPane] = useState<PaneId>(props.initialPane ?? 'records')
   // `5 Project` is present only inside a Fluent project — hidden entirely
   // rather than shown broken, so `5` is simply unbound elsewhere.
@@ -96,6 +101,10 @@ function Shell(props: ShellProps): ReactElement {
     [session],
   )
   const [helpOpen, setHelpOpen] = useState(false)
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  // An intent the palette raised for a pane to act on. Carries a serial so
+  // asking for the same thing twice still fires the second time.
+  const [intent, setIntent] = useState<undefined | { serial: number; value: PaneIntent }>()
   const [openRequest, setOpenRequest] = useState<OpenRecordRequest | undefined>()
 
   // Cross-pane jump: a log line names a record → land on its form.
@@ -131,8 +140,10 @@ function Shell(props: ShellProps): ReactElement {
 
   useInput((input, key) => {
     const toEvent = (chunk: string): KeyEvent => ({
+      // A Ctrl-chord travels as `chord`, never as `input`. See KeyEvent.
+      ...(key.ctrl && chunk ? { chord: chunk } : {}),
       ctrl: key.ctrl,
-      input: chunk,
+      input: key.ctrl ? '' : chunk,
       key: {
         backspace: key.backspace,
         delete: key.delete,
@@ -166,7 +177,33 @@ function Shell(props: ShellProps): ReactElement {
     for (const ch of input) scopes.dispatch(toEvent(ch))
   })
 
+  const paletteActions = useMemo(
+    () =>
+      buildPaletteActions({
+        panes: PANES,
+        quit: exit,
+        sendIntent(value) {
+          const owner = INTENT_OWNER[value.kind]
+          // The only genuine failure is a pane that is not present at all
+          // (Project outside a Fluent project). Otherwise go there first.
+          if (!PANES.some((p) => p.id === owner)) return false
+          setPane(owner)
+          setIntent((previous) => ({ serial: (previous?.serial ?? 0) + 1, value }))
+          return true
+        },
+        setPane,
+        showHelp() { setHelpOpen(true) },
+        toast,
+      }),
+    [PANES, exit, toast],
+  )
+
   useKeymap('global', (event) => {
+    if (event.chord === 'k') {
+      setPaletteOpen(true)
+      return 'handled'
+    }
+
     const paneIndex = ['1', '2', '3', '4', '5'].slice(0, PANES.length).indexOf(event.input)
     if (paneIndex !== -1) {
       setPane(PANES[paneIndex].id)
@@ -209,7 +246,14 @@ function Shell(props: ShellProps): ReactElement {
         ))}
       </Box>
       <Box flexDirection="column" height={bodyHeight}>
-        {helpOpen ? (
+        {paletteOpen ? (
+          <CommandPalette
+            actions={paletteActions}
+            height={bodyHeight}
+            onClose={() => { setPaletteOpen(false) }}
+          />
+        ) : null}
+        {!paletteOpen && helpOpen ? (
           <HelpOverlay
             entries={bindingsForPane(pane)}
             height={bodyHeight}
@@ -217,16 +261,25 @@ function Shell(props: ShellProps): ReactElement {
               setHelpOpen(false)
             }}
           />
-        ) : (
-          // ApprovalProvider renders EXCLUSIVELY: while a write is pending
-          // approval the dialog replaces the pane body, so the user cannot
-          // act on anything else mid-decision.
+        ) : null}
+        {/*
+          The pane stays MOUNTED under an overlay — collapsed to zero height,
+          never swapped out. `overlay ? <overlay/> : <PaneBody/>` unmounts the
+          pane and destroys its local state: opening the palette (or even the
+          ? sheet) from the Scripts pane threw away the whole script buffer.
+          Exactly the bug ApprovalProvider already had; same fix.
+
+          Safe because both overlays register a 'modal' scope, which outranks
+          'pane'/'editor', so the pane cannot act while one is up.
+        */}
+        <Box flexDirection="column" height={paletteOpen || helpOpen ? 0 : undefined} overflow="hidden">
           <ApprovalProvider>
             <PaneBody
               foregroundHost={props.foregroundHost}
               height={bodyHeight}
               initialQuery={props.initialQuery}
               initialTable={props.initialTable}
+              intent={intent}
               onOpenRecord={openRecord}
               onResolveNumber={resolveNumber}
               onShowRunLogs={showRunLogs}
@@ -235,10 +288,14 @@ function Shell(props: ShellProps): ReactElement {
               width={size.columns}
             />
           </ApprovalProvider>
-        )}
+        </Box>
       </Box>
       <Text dimColor>
-        {' '}1-{PANES.length} pane  ?  help  q quit
+        {topScope === 'modal' || topScope === 'editor'
+          // Something owns the keyboard and prints its own hints. Advertising
+          // the global keys here would be a lie — only ^K still works.
+          ? ' ^K commands  ·  Esc backs out'
+          : ` 1-${PANES.length} pane  ^K commands  ?  help  q quit`}
       </Text>
     </Box>
   )
@@ -249,6 +306,7 @@ interface PaneBodyProps {
   height: number
   initialQuery?: string
   initialTable?: string
+  intent?: { serial: number; value: PaneIntent }
   onOpenRecord(table: string, sysId: string): void
   onResolveNumber(table: string, number: string): void
   onShowRunLogs(startedAt: number, endedAt: number): void
@@ -264,6 +322,7 @@ function PaneBody(props: PaneBodyProps): ReactElement {
         <LogsPane
           active
           height={props.height}
+          intent={props.intent}
           onOpenRecord={props.onOpenRecord}
           onResolveNumber={props.onResolveNumber}
           width={props.width}
@@ -300,6 +359,7 @@ function PaneBody(props: PaneBodyProps): ReactElement {
           height={props.height}
           initialQuery={props.initialQuery}
           initialTable={props.initialTable}
+          intent={props.intent}
           openRequest={props.openRequest}
           width={props.width}
         />
@@ -312,6 +372,7 @@ function PaneBody(props: PaneBodyProps): ReactElement {
           active
           foregroundHost={props.foregroundHost}
           height={props.height}
+          intent={props.intent}
           onShowRunLogs={props.onShowRunLogs}
           width={props.width}
         />

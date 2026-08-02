@@ -5,6 +5,7 @@ import { describe, expect, it, jest } from '@jest/globals'
 jest.unstable_mockModule('@sonisoft/now-sdk-ext-core', () => ({
   AggregateQuery: jest.fn(),
   ATFTestExecutor: jest.fn(),
+  QueryBatchOperations: jest.fn(),
   FlowManager: jest.fn(),
   BackgroundScriptExecutor: jest.fn(),
   SchemaDiscovery: jest.fn(),

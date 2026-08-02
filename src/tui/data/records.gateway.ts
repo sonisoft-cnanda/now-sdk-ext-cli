@@ -6,15 +6,24 @@
  * a component physically cannot call a write it did not get approved —
  * forgetting is a compile error, not a review miss.
  */
-import { AggregateQuery, SchemaDiscovery, TableAPIRequest, TaskOperations } from '@sonisoft/now-sdk-ext-core'
+import { AggregateQuery, QueryBatchOperations, SchemaDiscovery, TableAPIRequest, TaskOperations } from '@sonisoft/now-sdk-ext-core'
 
+import type { BulkResult } from '../../services/shape/bulk-result.js'
 import type { ApprovalRegistry, ApprovalSpec, ApprovalToken } from './approvals.js'
 import type { FieldChoice, FieldSpec, RecordCell, RecordPage, RecordRow, TableInfo, TableSchema } from './types.js'
 
+import { chunkIds, sysIdInQuery, toBulkResult } from '../../services/shape/bulk-result.js'
 import { toFieldSpec } from '../../services/shape/schema-field.js'
 import { TtlCache } from './cache.js'
 
 const TABLE_LIST_TTL_MS = 10 * 60 * 1000
+
+/**
+ * Ids per request. `sys_idIN` rides in the query string, so an unbounded
+ * list eventually exceeds what the instance accepts and the whole request
+ * fails. 100 keeps each one comfortably inside that.
+ */
+export const BULK_CHUNK_SIZE = 100
 
 /** incident → task → ... is short; the cap is a cycle guard, not a limit. */
 const MAX_INHERITANCE_DEPTH = 8
@@ -75,6 +84,7 @@ export interface FetchPageOptions {
  */
 export class RecordsGateway {
   private readonly aggregate: AggregateQuery
+  private readonly batch: QueryBatchOperations
   private readonly choiceCache = new TtlCache<FieldChoice[]>({ maxEntries: 256 })
   private readonly schema: SchemaDiscovery
   private readonly schemaCache = new TtlCache<TableSchema>({ maxEntries: 32 })
@@ -88,6 +98,7 @@ export class RecordsGateway {
     private readonly approvals: ApprovalRegistry,
   ) {
     this.aggregate = new AggregateQuery(instance as never)
+    this.batch = new QueryBatchOperations(instance as never)
     this.schema = new SchemaDiscovery(instance as never)
     this.tableApi = new TableAPIRequest(instance as never)
     this.tasks = new TaskOperations(instance as never)
@@ -134,6 +145,92 @@ export class RecordsGateway {
       table: options.table,
     })
     this.invalidateTable(options.table)
+  }
+
+  /**
+   * Preview a bulk update. NO approval token: nothing is written.
+   *
+   * This is not a convenience — the dry run IS the approval dialog's body,
+   * so there is no path to execution that does not pass through it. The
+   * CLI's `--confirm` asks you to promise before you know the blast radius;
+   * here you see the count and a sample first.
+   */
+  async bulkDryRun(options: {
+    data: Record<string, string>
+    ids: string[]
+    table: string
+  }): Promise<BulkResult> {
+    const raw = await this.batch.queryUpdate({
+      confirm: false,
+      data: options.data,
+      query: sysIdInQuery(options.ids),
+      table: options.table,
+    } as never)
+    return toBulkResult(raw, 'update')
+  }
+
+  /**
+   * Execute a bulk update over an EXPLICIT id list.
+   *
+   * Targeting is always `sys_idIN<ids>` captured at selection time, never a
+   * live query: the affected set is exactly the rows you looked at, so the
+   * dry-run count and the execution count cannot diverge underneath you.
+   *
+   * Chunks run under ONE approval covering all of them — the token is
+   * consumed once, up front, because the user approved the whole operation
+   * rather than each request. `shouldAbort` is polled between chunks, so
+   * ^C stops cleanly at a boundary instead of mid-request, and whatever
+   * completed is reported as partial rather than as failure.
+   */
+  async bulkUpdate(
+    spec: ApprovalSpec,
+    token: ApprovalToken,
+    options: {
+      data: Record<string, string>
+      ids: string[]
+      onProgress?: (done: number, total: number) => void
+      shouldAbort?: () => boolean
+      table: string
+    },
+  ): Promise<BulkResult & { aborted: boolean }> {
+    this.approvals.consume(token, spec)
+
+    const chunks = chunkIds(options.ids, BULK_CHUNK_SIZE)
+    let matchCount = 0
+    let changedCount = 0
+    const errors: BulkResult['errors'] = []
+    let aborted = false
+
+    for (const chunk of chunks) {
+      if (options.shouldAbort?.()) {
+        aborted = true
+        break
+      }
+
+      // eslint-disable-next-line no-await-in-loop
+      const raw = await this.batch.queryUpdate({
+        confirm: true,
+        data: options.data,
+        query: sysIdInQuery(chunk),
+        table: options.table,
+      } as never)
+      const result = toBulkResult(raw, 'update')
+      matchCount += result.matchCount
+      changedCount += result.changedCount ?? 0
+      errors.push(...result.errors)
+      options.onProgress?.(changedCount, options.ids.length)
+    }
+
+    this.invalidateTable(options.table)
+    return {
+      aborted,
+      changedCount,
+      dryRun: false,
+      errors,
+      matchCount,
+      // Aborting is not success even if every attempted record wrote.
+      success: !aborted && errors.length === 0 && changedCount === matchCount,
+    }
   }
 
   /** Close an incident. */

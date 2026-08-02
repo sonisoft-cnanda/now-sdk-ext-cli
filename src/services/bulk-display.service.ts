@@ -1,4 +1,4 @@
- 
+import { toBulkResult } from "./shape/bulk-result.js";
 
 export class BulkDisplayService {
   /**
@@ -9,9 +9,10 @@ export class BulkDisplayService {
       return [JSON.stringify({ table, ...result }, null, 2)];
     }
 
+    const shaped = toBulkResult(result, 'delete');
     const lines: string[] = [];
 
-    if (result.dryRun) {
+    if (shaped.dryRun) {
       lines.push(`\nDry Run — Bulk Delete on "${table}"`);
     } else {
       lines.push(`\nBulk Delete on "${table}"`);
@@ -19,22 +20,22 @@ export class BulkDisplayService {
 
     lines.push("  " + "\u2500".repeat(50));
 
-    if (result.dryRun) {
-      lines.push(`  Records matching query:  ${result.matchCount}`);
+    if (shaped.dryRun) {
+      lines.push(`  Records matching query:  ${shaped.matchCount}`);
       lines.push("");
       lines.push("  No records were deleted (dry run).");
       lines.push("  Re-run with --confirm to execute the delete.");
     } else {
-      lines.push(`  Records matched:   ${result.matchCount}`);
+      lines.push(`  Records matched:   ${shaped.matchCount}`);
       lines.push(`  Records deleted:   ${result.deletedCount}`);
 
-      const statusIcon = result.success ? '\u2714' : '\u2718';
-      lines.push(`  Status:            ${statusIcon} ${result.success ? 'Success' : 'Completed with errors'}`);
+      const statusIcon = shaped.success ? '\u2714' : '\u2718';
+      lines.push(`  Status:            ${statusIcon} ${shaped.success ? 'Success' : 'Completed with errors'}`);
 
-      if (result.errors && result.errors.length > 0) {
+      if (shaped.errors.length > 0) {
         lines.push("");
-        lines.push(`  Errors (${result.errors.length}):`);
-        for (const err of result.errors) {
+        lines.push(`  Errors (${shaped.errors.length}):`);
+        for (const err of shaped.errors) {
           lines.push(`    - ${err.sysId}: ${err.error}`);
         }
       }
@@ -58,9 +59,10 @@ export class BulkDisplayService {
       return [JSON.stringify({ table, ...result }, null, 2)];
     }
 
+    const shaped = toBulkResult(result, 'update');
     const lines: string[] = [];
 
-    if (result.dryRun) {
+    if (shaped.dryRun) {
       lines.push(`\nDry Run — Bulk Update on "${table}"`);
     } else {
       lines.push(`\nBulk Update on "${table}"`);
@@ -68,22 +70,22 @@ export class BulkDisplayService {
 
     lines.push("  " + "\u2500".repeat(50));
 
-    if (result.dryRun) {
-      lines.push(`  Records matching query:  ${result.matchCount}`);
+    if (shaped.dryRun) {
+      lines.push(`  Records matching query:  ${shaped.matchCount}`);
       lines.push("");
       lines.push("  No changes were made (dry run).");
       lines.push("  Re-run with --confirm to execute the update.");
     } else {
-      lines.push(`  Records matched:   ${result.matchCount}`);
+      lines.push(`  Records matched:   ${shaped.matchCount}`);
       lines.push(`  Records updated:   ${result.updatedCount}`);
 
-      const statusIcon = result.success ? '\u2714' : '\u2718';
-      lines.push(`  Status:            ${statusIcon} ${result.success ? 'Success' : 'Completed with errors'}`);
+      const statusIcon = shaped.success ? '\u2714' : '\u2718';
+      lines.push(`  Status:            ${statusIcon} ${shaped.success ? 'Success' : 'Completed with errors'}`);
 
-      if (result.errors && result.errors.length > 0) {
+      if (shaped.errors.length > 0) {
         lines.push("");
-        lines.push(`  Errors (${result.errors.length}):`);
-        for (const err of result.errors) {
+        lines.push(`  Errors (${shaped.errors.length}):`);
+        for (const err of shaped.errors) {
           lines.push(`    - ${err.sysId}: ${err.error}`);
         }
       }

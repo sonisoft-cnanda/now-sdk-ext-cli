@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import type { FilterRule } from '../../../services/log-filter.service.js'
 import type { LogEntry } from '../../../services/shape/log-entry.js'
+import type { PaneIntent } from '../../commands/palette-actions.js'
 import type { LogReference } from './log-references.js'
 
 import { LogFilterService } from '../../../services/log-filter.service.js'
@@ -22,6 +23,8 @@ import { detectReferences } from './log-references.js'
 export interface LogsPaneProps {
   active: boolean
   height: number
+  /** An action raised from the command palette. */
+  intent?: { serial: number; value: PaneIntent }
   onOpenRecord(table: string, sysId: string): void
   onResolveNumber(table: string, number: string): void
   width: number
@@ -103,6 +106,15 @@ export function LogsPane(props: LogsPaneProps): ReactElement {
       return false
     })
   }, [length])
+
+  useEffect(() => {
+    if (props.intent?.serial === undefined) return
+    if (props.intent.value.kind === 'toggle-follow') {
+      if (follow) pause()
+      else setFollow(true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.intent?.serial])
 
   const jumpRef = useCallback(
     (ref: LogReference) => {

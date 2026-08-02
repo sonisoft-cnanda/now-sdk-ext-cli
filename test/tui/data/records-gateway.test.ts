@@ -8,6 +8,7 @@ const explainField = jest.fn<any>()
 // ESM: jest.mock does not hoist under --experimental-vm-modules;
 // unstable_mockModule + dynamic import is the working pattern.
 jest.unstable_mockModule('@sonisoft/now-sdk-ext-core', () => ({
+  QueryBatchOperations: jest.fn().mockImplementation(() => ({ queryUpdate: jest.fn() })),
   AggregateQuery: jest.fn().mockImplementation(() => ({ count: aggregateCount })),
   SchemaDiscovery: jest.fn().mockImplementation(() => ({ discoverTableSchema, explainField })),
   TableAPIRequest: jest.fn().mockImplementation(() => ({ get: tableGet })),

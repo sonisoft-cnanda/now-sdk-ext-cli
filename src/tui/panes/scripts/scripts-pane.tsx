@@ -4,8 +4,9 @@ import { Box, Text } from 'ink'
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import type { PaneIntent } from '../../commands/palette-actions.js'
 import type { ApprovalSpec } from '../../data/approvals.js'
 import type { ScopeOption } from '../../data/scripts.gateway.js'
 import type { PickerItem } from '../../ui/picker.js'
@@ -31,6 +32,8 @@ export interface ScriptsPaneProps {
   /** Suspend/resume the Ink tree for the $EDITOR handoff. */
   foregroundHost: { resume(): void; suspend(): void }
   height: number
+  /** An action raised from the command palette. */
+  intent?: { serial: number; value: PaneIntent }
   onShowRunLogs(startedAt: number, endedAt: number): void
   width: number
 }
@@ -76,8 +79,21 @@ export function ScriptsPane(props: ScriptsPaneProps): ReactElement {
   const [editorPickerOpen, setEditorPickerOpen] = useState(false)
   const [docsOpen, setDocsOpen] = useState(false)
 
+  const intentSerial = props.intent?.serial
+  const intentValue = props.intent?.value
+
   const scopes = useAsyncResource<ScopeOption[]>()
   const { run: loadScopes } = scopes
+
+  useEffect(() => {
+    if (intentSerial === undefined || !intentValue) return
+    if (intentValue.kind === 'open-docs') setDocsOpen(true)
+    if (intentValue.kind === 'pick-scope') {
+      setScopePickerOpen(true)
+      loadScopes(() => session.gateway.scripts.listScopes())
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intentSerial])
 
   const touch = useCallback(() => {
     setRevision((r) => r + 1)
@@ -203,24 +219,24 @@ export function ScriptsPane(props: ScriptsPaneProps): ReactElement {
     (event) => {
       const buffer = bufferRef.current
 
-      if (event.ctrl && event.input === 'e') {
+      if (event.chord === 'e') {
         execute().catch((): undefined => undefined)
         return 'handled'
       }
 
-      if (event.ctrl && event.input === 'z') {
+      if (event.chord === 'z') {
         buffer.undo()
         touch()
         return 'handled'
       }
 
-      if (event.ctrl && event.input === 'y') {
+      if (event.chord === 'y') {
         buffer.redo()
         touch()
         return 'handled'
       }
 
-      if (event.ctrl && event.input === 'a') {
+      if (event.chord === 'a') {
         buffer.lineStart()
         touch()
         return 'handled'
@@ -291,7 +307,7 @@ export function ScriptsPane(props: ScriptsPaneProps): ReactElement {
         return 'handled'
       }
 
-      if (event.ctrl && event.input === 'e') {
+      if (event.chord === 'e') {
         execute().catch((): undefined => undefined)
         return 'handled'
       }
@@ -317,7 +333,7 @@ export function ScriptsPane(props: ScriptsPaneProps): ReactElement {
         return 'handled'
       }
 
-      if (event.ctrl && event.input === 'l' && runs[transcriptCursor]) {
+      if (event.chord === 'l' && runs[transcriptCursor]) {
         const run = runs[transcriptCursor]
         props.onShowRunLogs(run.startedAt, run.startedAt + run.durationMs)
         return 'handled'

@@ -1,6 +1,27 @@
 # `nex tui` — a full-screen ServiceNow workspace
 
-> **Status: approved implementation plan — the authoritative reference for the TUI work.**
+> **Status: SHIPPED (phases 0–7). Kept as the design rationale, not as current
+> reference — for how the thing actually behaves, read [`tui.md`](./tui.md),
+> which is generated in part from `nex tui --json` and cannot drift.**
+>
+> Deviations from this plan, decided while building and recorded on the Jira
+> issues:
+>
+> | Planned | Shipped | Why |
+> |---|---|---|
+> | palette "switch instance" clearing approvals | **not built** | Would require the TUI to resolve a second credential, which the layer forbids and eslint enforces. Relaunching gives a clean process and no carried-over approvals for free. |
+> | identity check queries `sys_app` | queries `sys_scope` | `sys_app` holds custom apps only and is empty on a fresh PDI, so it could only ever answer "not installed" — the wrong-instance case would have been unreachable. |
+> | `TableAPIRequest.patch()` for record updates | PUT | `patch()` is a silent no-op in core 5.0.1 (no `patch` case in `executeRequest`). Filed as NEX-92; revert when it ships. |
+> | aggregate/group-by overlay, live-query bulk builder | **deferred** | Additive; the explicit-id bulk path is the safety-critical one and is complete. |
+> | `explain` docs browser in the Project pane | Scripts pane | It needs no project and no credential, so gating it on project detection was wrong — the point is the API reference beside the editor. |
+>
+> Two bugs this plan could not have predicted, both found only under a real
+> pty and both now regression-tested: Ink kept its stdin listener attached
+> during a foreground handoff and ate the child's first keystrokes; and a
+> Ctrl-chord was swallowed by the plain-letter binding of the same key
+> (65 bindings had that shape — fixed structurally, not per call site).
+
+> **Original status: approved implementation plan — the authoritative reference for the TUI work.**
 > Where this document and [`research/tui_research.md`](./research/tui_research.md) disagree,
 > this document wins: the research is the technology-selection rationale (mid-2026 survey);
 > this is the decisions of record. Verified against ink 7.1.1 / react 19.2.8 /

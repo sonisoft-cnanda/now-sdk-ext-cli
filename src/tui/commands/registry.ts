@@ -16,7 +16,8 @@ export interface BindingEntry {
 }
 
 export const BINDINGS: BindingEntry[] = [
-  { group: 'Global', key: '1-4', label: 'switch pane' },
+  { group: 'Global', key: '1-5', label: 'switch pane (5 Project only inside a Fluent project)' },
+  { group: 'Global', key: '^K', label: 'command palette — works even inside a picker or editor' },
   { group: 'Global', key: '?', label: 'this help' },
   { group: 'Global', key: 'q', label: 'quit' },
   { group: 'Global', key: 'Ctrl+C', label: 'quit' },
@@ -28,6 +29,7 @@ export const BINDINGS: BindingEntry[] = [
   { group: 'Records', key: 'x / X / -', label: 'select / select all / clear', pane: 'records' },
   { group: 'Records', key: '⏎', label: 'open record', pane: 'records' },
   { group: 'Records', key: 'r', label: 'refresh', pane: 'records' },
+  { group: 'Records', key: 'b', label: 'bulk update the selected rows (dry run, then approval)', pane: 'records' },
   { group: 'Record form', key: '↑↓ / j k', label: 'move field cursor', pane: 'records' },
   { group: 'Record form', key: 'e', label: 'edit field (stages locally)', pane: 'records' },
   { group: 'Record form', key: '^S', label: 'save staged changes (asks for approval)', pane: 'records' },
@@ -42,6 +44,7 @@ export const BINDINGS: BindingEntry[] = [
   { group: 'Scripts', key: 's', label: 'pick scope (transcript)', pane: 'scripts' },
   { group: 'Scripts', key: 'p', label: 'set {placeholder} params (transcript)', pane: 'scripts' },
   { group: 'Scripts', key: 'E', label: 'open the buffer in $EDITOR (transcript)', pane: 'scripts' },
+  { group: 'Scripts', key: 'd', label: 'Fluent API docs, offline (transcript)', pane: 'scripts' },
   { group: 'Scripts', key: '^L', label: 'logs for the selected run (transcript)', pane: 'scripts' },
   { group: 'Ops', key: '4', label: 'cycle Flows / ATF / Update Sets', pane: 'ops' },
   { group: 'Ops · Flows', key: '⏎', label: 'action-by-action detail', pane: 'ops' },

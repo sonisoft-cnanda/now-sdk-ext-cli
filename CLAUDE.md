@@ -22,9 +22,16 @@ argument parsing, output formatting, and the interactive surfaces.
   `scope-autocomplete.ts`.
 - **`src/services/`** — display services. Roughly 19 of them, all hand-rolled
   padded text tables. This is where output formatting lives, not in commands.
-- **`src/tui/`** (in progress) — the `nex tui` full-screen Ink workspace. Only
+- **`src/tui/`** — the `nex tui` full-screen Ink workspace: five panes over the
+  same core, with Claude-Code-style per-action approvals. Only
   `src/commands/tui.ts` may live under `src/commands/` (anything emitted into
-  `dist/commands/**` becomes a command). Plan of record: `docs/TUI_PLAN.md`.
+  `dist/commands/**` becomes a command). Only `src/tui/data/**` may import
+  core, and the TUI never resolves a credential — both enforced by eslint.
+  User guide: `docs/tui.md`. Rules that bite: `AGENTS.md` §7.
+- **`src/services/shape/`** — pure data-shaping shared by the CLI display
+  services and the TUI, so "which columns matter" or "what severity is this
+  log line" has exactly one definition. The display services were refactored
+  onto it byte-compatibly; their existing tests are the regression net.
 
 ## Sibling Projects
 
@@ -45,12 +52,12 @@ npm run lint         # eslint src/  (NOTE: src only — see AGENTS.md)
 ## Testing
 
 ```bash
-npm run test:unit         # services + common only
+npm run test:unit         # services + common + tui
 npm run test:integration  # commands/ — hits a real instance
 ```
 
 The split is by **path pattern**, not by directory convention:
-`test:unit` matches `(services|common)`, `test:integration` matches `commands`.
+`test:unit` matches `(services|common|tui)`, `test:integration` matches `commands`.
 A test placed outside those paths runs in neither.
 
 ## Key Patterns
