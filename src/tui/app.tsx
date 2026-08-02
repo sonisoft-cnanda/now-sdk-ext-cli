@@ -283,7 +283,14 @@ function PaneBody(props: PaneBodyProps): ReactElement {
     }
 
     case 'project': {
-      return <ProjectPane active height={props.height} width={props.width} />
+      return (
+        <ProjectPane
+          active
+          foregroundHost={props.foregroundHost}
+          height={props.height}
+          width={props.width}
+        />
+      )
     }
 
     case 'records': {

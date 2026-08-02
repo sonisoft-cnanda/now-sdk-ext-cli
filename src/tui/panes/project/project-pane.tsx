@@ -23,7 +23,7 @@ import {
   installReadiness,
   keysFileDirty,
 } from '../../data/project-health.js'
-import { buildArgv, SDK_COMMANDS, validateFlagValue } from '../../data/sdk-manifest.js'
+import { buildArgv, needsForeground, SDK_COMMANDS, validateFlagValue } from '../../data/sdk-manifest.js'
 import { useKeymap } from '../../hooks/use-keymap.js'
 import { Picker } from '../../ui/picker.js'
 import { theme } from '../../ui/theme.js'
@@ -32,6 +32,8 @@ import { Viewport } from '../../ui/viewport.js'
 
 export interface ProjectPaneProps {
   active: boolean
+  /** Suspend/resume the Ink tree for interactive now-sdk commands. */
+  foregroundHost: { resume(): void; suspend(): void }
   height: number
   width: number
 }
@@ -120,6 +122,9 @@ export function ProjectPane(props: ProjectPaneProps): ReactElement {
   const [running, setRunning] = useState(false)
   const [lastBuild, setLastBuild] = useState<BuildRecord | undefined>()
   const [health, setHealth] = useState<string[]>([])
+  /** Free-text entry for flags with no picker (an instance URL, an alias). */
+  const [textFlag, setTextFlag] = useState<null | SdkFlag>(null)
+  const [textDraft, setTextDraft] = useState('')
   const identity = useAppIdentity(project, session.gateway.records)
   const identityNote = useMemo(
     () => (project ? describeAppIdentity(identity, project, session.host) : undefined),
@@ -224,6 +229,24 @@ export function ProjectPane(props: ProjectPaneProps): ReactElement {
     const options = { argv, auth, cwd, npmScript }
     const preview = sdk.previewOf(options)
 
+    // Anything that prompts gets the whole terminal. Ink and
+    // @inquirer/prompts cannot share stdin — leave Ink mounted and the
+    // prompt never advances while the app looks hung.
+    if (needsForeground(command, values)) {
+      const result = sdk.foreground(props.foregroundHost, options)
+      if (result.error) {
+        toast('error', `${command.name}: ${result.error.message}`)
+        return
+      }
+
+      // Its output went to the real screen, not to us — say what happened
+      // rather than showing an empty output pane.
+      setStage('output')
+      setOutput([`$ ${preview}`, `(ran in the foreground — exited ${result.code})`])
+      toast(result.code === 0 ? 'success' : 'error', `${command.name} exited ${result.code}`)
+      return
+    }
+
     if (command.risk === 'instance') {
       const detail = [{ after: preview, label: 'command' }]
       // Both dangers, severest first: which app you are about to touch on
@@ -282,7 +305,7 @@ export function ProjectPane(props: ProjectPaneProps): ReactElement {
     }
 
     toast(run.ok ? 'success' : 'error', `${command.name} exited ${run.code}`)
-  }, [approve, command, identityNote, project, readiness, running, sdk, session, toast, values])
+  }, [approve, command, identityNote, project, props.foregroundHost, readiness, running, sdk, session, toast, values])
 
   useKeymap(
     'pane',
@@ -330,7 +353,10 @@ export function ProjectPane(props: ProjectPaneProps): ReactElement {
           if (flag.type === 'boolean') {
             setValues((v) => ({ ...v, [flag.name]: v[flag.name] === 'true' ? '' : 'true' }))
           } else if (flag.picker === 'none') {
-            toast('info', `${flag.name} is free text — set it in the palette builder (phase 7)`)
+            // No list to choose from — an instance URL or a new alias is
+            // genuinely free text. Still validated on commit.
+            setTextFlag(flag)
+            setTextDraft(values[flag.name] ?? '')
           } else {
             openPicker(flag).catch((): undefined => undefined)
           }
@@ -367,7 +393,48 @@ export function ProjectPane(props: ProjectPaneProps): ReactElement {
 
       return 'pass'
     },
-    props.active && stage !== 'picking',
+    props.active && stage !== 'picking' && textFlag === null,
+  )
+
+  // Free-text flag entry. Validates on commit, so an unusable value is
+  // refused here rather than by yargs after the spawn.
+  useKeymap(
+    'modal',
+    (event) => {
+      if (event.key.escape) {
+        setTextFlag(null)
+        return 'handled'
+      }
+
+      if (event.key.return) {
+        const invalid = validateFlagValue(textFlag!, textDraft)
+        if (invalid) {
+          toast('error', `${textFlag!.name}: ${invalid}`)
+          return 'handled'
+        }
+
+        setValues((v) => ({ ...v, [textFlag!.name]: textDraft }))
+        setTextFlag(null)
+        return 'handled'
+      }
+
+      if (event.key.backspace || event.key.delete) {
+        setTextDraft((d) => d.slice(0, -1))
+        return 'handled'
+      }
+
+      if (event.input && !event.ctrl && !event.meta) {
+        // Strip control characters and split on newline so a paste commits
+        // rather than smuggling escapes into the argv we build.
+        const [first] = event.input.split(/[\n\r]/)
+        // eslint-disable-next-line no-control-regex
+        setTextDraft((d) => d + first.replaceAll(/[\u0000-\u001F\u007F]/g, ''))
+        return 'handled'
+      }
+
+      return 'handled'
+    },
+    props.active && textFlag !== null,
   )
 
   if (!project) {
@@ -493,10 +560,19 @@ export function ProjectPane(props: ProjectPaneProps): ReactElement {
             }}
             source={{ at: (i) => command.flags[i], length: command.flags.length }}
           />
-          <Text dimColor>
-            ⏎ resolve value  ^E run  Esc back
-            {running ? `  ${glyphs.running} running…` : ''}
-          </Text>
+          {textFlag ? (
+            <Box>
+              <Text color={theme.fg.accent}>--{textFlag.name} </Text>
+              <Text>{textDraft}</Text>
+              <Text inverse> </Text>
+              <Text dimColor>  ⏎ set  Esc cancel</Text>
+            </Box>
+          ) : (
+            <Text dimColor>
+              ⏎ resolve value  ^E run  Esc back
+              {running ? `  ${glyphs.running} running…` : ''}
+            </Text>
+          )}
         </>
       ) : null}
 

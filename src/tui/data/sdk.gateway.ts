@@ -11,8 +11,11 @@ import { existsSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 
+import type { ForegroundHost, ForegroundResult } from '../boot/foreground.js'
 import type { ApprovalRegistry, ApprovalSpec, ApprovalToken } from './approvals.js'
 import type { ProjectInfo } from './project-detect.js'
+
+import { runForeground } from '../boot/foreground.js'
 
 export interface SdkBinary {
   args: string[]
@@ -166,6 +169,24 @@ export class SdkGateway {
     // `pack` and `clean` reject an unknown option outright.
     const auth = options.auth ? ['--auth', this.alias] : []
     return { args: [...binary.args, ...options.argv, ...auth], command: binary.command }
+  }
+
+  /**
+   * Run a command with the terminal handed over, for anything that prompts.
+   *
+   * Synchronous by design — see boot/foreground.ts. Nothing is captured:
+   * the child is drawing on the real screen, and a prompt's output is not
+   * ours to log. Notably this is also the only safe way to let now-sdk
+   * collect a password, since it never touches our argv.
+   */
+  foreground(
+    host: ForegroundHost,
+    options: RunOptions,
+    approval?: { spec: ApprovalSpec; token: ApprovalToken },
+  ): ForegroundResult {
+    if (approval) this.approvals.consume(approval.token, approval.spec)
+    const { args, command } = this.commandFor(options)
+    return runForeground(host, { args, command, env: childEnv() })
   }
 
   /** Human-readable preview of what will run. */

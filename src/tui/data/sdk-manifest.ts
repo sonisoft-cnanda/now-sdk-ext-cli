@@ -39,6 +39,12 @@ export interface SdkFlag {
   choices?: string[]
   /** Short description lifted from --help. */
   description: string
+  /**
+   * Setting this flag makes the run prompt, so it needs the foreground
+   * handoff. Interactivity is per-FLAG, not per-command: `auth --list` is
+   * pure output while `auth --add` sits waiting on a password.
+   */
+  interactive?: boolean
   name: string
   picker: PickerKind
   /** Positional argument rather than a --flag. */
@@ -76,6 +82,32 @@ export const SDK_COMMANDS: SdkCommand[] = [
     flags: [
       { description: 'List all available authentication credentials', name: 'list', picker: 'none', type: 'boolean' },
       { description: 'Alias of credential to use by default (changes the SDK-wide default)', name: 'use', picker: 'auth-alias', type: 'string' },
+      // --add prompts for the secret itself. There is deliberately NO flag
+      // for the password or client secret: this repo refuses to run when a
+      // secret appears in argv (bin/argv-guard.js), and the same reasoning
+      // applies to argv we generate. The prompt is the safe channel.
+      {
+        description: 'Instance name or URL to store credentials for (prompts for the secret)',
+        interactive: true,
+        name: 'add',
+        picker: 'none',
+        type: 'string',
+      },
+      {
+        choices: ['basic', 'oauth'],
+        description: 'Authentication type for the new credential',
+        name: 'type',
+        picker: 'enum',
+        type: 'string',
+      },
+      { description: 'Alias to give the new credential', name: 'alias', picker: 'none', type: 'string' },
+      {
+        description: 'Alias of the credential to delete (asks to confirm)',
+        interactive: true,
+        name: 'delete',
+        picker: 'auth-alias',
+        type: 'string',
+      },
     ],
     name: 'auth',
     risk: 'local-write',
@@ -220,6 +252,22 @@ export function findCommand(name: string): SdkCommand | undefined {
  */
 export function riskFor(name: string): SdkRisk {
   return findCommand(name)?.risk ?? 'instance'
+}
+
+/**
+ * Will this run sit waiting for input?
+ *
+ * If so it MUST get the terminal handed to it. now-sdk prompts through
+ * @inquirer/prompts, which takes over stdin and raw mode — two readers on
+ * one terminal means the keystrokes go to Ink, the prompt never advances,
+ * and the app looks hung with no way out.
+ *
+ * Per-flag, because the same command can be either: `auth --list` prints
+ * and exits, `auth --add` waits on a password.
+ */
+export function needsForeground(command: SdkCommand, values: Record<string, string>): boolean {
+  if (command.interactive) return true
+  return command.flags.some((flag) => flag.interactive && (values[flag.name] ?? '').length > 0)
 }
 
 export function validateFlagValue(flag: SdkFlag, value: string): string | undefined {

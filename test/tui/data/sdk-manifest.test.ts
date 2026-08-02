@@ -3,6 +3,7 @@ import { describe, expect, it } from '@jest/globals'
 import {
   buildArgv,
   findCommand,
+  needsForeground,
   riskFor,
   SCOPE_NAME_MAX,
   SDK_COMMANDS,
@@ -116,5 +117,39 @@ describe('buildArgv', () => {
   it('preserves manifest flag order regardless of value insertion order', () => {
     const argv = buildArgv(init, { appName: 'Acme', from: 'abc' })
     expect(argv.indexOf('--from')).toBeLessThan(argv.indexOf('--appName'))
+  })
+})
+
+describe('needsForeground — interactivity is per-flag, not per-command', () => {
+  const auth = findCommand('auth')!
+
+  it('auth --list is pure output and streams', () => {
+    expect(needsForeground(auth, { list: 'true' })).toBe(false)
+  })
+
+  it('auth --add prompts for the secret, so it must take the terminal', () => {
+    expect(needsForeground(auth, { add: 'dev1.service-now.com' })).toBe(true)
+  })
+
+  it('auth --delete asks to confirm', () => {
+    expect(needsForeground(auth, { delete: 'old-alias' })).toBe(true)
+  })
+
+  it('an interactive flag left UNSET does not force the handoff', () => {
+    expect(needsForeground(auth, { add: '' })).toBe(false)
+    expect(needsForeground(auth, {})).toBe(false)
+  })
+
+  it('build never prompts', () => {
+    expect(needsForeground(findCommand('build')!, { frozenKeys: 'true' })).toBe(false)
+  })
+
+  it('offers NO flag for the password — a secret must never reach argv', () => {
+    // bin/argv-guard.js refuses to run when a secret appears in argv; argv
+    // we generate is held to the same rule. The prompt is the only channel.
+    const names = new Set(auth.flags.map((f) => f.name))
+    for (const forbidden of ['password', 'pwd', 'secret', 'clientSecret', 'token']) {
+      expect(names.has(forbidden)).toBe(false)
+    }
   })
 })
