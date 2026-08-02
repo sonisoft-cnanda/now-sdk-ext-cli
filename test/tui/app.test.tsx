@@ -136,6 +136,46 @@ describe('App shell', () => {
     unmount()
   })
 
+  it('^K works even while the table picker owns the keyboard', async () => {
+    // Launched with no --table, the picker is up and consumes every key.
+    // The palette must still be reachable, or the first screen is a trap.
+    const { lastFrame, stdin, unmount } = render(createElement(App, { session: fakeSession() }))
+    await flush(120)
+    expect(lastFrame() ?? '').toContain('Table')
+    stdin.write('\u000B')
+    await flush(150)
+    expect(lastFrame() ?? '').toContain('type to search commands')
+    unmount()
+  })
+
+  it('does not advertise global keys while a modal owns the keyboard', async () => {
+    const { lastFrame, unmount } = render(createElement(App, { session: fakeSession() }))
+    await flush(120)
+    const frame = lastFrame() ?? ''
+    // The picker is up: promising "1-4 pane / ? help / q quit" would be a lie.
+    expect(frame).toContain('Esc backs out')
+    expect(frame).not.toContain('q quit')
+    unmount()
+  })
+
+  it('keeps the pane MOUNTED under an overlay, so its state survives', async () => {
+    const { lastFrame, stdin, unmount } = render(
+      createElement(App, { initialTable: 'incident', session: fakeSession() }),
+    )
+    await flush(120)
+    expect(lastFrame() ?? '').toContain('INC0010001')
+
+    stdin.write('?')
+    await flush(150)
+    expect(lastFrame() ?? '').toContain('Keymap')
+
+    // Close it: the list is still there, not refetched from scratch.
+    stdin.write('\u001B')
+    await flush(150)
+    expect(lastFrame() ?? '').toContain('INC0010001')
+    unmount()
+  })
+
   it('digit keys switch panes — Logs mounts the live pane', async () => {
     const { lastFrame, stdin, unmount } = render(
       createElement(App, { initialTable: 'incident', session: fakeSession() }),

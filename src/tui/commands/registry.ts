@@ -17,7 +17,7 @@ export interface BindingEntry {
 
 export const BINDINGS: BindingEntry[] = [
   { group: 'Global', key: '1-5', label: 'switch pane (5 Project only inside a Fluent project)' },
-  { group: 'Global', key: '^K', label: 'command palette — everything is reachable here' },
+  { group: 'Global', key: '^K', label: 'command palette — works even inside a picker or editor' },
   { group: 'Global', key: '?', label: 'this help' },
   { group: 'Global', key: 'q', label: 'quit' },
   { group: 'Global', key: 'Ctrl+C', label: 'quit' },

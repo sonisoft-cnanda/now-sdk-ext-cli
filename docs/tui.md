@@ -196,7 +196,7 @@ bindings.
 | Key | Does |
 |---|---|
 | `1-5` | switch pane (5 Project only inside a Fluent project) |
-| `^K` | command palette — everything is reachable here |
+| `^K` | command palette — works even inside a picker or editor |
 | `?` | this help |
 | `q` | quit |
 | `Ctrl+C` | quit |

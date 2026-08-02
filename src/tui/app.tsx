@@ -15,6 +15,7 @@ import { SessionProvider, useSession } from './context/session-context.js'
 import { UiProvider, useUi } from './context/ui-context.js'
 import { useKeymap } from './hooks/use-keymap.js'
 import { useTerminalSize } from './hooks/use-terminal-size.js'
+import { useTopScope } from './hooks/use-top-scope.js'
 import { LogsPane } from './panes/logs/logs-pane.js'
 import { OpsPane } from './panes/ops/ops-pane.js'
 import { ProjectPane } from './panes/project/project-pane.js'
@@ -91,6 +92,7 @@ function Shell(props: ShellProps): ReactElement {
   const session = useSession()
   const toast = useToast()
   const size = useTerminalSize()
+  const topScope = useTopScope()
   const [pane, setPane] = useState<PaneId>(props.initialPane ?? 'records')
   // `5 Project` is present only inside a Fluent project — hidden entirely
   // rather than shown broken, so `5` is simply unbound elsewhere.
@@ -250,7 +252,8 @@ function Shell(props: ShellProps): ReactElement {
             height={bodyHeight}
             onClose={() => { setPaletteOpen(false) }}
           />
-        ) : helpOpen ? (
+        ) : null}
+        {!paletteOpen && helpOpen ? (
           <HelpOverlay
             entries={bindingsForPane(pane)}
             height={bodyHeight}
@@ -258,10 +261,18 @@ function Shell(props: ShellProps): ReactElement {
               setHelpOpen(false)
             }}
           />
-        ) : (
-          // ApprovalProvider renders EXCLUSIVELY: while a write is pending
-          // approval the dialog replaces the pane body, so the user cannot
-          // act on anything else mid-decision.
+        ) : null}
+        {/*
+          The pane stays MOUNTED under an overlay — collapsed to zero height,
+          never swapped out. `overlay ? <overlay/> : <PaneBody/>` unmounts the
+          pane and destroys its local state: opening the palette (or even the
+          ? sheet) from the Scripts pane threw away the whole script buffer.
+          Exactly the bug ApprovalProvider already had; same fix.
+
+          Safe because both overlays register a 'modal' scope, which outranks
+          'pane'/'editor', so the pane cannot act while one is up.
+        */}
+        <Box flexDirection="column" height={paletteOpen || helpOpen ? 0 : undefined} overflow="hidden">
           <ApprovalProvider>
             <PaneBody
               foregroundHost={props.foregroundHost}
@@ -277,10 +288,14 @@ function Shell(props: ShellProps): ReactElement {
               width={size.columns}
             />
           </ApprovalProvider>
-        )}
+        </Box>
       </Box>
       <Text dimColor>
-        {' '}1-{PANES.length} pane  ^K commands  ?  help  q quit
+        {topScope === 'modal' || topScope === 'editor'
+          // Something owns the keyboard and prints its own hints. Advertising
+          // the global keys here would be a lie — only ^K still works.
+          ? ' ^K commands  ·  Esc backs out'
+          : ` 1-${PANES.length} pane  ^K commands  ?  help  q quit`}
       </Text>
     </Box>
   )
