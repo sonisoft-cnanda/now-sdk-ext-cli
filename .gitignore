@@ -8,10 +8,15 @@ lib-cov
 *.gz
 *.swp
 
-pids
-logs
-results
-tmp
+# Root-anchored (leading /) ON PURPOSE. A bare `logs` matches a DIRECTORY
+# CALLED logs ANYWHERE in the tree — which silently untracked the whole of
+# src/tui/panes/logs/, so the Logs pane was missing from every clone and the
+# build failed for everyone but the author. Same trap as the dist/ note
+# below. Do not remove the slashes.
+/pids
+/logs
+/results
+/tmp
 
 # Coverage reports
 coverage
