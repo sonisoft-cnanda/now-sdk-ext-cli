@@ -1,5 +1,6 @@
 import type { ReactElement, ReactNode } from 'react'
 
+import { Box } from 'ink'
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 
 import type { AmbientState } from '../data/ambient.gateway.js'
@@ -100,9 +101,22 @@ export function ApprovalProvider(props: ApprovalProviderProps): ReactElement {
           spec={pending.spec}
           supportsRemember={session.gateway.approvals.supportsRemember(pending.spec)}
         />
-      ) : (
-        props.children
-      )}
+      ) : null}
+      {/*
+        Children stay MOUNTED while the dialog is up — collapsed to zero
+        height with overflow hidden rather than swapped out.
+
+        Rendering `pending ? dialog : children` unmounts the pane, which
+        destroys every piece of its local state: the Scripts pane's whole
+        script buffer vanished when its own run asked for approval (found
+        live). Keeping them mounted also means the pane's key scopes stay
+        registered — but the dialog registers a 'modal' scope, which sits
+        above 'pane'/'editor' in the stack and consumes every key, so the
+        pane cannot act while a decision is pending.
+      */}
+      <Box flexDirection="column" height={pending ? 0 : undefined} overflow="hidden">
+        {props.children}
+      </Box>
     </ApprovalContext.Provider>
   )
 }

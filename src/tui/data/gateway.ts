@@ -15,6 +15,7 @@ import { AmbientGateway } from './ambient.gateway.js'
 import { ApprovalRegistry } from './approvals.js'
 import { LogsGateway } from './logs.gateway.js'
 import { RecordsGateway } from './records.gateway.js'
+import { ScriptsGateway } from './scripts.gateway.js'
 
 export type DisposeFn = () => void
 
@@ -28,6 +29,7 @@ export class NexGateway {
   readonly approvals: ApprovalRegistry
   readonly logs: LogsGateway
   readonly records: RecordsGateway
+  readonly scripts: ScriptsGateway
   private readonly disposers = new Set<DisposeFn>()
 
   constructor(instance: unknown, options: NexGatewayOptions) {
@@ -35,6 +37,7 @@ export class NexGateway {
     this.ambient = new AmbientGateway(instance)
     this.logs = new LogsGateway(instance, options.scrollback)
     this.records = new RecordsGateway(instance, this.approvals)
+    this.scripts = new ScriptsGateway(instance, this.approvals)
     // The tail is a live poll; it must stop on EVERY exit path, not just
     // effect teardown (an uncaught exception skips those).
     this.registerDisposer(() => {
