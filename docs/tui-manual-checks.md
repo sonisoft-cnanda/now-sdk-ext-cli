@@ -14,6 +14,26 @@ Run this list against a **dev** alias before releasing a change to
 
 ---
 
+## 0. It builds from what is actually committed
+
+CI does this on every PR now, so it should never surprise you again — but it
+is first on the list because it went wrong once and cost everyone else a
+broken build:
+
+```bash
+git clone <repo> /tmp/fresh && cd /tmp/fresh && npm ci && npm run build
+```
+
+A bare `logs` in `.gitignore` matches a **directory of that name anywhere in
+the tree**, which silently untracked all of `src/tui/panes/logs/`. It built
+perfectly for the author and for nobody else. The directory patterns are
+root-anchored now, and CI builds from a clean checkout on every pull request
+rather than only on those targeting `main`.
+
+If you add a source directory whose name collides with a common ignore word
+(`logs`, `tmp`, `results`, `pids`, `dist`, `coverage`), check
+`git check-ignore -v <path>` before assuming it is tracked.
+
 ## 1. Terminal integrity
 
 The one failure nobody forgives is a terminal left unusable. Check all four
