@@ -614,97 +614,140 @@ Three sub-tabs, cycled by pressing `4` again.
 covers the other half: the local project → instance pipeline. Running `nex tui` inside a
 Fluent project directory should show both.
 
-This is cheap to reach because **`@servicenow/sdk@4.9.2` is already a direct dependency of
-this CLI** and ships bins `now-sdk` / `sdk` → `bin/index.js`. Resolve it deterministically
-rather than trusting `PATH`:
+**The thesis, revised after researching how the SDK is actually used: running the commands
+is the easy part.** Every one of them is a single line you can type. What is genuinely hard
+is (a) knowing the *values* the flags need — `init --from` wants a sys_id, `dependencies
+--add` wants a table plus a scope, `transform --table` wants table names — and (b) the
+handful of failure modes the CLI cannot protect you from because it only sees one command
+at a time. The pane's job is argument resolution and cross-command state, not command
+execution.
 
-```ts
-const req = createRequire(import.meta.url)
-const pkg = req.resolve('@servicenow/sdk/package.json')
-const bin = path.join(path.dirname(pkg), JSON.parse(fs.readFileSync(pkg)).bin['now-sdk'])
-```
+#### The 11 commands (verified from `now-sdk --help` at 4.9.2)
 
-Prefer a project-local `node_modules/.bin/now-sdk` when one exists and its version differs —
-the project's pinned SDK is the authority for that project — and show which one is in use.
+`auth` · `init` (alias `create`) · `download <directory>` · `build [source]` ·
+`install` (alias `deploy`) · `dependencies [sysIds..]` · `transform` · `clean [source]` ·
+`pack [source]` · `explain [topic]` · `query <table>`
 
-#### Spawn, don't import
+#### QoL 1 — every identifier flag gets a picker
 
-`@servicenow/sdk-cli` is a **yargs + `@inquirer/prompts`** CLI. `dist/auth/index.js` is
-already deep-imported at `src/common/authenticated-command.ts:4`, but that is one function;
-there is no supported programmatic API for the subcommands, and `@inquirer/prompts` inside
-an Ink process means two things fighting over stdin and raw mode. So the SDK is always a
-**child process**, in one of two modes:
+This is the headline, and it reuses `picker.tsx` wholesale. No surface should ever ask a
+developer to go find a sys_id.
 
-- **Streamed** — non-interactive runs (`build`, or any command whose flags are fully
-  supplied). `spawn` with piped stdio, lines fed through the same `use-stream-buffer` the
-  log pane uses, rendered in `run-output.tsx`. Exit code drives the status glyph.
-- **Foreground handoff** — anything that prompts. `boot/foreground.ts` unmounts Ink, leaves
-  the alt screen, restores raw mode, `spawnSync(..., {stdio: 'inherit'})`, then re-enters
-  and re-mounts. **This is the same primitive as the `$EDITOR` pop-out in §7.3** — build it
-  once in Phase 4 and both callers use it.
+| Command · flag | Wants | Pane offers |
+|---|---|---|
+| `init --from` | sys_id of a scoped app **or** a legacy app directory | searchable `sys_app` list (name, scope, version) — or a directory picker for the local variant |
+| `init --template` | one of 7 fixed values | enum picker (`base`, `javascript.aiux`, `javascript.basic`, `javascript.react`, `typescript.basic`, `typescript.react`, `typescript.vue`) |
+| `init --scopeName` | ≤18 chars, `^((x\|sn)_[a-z0-9_]+\|global)$` | live-validated input — the constraint is in `now.config.json`'s schema, so we can enforce it before the command runs rather than after it fails |
+| `transform --table` | comma-separated table names | the **existing** table picker, multi-select, joined for the flag |
+| `transform --from` | local XML file/directory | directory tree picker rooted at the project |
+| `dependencies --add` | a table name | table picker |
+| `dependencies --scope` | `global` or `x_...` | the **existing** scope picker (already built for the Scripts pane) |
+| `dependencies [sysIds..]` | record sys_ids | record multi-select against the chosen table |
+| `install --source`, `build [source]`, `--directory` | a project directory | directory picker, defaulted to the detected project root |
+| `auth --use` | an existing alias | picker over `now-sdk auth --list` |
+| `query <table> -q` | table + encoded query | table picker + the Records pane's query bar — or just send them to the Records pane, which is strictly better |
 
-#### Generic command enumeration
+#### QoL 2 — prefer the project's npm scripts
 
-Per your decision, the pane exposes everything the SDK offers rather than a curated four.
-A **checked-in manifest** (`data/sdk-manifest.ts`) describes each command: name, summary,
-flags (name, type, required, choices, default), `interactive` (needs handoff), and a
-`risk` classification. At runtime the pane reads the installed SDK version; if it matches the
-manifest, render from it, otherwise **fall back to parsing `now-sdk <cmd> --help` live** and
-render best-effort.
+The SDK's own guide is explicit: *"Prefer the `package.json` npm scripts over the underlying
+`now-sdk build` / `now-sdk install` commands — a complete application may have additional
+build steps wired into those scripts."* So the pane reads `package.json.scripts` and, when
+`build`/`deploy` exist, runs `npm run build` rather than `now-sdk build`, showing which it
+chose. Running the raw command when the project has wrapped it is a real way to ship a
+half-built app.
 
-The manifest is not laziness — it carries what help text cannot:
+#### QoL 3 — the build → install ordering guard
 
-> **You cannot derive "this mutates a production instance" from a yargs help string.**
-> `install` pushes to the instance; `build` does not. Risk classification has to be declared,
-> and **any command not in the manifest defaults to always-ask**, non-rememberable.
+From the same guide: *"MUST: Ensure build has passed before deploying! A failed build leaves
+the previous artifacts in place, so deploying without rebuilding pushes stale output."*
 
-`flag-form.tsx` renders a form over the flag list (text, boolean, choice via `Picker`), with
-the assembled command line shown verbatim above the run button so there is never a question
-about what is about to execute — and `y` copies it as a runnable shell command.
+The CLI cannot enforce this — it sees one invocation at a time. The pane can, because it
+owns the session: it records the outcome and timestamp of the last build, compares it
+against the newest mtime under the source dirs, and marks `install` as **stale** or
+**failed-build** in the approval body. Installing anyway is allowed; doing it unknowingly
+is not. This is the single highest-value thing the pane does.
 
-Approval mapping: local-only commands (`build`, `version`, `dependencies` read paths) need
-none; commands that write local files (`transform`, `convert`, `init`) confirm overwrites;
-anything that reaches the instance (`install`, `dependencies` install paths, `upgrade`) is
-**always-ask**, in the same tier as `xml import` and app install.
+#### QoL 4 — keys.ts drift detector
 
-#### Project detection
+`src/fluent/generated/keys.ts` maps `Now.ID['…']` to sys_ids and **must be committed**. When
+it is not, per the CI guide: *"Deploys produce different sys_ids on every machine… Updates
+become inserts… corrupting the target instance."* `now-sdk build --frozenKeys` is the CI
+guard, but locally nothing tells you.
 
-Walk up from `process.cwd()` for `now.config.json`; corroborate with a `package.json`
-depending on `@servicenow/sdk`. Read scope, name, version and source dirs from the config.
-`@servicenow/sdk-project` exists in the tree and parses this properly, but only as a
-**transitive dep at 3.0.3 while the direct SDK line is 4.9.2** — take the version skew as a
-reason to read the two files directly rather than binding to an unversioned internal.
+After every build the pane checks whether `keys.ts` is dirty in git and says so loudly, with
+the one-line fix (commit it). Cheap to implement, and the failure it prevents is silent
+record duplication on someone else's instance.
 
-Outside a project the pane is hidden entirely (not shown-and-broken) and `nex tui` behaves
-exactly as it does today. Inside one, the header gains the project identity and the tab
-strip gains `5 Project`.
+#### QoL 5 — post-transform shadow cleanup
 
-#### The `--cred-store` trap
+*"Records that exist as both a fluent entity (`.now.ts`) and an XML file in `metadata` will
+use the XML version on `build`. Remove converted XML files to avoid conflicts."*
 
-`bin/credstore-boot.js` installs the sn-credstore keyring shim **in this process only**, via
-a dynamic `import('@sonisoft/sn-credstore/register')`. A spawned `now-sdk` inherits none of
-that: it would fall back to the OS keyring, which in a headless session reports "no
-credentials" rather than failing loudly — the exact silent failure
-`AuthenticatedCommand.failAuth()` exists to explain.
+So a successful `transform` can leave the project in a state where the Fluent source you
+just generated is silently ignored. After a transform the pane lists XML files under
+`metadata/` that now have a `.now.ts` twin and offers to delete them — a `write:local`
+confirm, never automatic.
 
-So `sdk.gateway.ts` must build the child environment deliberately: propagate
-`SN_CRED_STORE_*`, and when `NOW_SDK_KEYCHAIN_PATCHED === '1'` add the register module to
-the child's `NODE_OPTIONS` so the shim installs there too. Pass `--auth <alias>` through so
-the SDK targets the instance in the banner — the SDK's credential store *is* the store
-`getCredentials()` reads, so the alias is already shared. Verify this against a file-backed
-store (`SN_CRED_STORE=file`, `SN_CRED_STORE_PATH` to a temp dir) per `AGENTS.md` rule 2, and
-confirm the redirect took effect rather than assuming it did.
+#### QoL 6 — project ↔ instance identity check
 
-#### Cross-pane payoff
+`now.config.json` carries `scope` **and** `scopeId` (both required). The pane queries
+`sys_app` on the connected instance for that scopeId and shows, in the header: is this app
+installed here, at what version, and does the instance you are pointed at actually make
+sense for this project. This is the Project-pane equivalent of the instance banner, and it
+catches "I'm about to install my app onto the wrong instance" before the approval dialog
+has to.
 
-Build errors carry `file:line` → open in `$EDITOR`. After `install`, jump to the update set
-it produced, or tail syslog for the install window. `transform` output lists the records it
-pulled → open them in Records. This adjacency is the whole argument for the pane.
+#### QoL 7 — `explain` as an offline docs pane
 
-> **Unverified here:** `node_modules` is not installed in this checkout, so the actual
-> subcommand and flag surface of now-sdk 4.9.2 could not be enumerated. Generating the
-> manifest from `now-sdk --help` and each subcommand's `--help` is the first task of the
-> phase, and its output may change the shape of `flag-form.tsx`.
+`now-sdk explain --list` returns ~200 topics, each tagged with searchable keywords
+(`business-rule-guide (business rule, server script, sys_script, before, after, async)`),
+and `explain <topic> --format raw` prints markdown. It needs no instance and no auth.
+
+Surfacing this as a searchable panel beside the Scripts editor is a large win for a small
+amount of work: the Fluent API reference, in the terminal, while you are writing Fluent.
+Reuses `picker.tsx` for topic search and the `Viewport` for the body.
+
+#### Auth: what the pane should and should not do
+
+`now-sdk auth` supports `--list`, `--use <alias>`, `--delete <alias>`, and
+`--add <instance> --type basic|oauth [--alias] [--password-stdin]`.
+
+- **`--list` / `--use`** are safe and belong in the pane: a picker of configured aliases,
+  and a session-scoped default. Note `--use` changes the *global* SDK default, so switching
+  it is a `write:context` approval, not a silent toggle.
+- **`--add` is a foreground handoff.** It prompts for a password via `@inquirer/prompts`;
+  the TUI must not collect credentials itself. `--password-stdin` exists, but a TUI that
+  takes a password and pipes it is a credential-handling responsibility this project
+  deliberately does not want — `AGENTS.md` and the sn-credstore work are explicit that
+  credentials stay with the SDK and the credential store.
+- **On the `.env` idea:** the SDK's CI mode reads `SN_SDK_NODE_ENV`, `SN_SDK_AUTH_TYPE`,
+  `SN_SDK_INSTANCE_URL`, `SN_SDK_USER`, `SN_SDK_USER_PWD`, `SN_SDK_OAUTH_CLIENT_ID`,
+  `SN_SDK_OAUTH_CLIENT_SECRET`. Writing a `.env` therefore means writing a **plaintext
+  password or client secret to disk** in a repo that runs gitleaks precisely to stop that.
+  Recommendation: offer a *session* default (held in the TUI, passed as `--auth <alias>` to
+  every spawned command — no file, no secret) and, if a `.env` is genuinely wanted, write
+  only the non-secret keys (`SN_SDK_INSTANCE_URL`, `SN_SDK_AUTH_TYPE`) with the secrets left
+  as documented placeholders. Never the password.
+
+#### Mechanics
+
+- **Spawn, don't import.** `@servicenow/sdk-cli` is a yargs + `@inquirer/prompts` CLI with
+  no supported programmatic API. Streamed mode (piped stdio → `use-stream-buffer`) for
+  non-interactive runs; `boot/foreground.ts` for anything that prompts.
+- **Binary resolution** via `createRequire(...).resolve('@servicenow/sdk/package.json')` →
+  `bin['now-sdk']`, preferring a project-local install when present. `@servicenow/sdk@4.9.2`
+  is already a direct dependency of this CLI, so there is nothing to install.
+- **`--cred-store` propagation.** `bin/credstore-boot.js` patches the keyring **in this
+  process only**. A spawned `now-sdk` inherits none of it and silently falls back to the OS
+  keyring — the exact failure `failAuth()` exists to explain. Propagate `SN_CRED_STORE_*`
+  and, when `NOW_SDK_KEYCHAIN_PATCHED === '1'`, add the register module to the child's
+  `NODE_OPTIONS`.
+- **Approval mapping.** Local-only (`build`, `clean`, `pack`, `explain`, `query`) → none.
+  Local-file writes (`init`, `transform`, `download`, `dependencies`) → confirm overwrites.
+  Instance-reaching (`install`, `auth --use`) → always-ask, alongside `xml import`.
+- **Risk is declared, not inferred.** A yargs help string cannot tell you `install` writes to
+  an instance and `build` does not, so `sdk-manifest.ts` carries the classification and
+  anything unknown defaults to always-ask.
 
 ---
 
@@ -1057,8 +1100,9 @@ the relevant file paths from this plan, plus a `tui` label and a phase label
 | 24 | 6 | Generate `sdk-manifest.ts` from `now-sdk --help` (+ per-subcommand help); declare interactivity and risk per command |
 | 25 | 6 | Project detection (`now.config.json` walk-up) + deterministic binary resolution, project-local preferred; conditional pane |
 | 26 | 6 | `sdk.gateway.ts`: streamed and foreground spawn modes, `--auth` pass-through, `--cred-store` / `NODE_OPTIONS` env propagation |
-| 27 | 6 | Project pane: generic flag form, assembled command-line preview, run output, approval mapping, live `--help` fallback |
-| 28 | 6 | Project cross-pane jumps: build error → `$EDITOR`, post-install → update set / syslog window, transform output → Records |
+| 27 | 6 | Project pane: argument pickers for every identifier flag (`init --from` scope picker, template enum, table/scope/directory pickers), assembled command-line preview |
+| 28 | 6 | Safety nets the CLI cannot provide: stale-install guard, keys.ts drift detector, post-transform shadow cleanup, npm-script preference, project↔instance identity |
+| 28b | 6 | Fluent docs browser over `now-sdk explain` (offline, no instance, reachable from the Scripts pane) |
 | 29 | 7 | Command palette over the registry + `?` help sheet |
 | 30 | 7 | Bulk operations: two-step dry-run wizard, `sys_idIN` targeting, chunking, progress + abort |
 | 31 | 7 | Docs: `docs/tui.md`, `docs/tui-manual-checks.md`, `oclif readme`, `CLAUDE.md`/`AGENTS.md` rules for `src/tui/` |

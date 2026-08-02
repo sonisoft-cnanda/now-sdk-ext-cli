@@ -13,6 +13,7 @@ import type { ApprovalRegistryOptions } from './approvals.js'
 
 import { AmbientGateway } from './ambient.gateway.js'
 import { ApprovalRegistry } from './approvals.js'
+import { AutomationGateway } from './automation.gateway.js'
 import { LogsGateway } from './logs.gateway.js'
 import { RecordsGateway } from './records.gateway.js'
 import { ScriptsGateway } from './scripts.gateway.js'
@@ -27,6 +28,7 @@ export class NexGateway {
   readonly ambient: AmbientGateway
   /** The only minter of ApprovalTokens; every write consumes one. */
   readonly approvals: ApprovalRegistry
+  readonly automation: AutomationGateway
   readonly logs: LogsGateway
   readonly records: RecordsGateway
   readonly scripts: ScriptsGateway
@@ -35,6 +37,7 @@ export class NexGateway {
   constructor(instance: unknown, options: NexGatewayOptions) {
     this.approvals = new ApprovalRegistry(options)
     this.ambient = new AmbientGateway(instance)
+    this.automation = new AutomationGateway(instance, this.approvals)
     this.logs = new LogsGateway(instance, options.scrollback)
     this.records = new RecordsGateway(instance, this.approvals)
     this.scripts = new ScriptsGateway(instance, this.approvals)

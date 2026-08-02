@@ -14,6 +14,7 @@ import { UiProvider, useUi } from './context/ui-context.js'
 import { useKeymap } from './hooks/use-keymap.js'
 import { useTerminalSize } from './hooks/use-terminal-size.js'
 import { LogsPane } from './panes/logs/logs-pane.js'
+import { OpsPane } from './panes/ops/ops-pane.js'
 import { RecordPane } from './panes/records/record-pane.js'
 import { ScriptsPane } from './panes/scripts/scripts-pane.js'
 import { HelpOverlay } from './ui/help-overlay.js'
@@ -261,7 +262,14 @@ function PaneBody(props: PaneBodyProps): ReactElement {
     }
 
     case 'ops': {
-      return <ComingSoon label="Ops — Flows / ATF / Update Sets" phase="5" />
+      return (
+        <OpsPane
+          active
+          height={props.height}
+          onOpenRecord={props.onOpenRecord}
+          width={props.width}
+        />
+      )
     }
 
     case 'records': {
@@ -291,12 +299,3 @@ function PaneBody(props: PaneBodyProps): ReactElement {
   }
 }
 
-function ComingSoon(props: { label: string; phase: string }): ReactElement {
-  return (
-    <Box alignItems="center" flexGrow={1} justifyContent="center">
-      <Text dimColor>
-        {props.label} arrives in phase {props.phase} (docs/TUI_PLAN.md)
-      </Text>
-    </Box>
-  )
-}
