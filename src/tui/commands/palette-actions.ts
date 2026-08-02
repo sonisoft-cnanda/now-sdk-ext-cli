@@ -43,6 +43,7 @@ export interface PaletteContext {
  * and the user is told, instead of the palette silently doing nothing.
  */
 export type PaneIntent =
+  | { kind: 'bulk' }
   | { kind: 'edit-query' }
   | { kind: 'open-docs' }
   | { kind: 'pick-scope' }
@@ -59,6 +60,7 @@ export type PaneIntent =
  * genuine failure is a pane that is not present at all.
  */
 export const INTENT_OWNER: Record<PaneIntent['kind'], PaneId> = {
+  bulk: 'records',
   'edit-query': 'records',
   'open-docs': 'scripts',
   'pick-scope': 'scripts',
@@ -99,6 +101,7 @@ export function buildPaletteActions(context: PaletteContext): PaletteAction[] {
   intent('records.table', 'Records', 'Change table', { kind: 'pick-table' }, 't')
   intent('records.query', 'Records', 'Edit encoded query', { kind: 'edit-query' }, '/')
   intent('records.refresh', 'Records', 'Refresh', { kind: 'refresh' }, 'r')
+  intent('records.bulk', 'Records', 'Bulk update selected records', { kind: 'bulk' }, 'b', 'write')
   intent('logs.follow', 'Logs', 'Toggle follow / pause', { kind: 'toggle-follow' }, 'Space')
   intent('scripts.scope', 'Scripts', 'Change execution scope', { kind: 'pick-scope' }, 's')
   intent('docs.open', 'Help', 'Fluent API docs (offline)', { kind: 'open-docs' }, 'd')

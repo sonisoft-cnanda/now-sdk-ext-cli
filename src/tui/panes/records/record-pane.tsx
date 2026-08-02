@@ -15,6 +15,8 @@ import { useKeymap } from '../../hooks/use-keymap.js'
 import { DataTable } from '../../ui/data-table.js'
 import { Picker } from '../../ui/picker.js'
 import { theme } from '../../ui/theme.js'
+import { useToast } from '../../ui/toast-host.js'
+import { BulkWizard } from './bulk-wizard.js'
 import { RecordForm } from './record-form.js'
 
 export interface RecordPaneProps {
@@ -53,6 +55,8 @@ export function RecordPane(props: RecordPaneProps): ReactElement {
   const [cursor, setCursor] = useState(0)
   const [selection, setSelection] = useState<ReadonlySet<string>>(new Set())
   const [pickerOpen, setPickerOpen] = useState(!props.initialTable)
+  const [bulkOpen, setBulkOpen] = useState(false)
+  const toast = useToast()
 
   // Palette intents. Keyed on the serial so asking twice fires twice.
   const intentSerial = props.intent?.serial
@@ -76,6 +80,7 @@ export function RecordPane(props: RecordPaneProps): ReactElement {
   useEffect(() => {
     if (intentSerial === undefined || !intentValue) return
     switch (intentValue.kind) {
+      case 'bulk': { if (selection.size > 0) setBulkOpen(true); break }
       case 'edit-query': { setQueryDraft(query); break }
       case 'pick-table': { setPickerOpen(true); break }
       case 'refresh': { refresh(); break }
@@ -209,6 +214,16 @@ export function RecordPane(props: RecordPaneProps): ReactElement {
         return 'handled'
       }
 
+      if (event.input === 'b') {
+        if (selection.size === 0) {
+          toast('info', 'select rows with x first — bulk always targets an explicit list')
+          return 'handled'
+        }
+
+        setBulkOpen(true)
+        return 'handled'
+      }
+
       if (event.key.return && rows[cursor]) {
         setStack([{ sysId: rows[cursor].sysId, table }])
         return 'handled'
@@ -216,7 +231,7 @@ export function RecordPane(props: RecordPaneProps): ReactElement {
 
       return 'pass'
     },
-    props.active && !pickerOpen && !editingQuery && !inForm,
+    props.active && !pickerOpen && !editingQuery && !inForm && !bulkOpen,
   )
 
   const commitQuery = useCallback((value: string) => {
@@ -267,6 +282,21 @@ export function RecordPane(props: RecordPaneProps): ReactElement {
     },
     props.active && editingQuery,
   )
+
+  if (bulkOpen) {
+    return (
+      <BulkWizard
+        height={props.height}
+        ids={[...selection]}
+        onClose={() => {
+          setBulkOpen(false)
+          setSelection(new Set())
+          refresh()
+        }}
+        table={table!}
+      />
+    )
+  }
 
   if (pickerOpen) {
     return (

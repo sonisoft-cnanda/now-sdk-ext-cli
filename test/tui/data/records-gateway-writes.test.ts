@@ -13,6 +13,7 @@ const resolveIncident = jest.fn<any>()
 const approveChange = jest.fn<any>()
 
 jest.unstable_mockModule('@sonisoft/now-sdk-ext-core', () => ({
+  QueryBatchOperations: jest.fn().mockImplementation(() => ({ queryUpdate: jest.fn() })),
   AggregateQuery: jest.fn().mockImplementation(() => ({ count: jest.fn<any>() })),
   SchemaDiscovery: jest.fn().mockImplementation(() => ({ discoverTableSchema: jest.fn<any>(), explainField: jest.fn<any>() })),
   TableAPIRequest: jest.fn().mockImplementation(() => ({ get: jest.fn<any>(), put: tablePut })),
