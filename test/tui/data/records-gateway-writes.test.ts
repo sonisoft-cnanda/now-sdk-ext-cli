@@ -50,9 +50,9 @@ describe('RecordsGateway writes', () => {
   })
 
   it('treats a no-response write as a FAILURE, never as success', async () => {
-    // core 5.0.1's executeRequest has no 'patch' case and returns null for
-    // it — a silent no-op that reported success. Any write that comes back
-    // empty must throw rather than toast "saved".
+    // NEX-92: core 5.0.1's executeRequest has no 'patch' case and returns
+    // null for it — a silent no-op that reported success. Any write that
+    // comes back empty must throw rather than toast "saved".
     tablePut.mockResolvedValueOnce(undefined)
     const approvals = new ApprovalRegistry({ alias: 'dev', env: 'dev' })
     const gw = new RecordsGateway({}, approvals)

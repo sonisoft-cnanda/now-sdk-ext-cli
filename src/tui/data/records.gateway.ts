@@ -312,14 +312,16 @@ export class RecordsGateway {
   /**
    * Update fields on one record.
    *
-   * Uses PUT, not PATCH, deliberately: core 5.0.1's
+   * Uses PUT, not PATCH, deliberately — see NEX-92. In core 5.0.1
    * `ServiceNowRequest.executeRequest` switches on the HTTP method with
    * cases for post/put/get/delete and NO case for patch, so
-   * `TableAPIRequest.patch()` resolves successfully having sent nothing —
-   * a silent no-op. No CLI command uses patch, which is why it went
-   * unnoticed. Verified against a live instance: PUT with a partial body
-   * updates only the supplied fields and leaves the rest untouched, which
-   * is the semantic we want. Revert to patch once core is fixed.
+   * `TableAPIRequest.patch()` resolves successfully having sent nothing:
+   * a silent no-op that reports success. No CLI command uses patch, which
+   * is why it went unnoticed until the TUI's first write.
+   *
+   * Verified against a live instance: PUT with a partial body updates only
+   * the supplied fields and leaves the rest untouched, which is the
+   * semantic we want. Revert to patch once NEX-92 ships.
    */
   async updateRecord(
     spec: ApprovalSpec,
