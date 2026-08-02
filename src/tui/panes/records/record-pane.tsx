@@ -21,6 +21,8 @@ export interface RecordPaneProps {
   height: number
   initialQuery?: string
   initialTable?: string
+  /** Cross-pane jump: open this record's form directly (from Logs). */
+  openRequest?: { requestId: number; sysId: string; table: string }
   width: number
 }
 
@@ -49,6 +51,7 @@ export function RecordPane(props: RecordPaneProps): ReactElement {
   const [selection, setSelection] = useState<ReadonlySet<string>>(new Set())
   const [pickerOpen, setPickerOpen] = useState(!props.initialTable)
   const [stack, setStack] = useState<FormTarget[]>([])
+  const [formDirty, setFormDirty] = useState(false)
 
   const page = useAsyncResource<RecordPage>()
   const count = useAsyncResource<number>()
@@ -66,6 +69,17 @@ export function RecordPane(props: RecordPaneProps): ReactElement {
   useEffect(() => {
     refresh()
   }, [refresh])
+
+  // Cross-pane open request: land on the record's form with its table as
+  // the list context, so Esc-back drops into a sensible list.
+  const openRequestId = props.openRequest?.requestId
+  useEffect(() => {
+    if (!props.openRequest) return
+    setTable(props.openRequest.table)
+    setStack([{ sysId: props.openRequest.sysId, table: props.openRequest.table }])
+    setPickerOpen(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openRequestId])
 
   useEffect(() => {
     if (!pickerOpen) return
@@ -264,15 +278,17 @@ export function RecordPane(props: RecordPaneProps): ReactElement {
           <Text color={theme.fg.accent}>
             {stack.map((t) => `${t.table}`).join(' ▸ ')}
           </Text>
-          <Text dimColor>  Esc back  o open reference</Text>
+          {formDirty ? <Text color={theme.edit.dirty}>  ● unsaved</Text> : null}
         </Box>
         <RecordForm
           active={props.active}
           height={props.height - 1}
           key={`${target.table}:${target.sysId}`}
           onBack={() => {
+            setFormDirty(false)
             setStack((s) => s.slice(0, -1))
           }}
+          onDirtyChange={setFormDirty}
           onOpenReference={(refTable, refSysId) => {
             setStack((s) => [...s, { sysId: refSysId, table: refTable }])
           }}

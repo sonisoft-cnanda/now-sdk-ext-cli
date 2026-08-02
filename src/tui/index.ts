@@ -14,19 +14,23 @@ import { enterAltScreen, exitAltScreen, registerCleanup, runCleanup } from './bo
 
 export interface StartTuiOptions {
   alias: string
+  approveAll?: boolean
   ascii?: boolean
   initialPane?: PaneId
   initialQuery?: string
   initialTable?: string
   instance: InstanceLike
   readOnly: boolean
+  scrollback?: number
 }
 
 export async function startTui(options: StartTuiOptions): Promise<void> {
   const session = createSession({
     alias: options.alias,
+    approveAll: options.approveAll,
     instance: options.instance,
     readOnly: options.readOnly,
+    scrollback: options.scrollback,
   })
 
   enterAltScreen()
@@ -43,9 +47,22 @@ export async function startTui(options: StartTuiOptions): Promise<void> {
     session.gateway.disposeAll()
   })
 
+  // The $EDITOR pop-out needs to clear Ink out of the way and put it back.
+  // Ink has no "pause" — clear() blanks the frame and a re-render restores
+  // it, which is what suspend/resume mean here.
+  const foregroundHost = {
+    resume() {
+      app.clear()
+    },
+    suspend() {
+      app.clear()
+    },
+  }
+
   const app = render(
     createElement(App, {
       ascii: options.ascii,
+      foregroundHost,
       initialPane: options.initialPane,
       initialQuery: options.initialQuery,
       initialTable: options.initialTable,
@@ -65,4 +82,12 @@ export async function startTui(options: StartTuiOptions): Promise<void> {
   } finally {
     runCleanup()
   }
+
+  // Hard exit, same precedent and same root cause as the SIGINT handler in
+  // src/commands/log/index.ts: core's tail machinery (poll interval,
+  // keep-alive sockets) does not release the event loop even after
+  // stopTailing(), so a session that ever tailed would hang the process
+  // after quit. Cleanup above has already restored the terminal.
+  // eslint-disable-next-line n/no-process-exit, unicorn/no-process-exit
+  process.exit(0)
 }

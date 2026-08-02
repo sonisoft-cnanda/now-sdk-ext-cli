@@ -11,9 +11,14 @@ jest.unstable_mockModule('@sonisoft/now-sdk-ext-core', () => ({
   AggregateQuery: jest.fn().mockImplementation(() => ({ count: aggregateCount })),
   SchemaDiscovery: jest.fn().mockImplementation(() => ({ discoverTableSchema, explainField })),
   TableAPIRequest: jest.fn().mockImplementation(() => ({ get: tableGet })),
+  TaskOperations: jest.fn().mockImplementation(() => ({})),
 }))
 
 const { RecordsGateway, toRecordRow, unwrapResult } = await import('../../../src/tui/data/records.gateway.js')
+const { ApprovalRegistry } = await import('../../../src/tui/data/approvals.js')
+
+/** Reads need no approvals; the registry is just a constructor dependency. */
+const approvals = () => new ApprovalRegistry({ alias: 'dev', env: 'dev' })
 
 describe('unwrapResult', () => {
   it('prefers data.result, falls back to bodyObject.result, then empty', () => {
@@ -49,7 +54,7 @@ describe('toRecordRow', () => {
 describe('RecordsGateway', () => {
   it('fetchPage builds sysparm params with display_value=all and offset', async () => {
     tableGet.mockResolvedValueOnce({ data: { result: [{ number: 'INC1', sys_id: 'a' }] } })
-    const gw = new RecordsGateway({})
+    const gw = new RecordsGateway({}, approvals())
     const page = await gw.fetchPage({ limit: 25, offset: 50, query: 'active=true', table: 'incident' })
 
     expect(tableGet).toHaveBeenCalledWith('incident', expect.objectContaining({
@@ -64,7 +69,7 @@ describe('RecordsGateway', () => {
 
   it('always carries sys_id when a field list is given', async () => {
     tableGet.mockResolvedValueOnce({ data: { result: [] } })
-    const gw = new RecordsGateway({})
+    const gw = new RecordsGateway({}, approvals())
     await gw.fetchPage({ fields: ['number', 'state'], limit: 10, offset: 0, query: '', table: 'incident' })
     const params = tableGet.mock.calls.at(-1)![1] as Record<string, unknown>
     expect(String(params.sysparm_fields).split(',')).toEqual(expect.arrayContaining(['sys_id', 'number', 'state']))
@@ -72,7 +77,7 @@ describe('RecordsGateway', () => {
 
   it('hasMore is true exactly when a full page returns', async () => {
     tableGet.mockResolvedValueOnce({ data: { result: [{ sys_id: 'a' }, { sys_id: 'b' }] } })
-    const gw = new RecordsGateway({})
+    const gw = new RecordsGateway({}, approvals())
     const page = await gw.fetchPage({ limit: 2, offset: 0, query: '', table: 'incident' })
     expect(page.hasMore).toBe(true)
   })
@@ -83,7 +88,7 @@ describe('RecordsGateway', () => {
       label: 'Incident',
       table: 'incident',
     })
-    const gw = new RecordsGateway({})
+    const gw = new RecordsGateway({}, approvals())
     const first = await gw.getSchema('incident')
     const second = await gw.getSchema('incident')
     expect(discoverTableSchema).toHaveBeenCalledTimes(1)
@@ -93,7 +98,7 @@ describe('RecordsGateway', () => {
 
   it('caches choices per table.field', async () => {
     explainField.mockResolvedValue({ choices: [{ label: 'New', value: '1' }] })
-    const gw = new RecordsGateway({})
+    const gw = new RecordsGateway({}, approvals())
     await gw.getChoices('incident', 'state')
     const again = await gw.getChoices('incident', 'state')
     expect(explainField).toHaveBeenCalledTimes(1)
@@ -102,7 +107,7 @@ describe('RecordsGateway', () => {
 
   it('countQuery passes the options object and coerces to a number', async () => {
     aggregateCount.mockResolvedValueOnce('412')
-    const gw = new RecordsGateway({})
+    const gw = new RecordsGateway({}, approvals())
     await expect(gw.countQuery('incident', 'active=true')).resolves.toBe(412)
     expect(aggregateCount).toHaveBeenCalledWith({ query: 'active=true', table: 'incident' })
   })
@@ -113,7 +118,7 @@ describe('RecordsGateway', () => {
       { label: 'Task', name: 'task', super_class: '' },
       { label: 'Broken', name: '' },
     ] } })
-    const gw = new RecordsGateway({})
+    const gw = new RecordsGateway({}, approvals())
     const tables = await gw.listTables()
     expect(tables).toHaveLength(2)
     expect(tables[0]).toEqual({ label: 'Incident', name: 'incident', superClass: 'task-sys-id' })
