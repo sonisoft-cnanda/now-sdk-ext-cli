@@ -15,8 +15,10 @@ import { AmbientGateway } from './ambient.gateway.js'
 import { ApprovalRegistry } from './approvals.js'
 import { AutomationGateway } from './automation.gateway.js'
 import { LogsGateway } from './logs.gateway.js'
+import { detectProject, type ProjectInfo } from './project-detect.js'
 import { RecordsGateway } from './records.gateway.js'
 import { ScriptsGateway } from './scripts.gateway.js'
+import { resolveSdkBinary, SdkGateway } from './sdk.gateway.js'
 
 export type DisposeFn = () => void
 
@@ -30,8 +32,11 @@ export class NexGateway {
   readonly approvals: ApprovalRegistry
   readonly automation: AutomationGateway
   readonly logs: LogsGateway
+  /** Present only inside a Fluent project — the pane is hidden otherwise. */
+  readonly project: ProjectInfo | undefined
   readonly records: RecordsGateway
   readonly scripts: ScriptsGateway
+  readonly sdk: SdkGateway
   private readonly disposers = new Set<DisposeFn>()
 
   constructor(instance: unknown, options: NexGatewayOptions) {
@@ -41,6 +46,9 @@ export class NexGateway {
     this.logs = new LogsGateway(instance, options.scrollback)
     this.records = new RecordsGateway(instance, this.approvals)
     this.scripts = new ScriptsGateway(instance, this.approvals)
+    this.project = detectProject()
+    this.sdk = new SdkGateway(this.approvals, options.alias)
+    this.sdk.binary = resolveSdkBinary(this.project)
     // The tail is a live poll; it must stop on EVERY exit path, not just
     // effect teardown (an uncaught exception skips those).
     this.registerDisposer(() => {

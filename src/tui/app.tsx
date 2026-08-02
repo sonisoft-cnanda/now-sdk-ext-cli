@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react'
 
 import { Box, Text, useApp, useInput } from 'ink'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import type { TuiSession } from './boot/session.js'
 import type { PaneId } from './commands/registry.js'
@@ -15,6 +15,7 @@ import { useKeymap } from './hooks/use-keymap.js'
 import { useTerminalSize } from './hooks/use-terminal-size.js'
 import { LogsPane } from './panes/logs/logs-pane.js'
 import { OpsPane } from './panes/ops/ops-pane.js'
+import { ProjectPane } from './panes/project/project-pane.js'
 import { RecordPane } from './panes/records/record-pane.js'
 import { ScriptsPane } from './panes/scripts/scripts-pane.js'
 import { HelpOverlay } from './ui/help-overlay.js'
@@ -41,12 +42,15 @@ export interface AppProps {
 
 const NOOP_FOREGROUND = { resume() {}, suspend() {} }
 
-const PANES: Array<{ id: PaneId; label: string }> = [
+const BASE_PANES: Array<{ id: PaneId; label: string }> = [
   { id: 'records', label: 'Records' },
   { id: 'logs', label: 'Logs' },
   { id: 'scripts', label: 'Scripts' },
   { id: 'ops', label: 'Ops' },
 ]
+
+/** `5 Project` appears only inside a Fluent project. */
+const PROJECT_PANE = { id: 'project' as PaneId, label: 'Project' }
 
 export function App(props: AppProps): ReactElement {
   return (
@@ -85,6 +89,12 @@ function Shell(props: ShellProps): ReactElement {
   const toast = useToast()
   const size = useTerminalSize()
   const [pane, setPane] = useState<PaneId>(props.initialPane ?? 'records')
+  // `5 Project` is present only inside a Fluent project — hidden entirely
+  // rather than shown broken, so `5` is simply unbound elsewhere.
+  const PANES = useMemo(
+    () => (session.gateway.project ? [...BASE_PANES, PROJECT_PANE] : BASE_PANES),
+    [session],
+  )
   const [helpOpen, setHelpOpen] = useState(false)
   const [openRequest, setOpenRequest] = useState<OpenRecordRequest | undefined>()
 
@@ -157,7 +167,7 @@ function Shell(props: ShellProps): ReactElement {
   })
 
   useKeymap('global', (event) => {
-    const paneIndex = ['1', '2', '3', '4'].indexOf(event.input)
+    const paneIndex = ['1', '2', '3', '4', '5'].slice(0, PANES.length).indexOf(event.input)
     if (paneIndex !== -1) {
       setPane(PANES[paneIndex].id)
       return 'handled'
@@ -228,7 +238,7 @@ function Shell(props: ShellProps): ReactElement {
         )}
       </Box>
       <Text dimColor>
-        {' '}1-4 pane  ?  help  q quit
+        {' '}1-{PANES.length} pane  ?  help  q quit
       </Text>
     </Box>
   )
@@ -270,6 +280,10 @@ function PaneBody(props: PaneBodyProps): ReactElement {
           width={props.width}
         />
       )
+    }
+
+    case 'project': {
+      return <ProjectPane active height={props.height} width={props.width} />
     }
 
     case 'records': {
