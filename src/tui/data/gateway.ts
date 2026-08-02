@@ -1,0 +1,64 @@
+/**
+ * NexGateway — the ONLY layer of the TUI allowed to import the core package
+ * (enforced by no-restricted-imports; only src/tui/data/** is exempt).
+ * Panes and components consume normalized DTOs and never see core managers
+ * or response envelopes.
+ *
+ * Also the disposal owner: anything long-running (the syslog tail arrives in
+ * Phase 2) registers here, and boot/terminal.ts calls disposeAll() on every
+ * exit path — a useEffect teardown alone is skipped by uncaught exceptions,
+ * which is exactly when a live poll would otherwise pin the process open.
+ */
+import type { ApprovalRegistryOptions } from './approvals.js'
+
+import { AmbientGateway } from './ambient.gateway.js'
+import { ApprovalRegistry } from './approvals.js'
+import { LogsGateway } from './logs.gateway.js'
+import { RecordsGateway } from './records.gateway.js'
+import { ScriptsGateway } from './scripts.gateway.js'
+
+export type DisposeFn = () => void
+
+export interface NexGatewayOptions extends ApprovalRegistryOptions {
+  scrollback?: number
+}
+
+export class NexGateway {
+  readonly ambient: AmbientGateway
+  /** The only minter of ApprovalTokens; every write consumes one. */
+  readonly approvals: ApprovalRegistry
+  readonly logs: LogsGateway
+  readonly records: RecordsGateway
+  readonly scripts: ScriptsGateway
+  private readonly disposers = new Set<DisposeFn>()
+
+  constructor(instance: unknown, options: NexGatewayOptions) {
+    this.approvals = new ApprovalRegistry(options)
+    this.ambient = new AmbientGateway(instance)
+    this.logs = new LogsGateway(instance, options.scrollback)
+    this.records = new RecordsGateway(instance, this.approvals)
+    this.scripts = new ScriptsGateway(instance, this.approvals)
+    // The tail is a live poll; it must stop on EVERY exit path, not just
+    // effect teardown (an uncaught exception skips those).
+    this.registerDisposer(() => {
+      this.logs.stopTail()
+    })
+  }
+
+  disposeAll(): void {
+    for (const dispose of this.disposers) {
+      try {
+        dispose()
+      } catch {
+        // best-effort: disposal must never block the exit path
+      }
+    }
+
+    this.disposers.clear()
+  }
+
+  registerDisposer(fn: DisposeFn): () => void {
+    this.disposers.add(fn)
+    return () => this.disposers.delete(fn)
+  }
+}

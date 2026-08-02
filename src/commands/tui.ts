@@ -1,5 +1,7 @@
 /* eslint-disable perfectionist/sort-objects */
 
+import { Flags } from '@oclif/core'
+
 import { AuthenticatedCommand } from '../common/authenticated-command.js'
 
 /**
@@ -26,7 +28,35 @@ export class Tui extends AuthenticatedCommand<typeof Tui> {
       command: '<%= config.bin %> <%= command.id %> --auth dev --json',
     },
   ]
-  static flags = {}
+  static flags = {
+    'pane': Flags.option({
+      description: 'Pane to open on.',
+      options: ['records', 'logs', 'scripts', 'ops'] as const,
+    })(),
+    'table': Flags.string({
+      description: 'Open the Records pane on this table.',
+    }),
+    'query': Flags.string({
+      description: 'Encoded query to prefill in the Records pane.',
+    }),
+    'read-only': Flags.boolean({
+      default: false,
+      description: 'Refuse every write for this session (enforced in the data gateway).',
+    }),
+    'approve-all': Flags.boolean({
+      default: false,
+      description: 'Pre-approve routine writes for a dev loop. Refuses to engage on prod or ' +
+        'unclassified instances, and never covers bulk or destructive operations.',
+    }),
+    'ascii': Flags.boolean({
+      default: false,
+      description: 'Use ASCII glyphs instead of Unicode.',
+    }),
+    'scrollback': Flags.integer({
+      default: 5000,
+      description: 'Log-tail buffer capacity in lines (bounds memory; oldest lines drop).',
+    }),
+  }
 
   public async init(): Promise<void> {
     // The TTY guard runs BEFORE credential resolution: a session that cannot
@@ -41,12 +71,15 @@ export class Tui extends AuthenticatedCommand<typeof Tui> {
   }
 
   async run(): Promise<unknown> {
-    await this.parse(Tui)
+    const { flags } = await this.parse(Tui)
 
     const descriptor = {
-      alias: this.flags.auth ?? 'fluent-default',
-      host: this.instance.getHost(),
-      user: this.instance.getUserName(),
+      alias: flags.auth ?? 'fluent-default',
+      host: this.instance.getHost() ?? null,
+      // OAuth credentials carry no username — null, not undefined, so the
+      // key survives JSON serialization and agents see the distinction.
+      user: this.instance.getUserName() ?? null,
+      readOnly: flags['read-only'],
       panes: ['records', 'logs', 'scripts', 'ops'],
       version: this.config.version,
     }
@@ -61,8 +94,14 @@ export class Tui extends AuthenticatedCommand<typeof Tui> {
     const { startTui } = await import('../tui/index.js')
     await startTui({
       alias: descriptor.alias,
-      host: descriptor.host,
-      user: descriptor.user,
+      approveAll: flags['approve-all'],
+      ascii: flags.ascii,
+      initialPane: flags.pane,
+      initialQuery: flags.query,
+      initialTable: flags.table,
+      instance: this.instance,
+      readOnly: flags['read-only'],
+      scrollback: flags.scrollback,
     })
   }
 
