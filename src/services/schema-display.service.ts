@@ -1,5 +1,7 @@
  
 
+import { schemaFieldCells } from './shape/schema-field.js';
+
 export class SchemaDisplayService {
   /**
    * Format catalog validation result for display.
@@ -110,14 +112,15 @@ export class SchemaDisplayService {
       lines.push("  " + "\u2500".repeat(90));
 
       for (const field of schema.fields) {
+        const cells = schemaFieldCells(field);
         lines.push(
           "  " +
-            (field.name || "").padEnd(25) +
-            (field.label || "").padEnd(25) +
-            (field.internalType || field.type || "").padEnd(15) +
-            String(field.maxLength ?? "").padEnd(12) +
-            String(field.mandatory ?? false).padEnd(12) +
-            String(field.readOnly ?? false)
+            cells.name.padEnd(25) +
+            cells.label.padEnd(25) +
+            cells.type.padEnd(15) +
+            cells.maxLength.padEnd(12) +
+            cells.mandatory.padEnd(12) +
+            cells.readOnly
         );
       }
 

@@ -1,7 +1,18 @@
 name: CI
 
 on:
+  # EVERY pull request, whatever it targets — not just [main].
+  #
+  # Restricting this to main meant a stack of PRs targeting feature branches
+  # ran no build and no tests at all. A whole source directory went missing
+  # (see the .gitignore note) and only the one PR aimed at main caught it,
+  # long after the code had been reviewed and merged down the stack.
+  # Feedback on the PR that introduces a break is worth far more than
+  # feedback on the one that finally aims at main.
   pull_request:
+  # Keep the long-lived integration branches green on their own account, so
+  # a bad merge into one is visible without waiting for the next PR.
+  push:
     branches: [main]
 
 concurrency:

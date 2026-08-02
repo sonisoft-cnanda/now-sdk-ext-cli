@@ -22,6 +22,9 @@ argument parsing, output formatting, and the interactive surfaces.
   `scope-autocomplete.ts`.
 - **`src/services/`** — display services. Roughly 19 of them, all hand-rolled
   padded text tables. This is where output formatting lives, not in commands.
+- **`src/tui/`** (in progress) — the `nex tui` full-screen Ink workspace. Only
+  `src/commands/tui.ts` may live under `src/commands/` (anything emitted into
+  `dist/commands/**` becomes a command). Plan of record: `docs/TUI_PLAN.md`.
 
 ## Sibling Projects
 
