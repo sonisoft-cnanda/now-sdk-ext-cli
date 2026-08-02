@@ -15,10 +15,11 @@ import { useKeymap } from './hooks/use-keymap.js'
 import { useTerminalSize } from './hooks/use-terminal-size.js'
 import { LogsPane } from './panes/logs/logs-pane.js'
 import { RecordPane } from './panes/records/record-pane.js'
+import { ScriptsPane } from './panes/scripts/scripts-pane.js'
 import { HelpOverlay } from './ui/help-overlay.js'
 import { InstanceBanner } from './ui/instance-banner.js'
 import { theme } from './ui/theme.js'
-import { ToastProvider } from './ui/toast-host.js'
+import { ToastProvider, useToast } from './ui/toast-host.js'
 
 /** A cross-pane request to open a specific record in the Records pane. */
 export interface OpenRecordRequest {
@@ -29,11 +30,15 @@ export interface OpenRecordRequest {
 
 export interface AppProps {
   ascii?: boolean
+  /** Lets the Scripts pane hand the terminal to $EDITOR and take it back. */
+  foregroundHost?: { resume(): void; suspend(): void }
   initialPane?: PaneId
   initialQuery?: string
   initialTable?: string
   session: TuiSession
 }
+
+const NOOP_FOREGROUND = { resume() {}, suspend() {} }
 
 const PANES: Array<{ id: PaneId; label: string }> = [
   { id: 'records', label: 'Records' },
@@ -48,6 +53,7 @@ export function App(props: AppProps): ReactElement {
       <UiProvider ascii={props.ascii}>
         <ToastProvider>
           <Shell
+            foregroundHost={props.foregroundHost ?? NOOP_FOREGROUND}
             initialPane={props.initialPane}
             initialQuery={props.initialQuery}
             initialTable={props.initialTable}
@@ -59,6 +65,7 @@ export function App(props: AppProps): ReactElement {
 }
 
 interface ShellProps {
+  foregroundHost: { resume(): void; suspend(): void }
   initialPane?: PaneId
   initialQuery?: string
   initialTable?: string
@@ -74,6 +81,7 @@ function Shell(props: ShellProps): ReactElement {
   const { exit } = useApp()
   const { scopes } = useUi()
   const session = useSession()
+  const toast = useToast()
   const size = useTerminalSize()
   const [pane, setPane] = useState<PaneId>(props.initialPane ?? 'records')
   const [helpOpen, setHelpOpen] = useState(false)
@@ -83,6 +91,19 @@ function Shell(props: ShellProps): ReactElement {
   const openRecord = (table: string, sysId: string) => {
     setOpenRequest((previous) => ({ requestId: (previous?.requestId ?? 0) + 1, sysId, table }))
     setPane('records')
+  }
+
+  // Cross-pane: "show me the logs for that script run". The Logs pane owns
+  // a live tail already, so this switches to it and clears filter rules so
+  // nothing from the run window is hidden. The run's own returned output
+  // stays in the transcript; this is for what the script logged.
+  const showRunLogs = (startedAt: number, endedAt: number) => {
+    session.gateway.logs.setRules([])
+    setPane('logs')
+    toast(
+      'info',
+      `logs cleared of filters — run window ${new Date(startedAt).toTimeString().slice(0, 8)}–${new Date(endedAt).toTimeString().slice(0, 8)}`,
+    )
   }
 
   // Record numbers (INC0010023) resolve to a sys_id via one filtered fetch.
@@ -191,11 +212,13 @@ function Shell(props: ShellProps): ReactElement {
           // act on anything else mid-decision.
           <ApprovalProvider>
             <PaneBody
+              foregroundHost={props.foregroundHost}
               height={bodyHeight}
               initialQuery={props.initialQuery}
               initialTable={props.initialTable}
               onOpenRecord={openRecord}
               onResolveNumber={resolveNumber}
+              onShowRunLogs={showRunLogs}
               openRequest={openRequest}
               pane={pane}
               width={size.columns}
@@ -211,11 +234,13 @@ function Shell(props: ShellProps): ReactElement {
 }
 
 interface PaneBodyProps {
+  foregroundHost: { resume(): void; suspend(): void }
   height: number
   initialQuery?: string
   initialTable?: string
   onOpenRecord(table: string, sysId: string): void
   onResolveNumber(table: string, number: string): void
+  onShowRunLogs(startedAt: number, endedAt: number): void
   openRequest?: OpenRecordRequest
   pane: PaneId
   width: number
@@ -253,7 +278,15 @@ function PaneBody(props: PaneBodyProps): ReactElement {
     }
 
     case 'scripts': {
-      return <ComingSoon label="Scripts — background-script notebook" phase="4" />
+      return (
+        <ScriptsPane
+          active
+          foregroundHost={props.foregroundHost}
+          height={props.height}
+          onShowRunLogs={props.onShowRunLogs}
+          width={props.width}
+        />
+      )
     }
   }
 }
