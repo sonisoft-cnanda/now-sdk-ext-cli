@@ -47,15 +47,35 @@ export async function startTui(options: StartTuiOptions): Promise<void> {
     session.gateway.disposeAll()
   })
 
-  // The $EDITOR pop-out needs to clear Ink out of the way and put it back.
-  // Ink has no "pause" — clear() blanks the frame and a re-render restores
-  // it, which is what suspend/resume mean here.
+  // The $EDITOR pop-out and interactive now-sdk commands need Ink out of the
+  // way and then back. Ink has no "pause" — clear() blanks the frame and a
+  // re-render restores it, which is what suspend/resume mean here.
   const foregroundHost = {
     resume() {
+      // Ink's raw-mode refcount never changed, so it does not know raw mode
+      // was turned off and will not re-enable it. Restore it here or every
+      // key after a handoff arrives line-buffered.
+      if (process.stdin.isTTY) {
+        try {
+          process.stdin.setRawMode(true)
+        } catch {
+          // Non-fatal: a terminal that refuses is still readable.
+        }
+      }
+
+      process.stdin.resume()
       app.clear()
     },
     suspend() {
       app.clear()
+      // CRITICAL, and only visible under a real pty: clear() blanks the
+      // frame but leaves Ink's stdin 'data' listener attached and the
+      // stream flowing. spawnSync(stdio:'inherit') hands the child the SAME
+      // fd 0, so the parent and the child then race for keystrokes and the
+      // parent silently eats the first ones — the child's first prompt sits
+      // there looking ignored. Pausing stops the parent reading; the child
+      // still owns the descriptor.
+      process.stdin.pause()
     },
   }
 

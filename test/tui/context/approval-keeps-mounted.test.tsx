@@ -80,7 +80,48 @@ function VolatilePane(props: { mounts: { count: number } }): ReturnType<typeof T
 // Ink commits and effect-registration lag the first render in the test
 // renderer; the dialog's keymap is not live for ~100ms. A real user is
 // never this fast.
-const flush = (ms = 150) => new Promise((resolve) => { setTimeout(resolve, ms) })
+//
+// POLL, never sleep a fixed amount. A flat 150ms passes alone and fails
+// under a full parallel suite where this process is competing for CPU —
+// which is exactly the flake that turns a green run red at random.
+const tick = () => new Promise((resolve) => { setTimeout(resolve, 10) })
+
+async function waitFor(predicate: () => boolean, timeout = 4000): Promise<void> {
+  const deadline = Date.now() + timeout
+  while (Date.now() < deadline) {
+    if (predicate()) return
+    await tick()
+  }
+
+  throw new Error('timed out waiting for the expected frame')
+}
+
+/**
+ * Press a key until it takes effect.
+ *
+ * A frame containing the dialog does NOT mean the dialog can receive keys —
+ * ink paints on commit but the keymap registers in an effect afterwards, so
+ * a single well-timed keystroke lands in a void and the test hangs. Re-press
+ * until the outcome appears. Safe here because the pane ignores input, so a
+ * duplicate key after the decision goes nowhere.
+ */
+async function pressUntil(
+  view: { lastFrame(): string | undefined; stdin: { write(data: string): void } },
+  key: string,
+  done: () => boolean,
+  timeout = 4000,
+): Promise<void> {
+  const deadline = Date.now() + timeout
+  while (Date.now() < deadline) {
+    view.stdin.write(key)
+    for (let i = 0; i < 5; i++) {
+      if (done()) return
+      await tick()
+    }
+  }
+
+  throw new Error(`timed out waiting for "${key}" to take effect`)
+}
 
 describe('ApprovalProvider keeps children mounted', () => {
   it('does not remount the pane while a decision is pending', async () => {
@@ -98,17 +139,14 @@ describe('ApprovalProvider keeps children mounted', () => {
       }),
     )
 
-    await flush()
     // Dialog is up …
-    expect(view.lastFrame()).toContain('APPROVE WRITE')
+    await waitFor(() => view.lastFrame()!.includes('APPROVE WRITE'))
     // … and the pane mounted exactly once, so its buffer still exists.
     expect(mounts.count).toBe(1)
 
     // Decide, and confirm the pane STILL was not remounted.
-    view.stdin.write('y')
-    await flush()
+    await pressUntil(view, 'y', () => view.lastFrame()!.includes('BUFFER:my precious script'))
     expect(mounts.count).toBe(1)
-    expect(view.lastFrame()).toContain('BUFFER:my precious script')
     view.unmount()
   })
 
@@ -127,13 +165,11 @@ describe('ApprovalProvider keeps children mounted', () => {
       }),
     )
 
-    await flush()
+    await waitFor(() => view.lastFrame()!.includes('APPROVE WRITE'))
     // Collapsed: the dialog owns the screen, the pane text is not drawn.
     expect(view.lastFrame()).not.toContain('BUFFER:')
-    view.stdin.write('n')
-    await flush()
     // Refused — pane is visible again, state intact.
-    expect(view.lastFrame()).toContain('BUFFER:my precious script')
+    await pressUntil(view, 'n', () => view.lastFrame()!.includes('BUFFER:my precious script'))
     view.unmount()
   })
 })

@@ -31,7 +31,7 @@ export class Tui extends AuthenticatedCommand<typeof Tui> {
   static flags = {
     'pane': Flags.option({
       description: 'Pane to open on.',
-      options: ['records', 'logs', 'scripts', 'ops'] as const,
+      options: ['records', 'logs', 'scripts', 'ops', 'project'] as const,
     })(),
     'table': Flags.string({
       description: 'Open the Records pane on this table.',
@@ -80,7 +80,7 @@ export class Tui extends AuthenticatedCommand<typeof Tui> {
       // key survives JSON serialization and agents see the distinction.
       user: this.instance.getUserName() ?? null,
       readOnly: flags['read-only'],
-      panes: ['records', 'logs', 'scripts', 'ops'],
+      panes: ['records', 'logs', 'scripts', 'ops', 'project'],
       version: this.config.version,
     }
 

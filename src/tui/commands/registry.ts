@@ -5,7 +5,7 @@
  * callbacks arrive with the palette.
  */
 
-export type PaneId = 'logs' | 'ops' | 'records' | 'scripts'
+export type PaneId = 'logs' | 'ops' | 'project' | 'records' | 'scripts'
 
 export interface BindingEntry {
   group: string
@@ -52,6 +52,9 @@ export const BINDINGS: BindingEntry[] = [
   { group: 'Ops · ATF', key: 'o', label: 'open the suite result record', pane: 'ops' },
   { group: 'Ops · Update Sets', key: '⏎', label: 'inspect contents', pane: 'ops' },
   { group: 'Ops · Update Sets', key: 'S', label: 'switch current set (asks for approval)', pane: 'ops' },
+  { group: 'Project', key: '⏎', label: 'configure a command / resolve a flag value', pane: 'project' },
+  { group: 'Project', key: '^E', label: 'run the configured command', pane: 'project' },
+  { group: 'Project', key: 'Esc', label: 'back', pane: 'project' },
   { group: 'Approval', key: 'y', label: 'approve once' },
   { group: 'Approval', key: 'a', label: "approve and don't ask again (this action, this alias)" },
   { group: 'Approval', key: 'n / Esc', label: 'refuse' },

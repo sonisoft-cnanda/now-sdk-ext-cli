@@ -18,6 +18,7 @@ import { useUi } from '../../context/ui-context.js'
 import { useAsyncResource } from '../../hooks/use-async-resource.js'
 import { useKeymap } from '../../hooks/use-keymap.js'
 import { decodePaste } from '../../ui/bracketed-paste.js'
+import { DocsBrowser } from '../../ui/docs-browser.js'
 import { Editor } from '../../ui/editor.js'
 import { Picker } from '../../ui/picker.js'
 import { TextBuffer } from '../../ui/text-buffer.js'
@@ -73,6 +74,7 @@ export function ScriptsPane(props: ScriptsPaneProps): ReactElement {
   const [running, setRunning] = useState(false)
   const [scopePickerOpen, setScopePickerOpen] = useState(false)
   const [editorPickerOpen, setEditorPickerOpen] = useState(false)
+  const [docsOpen, setDocsOpen] = useState(false)
 
   const scopes = useAsyncResource<ScopeOption[]>()
   const { run: loadScopes } = scopes
@@ -254,7 +256,7 @@ export function ScriptsPane(props: ScriptsPaneProps): ReactElement {
 
       return 'handled'
     },
-    props.active && focus === 'editor' && !scopePickerOpen && !editorPickerOpen && paramDraft === null,
+    props.active && focus === 'editor' && !scopePickerOpen && !editorPickerOpen && !docsOpen && paramDraft === null,
   )
 
   // Transcript / pane-level keys.
@@ -279,6 +281,13 @@ export function ScriptsPane(props: ScriptsPaneProps): ReactElement {
 
       if (event.input === 'E') {
         popOut()
+        return 'handled'
+      }
+
+      // The Fluent reference, beside the buffer. Offline: no instance, no
+      // credential — the SDK ships these ~236 topics locally.
+      if (event.input === 'd') {
+        setDocsOpen(true)
         return 'handled'
       }
 
@@ -316,7 +325,7 @@ export function ScriptsPane(props: ScriptsPaneProps): ReactElement {
 
       return 'pass'
     },
-    props.active && focus === 'transcript' && !scopePickerOpen && !editorPickerOpen && paramDraft === null,
+    props.active && focus === 'transcript' && !scopePickerOpen && !editorPickerOpen && !docsOpen && paramDraft === null,
   )
 
   // Params editor.
@@ -371,6 +380,17 @@ export function ScriptsPane(props: ScriptsPaneProps): ReactElement {
         }}
         placeholder={scopes.resource.status === 'loading' ? 'loading scopes…' : 'type to filter scopes'}
         title="Run script in scope"
+      />
+    )
+  }
+
+  if (docsOpen) {
+    return (
+      <DocsBrowser
+        height={props.height}
+        onClose={() => { setDocsOpen(false) }}
+        sdk={session.gateway.sdk}
+        width={props.width}
       />
     )
   }
@@ -452,7 +472,7 @@ export function ScriptsPane(props: ScriptsPaneProps): ReactElement {
       <Text dimColor>
         {focus === 'editor'
           ? '^E run  ^Z/^Y undo  Tab transcript  (typing edits the buffer)'
-          : `⏎ recall  ^E run  s scope  p params  E editor  ^L logs for run  Tab editor`}
+          : `⏎ recall  ^E run  s scope  p params  E editor  d docs  ^L logs  Tab editor`}
       </Text>
     </Box>
   )
