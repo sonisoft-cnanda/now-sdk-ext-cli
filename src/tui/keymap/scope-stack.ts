@@ -14,6 +14,13 @@
 export type KeyScopeKind = 'editor' | 'global' | 'modal' | 'palette' | 'pane'
 
 export interface KeyEvent {
+  /**
+   * The letter of a Ctrl-chord (^K -> 'k'), and ONLY then. `input` is empty
+   * for chords, which is the point: a plain-letter binding such as `k` for
+   * cursor-up structurally cannot swallow Ctrl+K. Guarding 65 comparisons
+   * by hand would have left the next one to be written unguarded.
+   */
+  chord?: string
   ctrl: boolean
   /** Printable input, when any ('' for pure modifier/special keys). */
   input: string

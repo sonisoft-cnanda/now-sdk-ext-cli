@@ -125,6 +125,17 @@ describe('App shell', () => {
     unmount()
   })
 
+  it('^K opens the command palette', async () => {
+    const { lastFrame, stdin, unmount } = render(
+      createElement(App, { initialTable: 'incident', session: fakeSession() }),
+    )
+    await flush(100)
+    stdin.write('\u000B')
+    await flush(150)
+    expect(lastFrame() ?? '').toContain('type to search commands')
+    unmount()
+  })
+
   it('digit keys switch panes — Logs mounts the live pane', async () => {
     const { lastFrame, stdin, unmount } = render(
       createElement(App, { initialTable: 'incident', session: fakeSession() }),

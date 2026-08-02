@@ -3,6 +3,7 @@
 import { Flags } from '@oclif/core'
 
 import { AuthenticatedCommand } from '../common/authenticated-command.js'
+import { BINDINGS } from '../tui/commands/registry.js'
 
 /**
  * The ONLY TUI file allowed under src/commands/ — oclif discovers every file
@@ -81,6 +82,12 @@ export class Tui extends AuthenticatedCommand<typeof Tui> {
       user: this.instance.getUserName() ?? null,
       readOnly: flags['read-only'],
       panes: ['records', 'logs', 'scripts', 'ops', 'project'],
+      // Derived from the same table the hint bar and ? sheet render, so a
+      // binding cannot change in one place and go stale in another. This
+      // is the source of truth for docs and for future rebinding.
+      // (registry.ts is plain data and imports nothing, so this does NOT
+      // pull React or Ink into the other 71 commands.)
+      keymap: BINDINGS,
       version: this.config.version,
     }
 

@@ -364,7 +364,7 @@ export function ProjectPane(props: ProjectPaneProps): ReactElement {
           return 'handled'
         }
 
-        if (event.ctrl && event.input === 'e') {
+        if (event.chord === 'e') {
           runCommand().catch((): undefined => undefined)
           return 'handled'
         }

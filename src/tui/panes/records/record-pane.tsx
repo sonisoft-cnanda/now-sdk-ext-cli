@@ -3,6 +3,7 @@ import type { ReactElement } from 'react'
 import { Box, Text } from 'ink'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import type { PaneIntent } from '../../commands/palette-actions.js'
 import type { RecordPage } from '../../data/types.js'
 import type { PickerItem } from '../../ui/picker.js'
 
@@ -21,6 +22,8 @@ export interface RecordPaneProps {
   height: number
   initialQuery?: string
   initialTable?: string
+  /** An action raised from the command palette. */
+  intent?: { serial: number; value: PaneIntent }
   /** Cross-pane jump: open this record's form directly (from Logs). */
   openRequest?: { requestId: number; sysId: string; table: string }
   width: number
@@ -50,6 +53,10 @@ export function RecordPane(props: RecordPaneProps): ReactElement {
   const [cursor, setCursor] = useState(0)
   const [selection, setSelection] = useState<ReadonlySet<string>>(new Set())
   const [pickerOpen, setPickerOpen] = useState(!props.initialTable)
+
+  // Palette intents. Keyed on the serial so asking twice fires twice.
+  const intentSerial = props.intent?.serial
+  const intentValue = props.intent?.value
   const [stack, setStack] = useState<FormTarget[]>([])
   const [formDirty, setFormDirty] = useState(false)
 
@@ -65,6 +72,18 @@ export function RecordPane(props: RecordPaneProps): ReactElement {
     runPage(() => session.gateway.records.fetchPage({ limit: PAGE_LIMIT, offset, query, table }))
     runCount(() => session.gateway.records.countQuery(table, query))
   }, [runPage, runCount, session, table, query, offset])
+
+  useEffect(() => {
+    if (intentSerial === undefined || !intentValue) return
+    switch (intentValue.kind) {
+      case 'edit-query': { setQueryDraft(query); break }
+      case 'pick-table': { setPickerOpen(true); break }
+      case 'refresh': { refresh(); break }
+      default: { break }
+    }
+    // Fires per SERIAL, not per value — repeating an action must repeat it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intentSerial])
 
   useEffect(() => {
     refresh()

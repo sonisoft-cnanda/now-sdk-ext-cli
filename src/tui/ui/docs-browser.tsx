@@ -100,12 +100,12 @@ export function DocsBrowser(props: DocsBrowserProps): ReactElement {
         return 'handled'
       }
 
-      if (event.key.pageDown || (event.ctrl && event.input === 'f')) {
+      if (event.key.pageDown || (event.chord === 'f')) {
         setCursor((c) => Math.min(Math.max(0, body.length - 1), c + props.height))
         return 'handled'
       }
 
-      if (event.key.pageUp || (event.ctrl && event.input === 'b')) {
+      if (event.key.pageUp || (event.chord === 'b')) {
         setCursor((c) => Math.max(0, c - props.height))
         return 'handled'
       }

@@ -204,7 +204,7 @@ export function RecordForm(props: RecordFormProps): ReactElement {
         return 'handled'
       }
 
-      if (event.ctrl && event.input === 's') {
+      if (event.chord === 's') {
         save().catch((): undefined => undefined)
         return 'handled'
       }
