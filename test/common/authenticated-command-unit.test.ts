@@ -46,6 +46,37 @@ describe('AuthenticatedCommand - Unit Tests', () => {
       expect(flagNames).toContain('log-level')
       expect(flagNames).not.toContain('logLevel')
     })
+
+    // NEX-3. Core used to write ./logs/*.log unconditionally, relative to whatever
+    // directory nex was run from, with no way to turn it off. File logging is now
+    // opt-in and these are the flags that opt in.
+    it('should have log-file flag defined as a boolean in GLOBAL', () => {
+      const flag = AuthenticatedCommand.baseFlags['log-file'] as any
+      expect(flag).toBeDefined()
+      expect(flag.type).toBe('boolean')
+      expect(flag.helpGroup).toBe('GLOBAL')
+    })
+
+    it('should default log-file to off — a library must not write files uninvited', () => {
+      const flag = AuthenticatedCommand.baseFlags['log-file'] as any
+      expect(flag.default).toBeFalsy()
+    })
+
+    it('should have log-dir flag defined, and document that it implies log-file', () => {
+      const flag = AuthenticatedCommand.baseFlags['log-dir'] as any
+      expect(flag).toBeDefined()
+      expect(flag.helpGroup).toBe('GLOBAL')
+      // Without the implication, `--log-dir ./x` alone produces nothing and reads
+      // as a broken flag rather than a missing second flag.
+      expect(flag.description).toMatch(/implies --log-file/i)
+    })
+
+    it('should declare the log flags in kebab-case only', () => {
+      const flagNames = Object.keys(AuthenticatedCommand.baseFlags)
+      expect(flagNames).toEqual(expect.arrayContaining(['log-file', 'log-dir']))
+      expect(flagNames).not.toContain('logFile')
+      expect(flagNames).not.toContain('logDir')
+    })
   })
 
   describe('JSON flag support', () => {

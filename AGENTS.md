@@ -99,6 +99,11 @@ job. Put unit tests for `bin/` code under `test/common/`.
 - Never log `credential` or `snSettings`. `--log-level debug` would write the
   password to the terminal and to CI logs; there is a comment at
   `src/common/authenticated-command.ts` saying exactly this.
+- **Do not write files unless asked.** `nex` used to drop `./logs/*.log` into
+  whatever directory it ran from, because core's logger had hard-coded relative
+  paths (NEX-3). File logging is now opt-in via `--log-file` / `--log-dir`, and
+  `test/common/logging-e2e.test.ts` spawns the real binary to prove it — a flag
+  test alone would pass even if `configureLogging()` were never called.
 - Errors from `sn-credstore` carry a `remediation` field. Surface it — that is
   the whole point of the taxonomy. Duck-type it (`(e as {remediation?: string})`)
   rather than `instanceof`, which is unreliable across its dual ESM/CJS build.

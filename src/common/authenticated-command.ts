@@ -2,7 +2,7 @@
 
 import { Command, Flags, Interfaces } from '@oclif/core'
 import { getCredentials } from "@servicenow/sdk-cli/dist/auth/index.js";
-import { Logger, ServiceNowInstance, ServiceNowSettingsInstance } from '@sonisoft/now-sdk-ext-core';
+import { configureLogging, flushLogs, Logger, ServiceNowInstance, ServiceNowSettingsInstance } from '@sonisoft/now-sdk-ext-core';
 
 import { LogFactory } from '../util/log-factory.js';
 
@@ -25,12 +25,27 @@ export abstract class AuthenticatedCommand<T extends typeof Command> extends Com
       helpGroup: 'GLOBAL',
       required: false,
     }),
+    'log-dir': Flags.string({
+      description: 'Directory to write log files to. Implies --log-file.',
+      helpGroup: 'GLOBAL',
+      required: false,
+    }),
+    // Logging to a file is opt-in. It used to be unconditional, writing
+    // ./logs/*.log into whatever directory nex happened to be run from — including
+    // CI checkouts — with no way to turn it off. See NEX-3.
+    'log-file': Flags.boolean({
+      description: 'Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs ' +
+        '(~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs ' +
+        'warnings and errors to stderr only.',
+      helpGroup: 'GLOBAL',
+      required: false,
+    }),
     'log-level': Flags.option({
       default: 'info',
       helpGroup: 'GLOBAL',
       options: ['debug', 'warn', 'error', 'info', 'trace'] as const,
       summary: 'Specify level for logging.',
-      
+
     })(),
   }
 // add the --json flag
@@ -56,11 +71,19 @@ protected instance!:ServiceNowInstance;
     // (reading 'error')", hiding the actual usage error behind a TypeError.
     this.authLogger?.error("Globally caught exception occurred.", err);
 
+    // Flush HERE, not only in finally(). super.catch() routes into oclif's error
+    // handler, which can terminate the process — so finally() is not guaranteed to
+    // run, and the record that just got logged is precisely the one worth keeping.
+    // Winston buffers, so without this the failure line is lost intermittently.
+    await flushLogs()
+
     return super.catch(err)
   }
 
   protected async finally(_: Error | undefined): Promise<any> {
-    // called after run and catch regardless of whether or not the command errored
+    // called after run and catch regardless of whether or not the command errored.
+    // Covers the success path; the failure path already flushed in catch().
+    await flushLogs()
     return super.finally(_)
   }
 
@@ -81,8 +104,25 @@ protected instance!:ServiceNowInstance;
     // value under that exact name. Reading `flags.logLevel` always yielded
     // undefined, silently pinning every command to 'info'.
     const logLevel = (this.flags['log-level'] as string | undefined) || 'info';
-    this.logger = LogFactory.createLogger(this.ctor.name, logLevel);
-    this.authLogger = LogFactory.createLogger("AuthenticatedCommand", logLevel);
+    const logDir = this.flags['log-dir'] as string | undefined;
+
+    // Configure BEFORE creating any logger. Core's loggers are field initializers on
+    // ~43 manager classes and take no arguments, so this process-wide call is the only
+    // thing that reaches them — a per-logger level never did.
+    configureLogging({
+      // --log-dir implies --log-file; requiring both would make `--log-dir ./x` alone
+      // silently produce nothing, which reads as a broken flag.
+      dir: logDir,
+      file: Boolean(this.flags['log-file']) || Boolean(logDir),
+      level: logLevel,
+      // --json puts machine-readable output on stdout. Warnings on stderr do not
+      // corrupt it, but they do land in a terminal the caller is likely piping, so
+      // stay quiet unless the level was asked for explicitly.
+      ...(this.jsonEnabled() && !this.argvHasLogLevel() ? {consoleLevel: 'error'} : {}),
+    });
+
+    this.logger = LogFactory.createLogger(this.ctor.name);
+    this.authLogger = LogFactory.createLogger("AuthenticatedCommand");
     // const wrapper:CredentialWrapper = new CredentialWrapper();
     // const credential:Creds = await (flags.auth ? wrapper.getStoredCredentialsByAlias(flags.auth) : wrapper.getStoredCredentialsByAlias( 'fluent-default'));
     // const credentialArgs = {"_": "get-credentials", auth: flags.auth || "fluent-default"};
@@ -117,6 +157,16 @@ protected instance!:ServiceNowInstance;
       credential
     }
     this.instance = new ServiceNowInstance(snSettings);
+  }
+
+  /**
+   * Whether --log-level was given on the command line rather than defaulted.
+   *
+   * oclif reports its own default as a parsed value, so `flags['log-level']` cannot
+   * distinguish "the user asked for info" from "nobody said anything".
+   */
+  private argvHasLogLevel(): boolean {
+    return this.argv.some((a) => a === '--log-level' || a.startsWith('--log-level='))
   }
 
   /**

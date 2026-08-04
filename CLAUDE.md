@@ -18,7 +18,8 @@ argument parsing, output formatting, and the interactive surfaces.
 - **`src/commands/`** — one directory per oclif topic (20 topics). Command
   discovery is by file path, so the directory layout *is* the command tree.
 - **`src/common/`** — `AuthenticatedCommand` (the base every non-`auth` command
-  extends, supplying `--auth`, `--cred-store`, `--log-level`), plus
+  extends, supplying `--auth`, `--cred-store`, `--log-level`, `--log-file`,
+  `--log-dir`), plus
   `scope-autocomplete.ts`.
 - **`src/services/`** — display services. Roughly 19 of them, all hand-rolled
   padded text tables. This is where output formatting lives, not in commands.
@@ -56,6 +57,14 @@ A test placed outside those paths runs in neither.
   credential and constructs a `ServiceNowInstance`. `auth` commands talk to
   `@sonisoft/sn-credstore` directly instead.
 - `static enableJsonFlag = true` — most commands support `--json`.
+- **Logging is configured once, in `AuthenticatedCommand.init()`, before any logger
+  is created.** Core builds one logger for the whole process, so `configureLogging()`
+  is the only thing that reaches the ~43 loggers inside core; passing a level to an
+  individual `Logger` has never worked. File logging is OFF unless `--log-file` or
+  `--log-dir` is given — `nex` must not write into the directory it was run from.
+- `flushLogs()` is awaited in both `catch()` and `finally()`. Winston buffers, and
+  `super.catch()` can terminate the process before `finally()` runs, which loses the
+  failure line — the one worth keeping.
 - Output goes through a display service; commands should not build tables inline.
 - `nex exec` is the only interactive surface (a REPL). `nex log` is a long-running
   tail with a SIGINT handler.
