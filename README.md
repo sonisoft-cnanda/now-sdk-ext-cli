@@ -681,6 +681,31 @@ USAGE
 ```
 <!-- usagestop -->
 
+
+## Restricting what can be changed
+
+Changes to a ServiceNow instance are **permitted by default**. Two ways to take that
+away, in priority order:
+
+| | | Reachable by an agent? |
+|---|---|---|
+| `NEX_POLICY_DENY=write,execute` (or `all`) | environment | **No** |
+| `--read-only`, `--deny-write`, `--deny-execute` | per invocation | Yes |
+
+Reads are never gated. `nex policy status` prints what is permitted and which layer
+decided — use it first when something is refused, since the fix differs completely
+between an environment variable and a flag.
+
+A malformed value **fails closed**: `NEX_POLICY_DENY=wrtie` denies everything and warns,
+rather than silently denying nothing.
+
+> `NEX_POLICY_DENY` holds only when set somewhere an agent cannot write — a shell
+> profile, a systemd unit, or a container environment. **Not** a committed `.env` or a
+> project-local config file, which anything with file access can edit.
+>
+> This is a guardrail, not a security boundary. Anything holding the credential can
+> reach the instance directly.
+
 # Commands
 <!-- commands -->
 * [`nex aggregate count`](#nex-aggregate-count)
