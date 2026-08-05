@@ -2,9 +2,10 @@
 
 import { Command, Flags, Interfaces } from '@oclif/core'
 import { getCredentials } from "@servicenow/sdk-cli/dist/auth/index.js";
-import { configureLogging, flushLogs, Logger, ServiceNowInstance, ServiceNowSettingsInstance } from '@sonisoft/now-sdk-ext-core';
+import { configureLogging, flushLogs, isPolicyRefusal, Logger, ServiceNowInstance, ServiceNowSettingsInstance } from '@sonisoft/now-sdk-ext-core';
 
 import { LogFactory } from '../util/log-factory.js';
+import { installCliPolicy, type PolicyFlags } from './policy.js';
 
 
 
@@ -22,6 +23,26 @@ export abstract class AuthenticatedCommand<T extends typeof Command> extends Com
     'cred-store': Flags.boolean({
       description: 'Read credentials from @sonisoft/sn-credstore instead of the OS keyring. ' +
         'Use this in headless sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.',
+      helpGroup: 'GLOBAL',
+      required: false,
+    }),
+    // Changes are PERMITTED by default; these take permission away.
+    //
+    // Deliberately deny-direction rather than `--allow-write`. With a permissive
+    // default an allow-flag would grant nothing it did not already have, and it could
+    // not override NEX_POLICY_DENY either, so it would ship as a no-op. If the default
+    // ever flips to deny, the allow flags arrive in that same change.
+    //
+    // These are agent-reachable, which is fine: an agent can only ever RESTRICT itself
+    // with them. The layer an agent cannot reach is NEX_POLICY_DENY, which outranks
+    // every flag — that is what makes pointing nex at production meaningful.
+    'deny-execute': Flags.boolean({
+      description: 'Refuse background scripts, flow runs and ATF runs for this invocation.',
+      helpGroup: 'GLOBAL',
+      required: false,
+    }),
+    'deny-write': Flags.boolean({
+      description: 'Refuse any change to instance data for this invocation.',
       helpGroup: 'GLOBAL',
       required: false,
     }),
@@ -47,6 +68,12 @@ export abstract class AuthenticatedCommand<T extends typeof Command> extends Com
       summary: 'Specify level for logging.',
 
     })(),
+    'read-only': Flags.boolean({
+      description: 'Refuse every change to the instance — equivalent to ' +
+        '--deny-write --deny-execute. Reads are unaffected.',
+      helpGroup: 'GLOBAL',
+      required: false,
+    }),
   }
 // add the --json flag
     static enableJsonFlag = true
@@ -65,6 +92,20 @@ protected instance!:ServiceNowInstance;
     }
 
   protected async catch(err: Error & {exitCode?: number}): Promise<any> {
+    // A refusal is a decision, not a crash. Render it as the CLI's own error with
+    // remediation, rather than letting a stack trace reach the user for something they
+    // asked for by passing a flag. Handled first, before the generic path below.
+    if (isPolicyRefusal(err)) {
+      this.authLogger?.warn("Refused by policy.", {message: err.message});
+      await flushLogs();
+      this.error(err.message, {
+        suggestions: [
+          'Reads are unaffected — only changes to the instance were refused.',
+          'Run `nex policy status` to see what is permitted and which layer decided.',
+        ],
+      });
+    }
+
     // authLogger is assigned partway through init(), so anything that throws
     // before that point — a missing required flag, for instance — arrived here
     // with it still undefined and produced "Cannot read properties of undefined
@@ -123,6 +164,15 @@ protected instance!:ServiceNowInstance;
 
     this.logger = LogFactory.createLogger(this.ctor.name);
     this.authLogger = LogFactory.createLogger("AuthenticatedCommand");
+
+    // Install the permission ladder before anything can issue a request. Core's gate
+    // is inert until this runs, so ordering matters: after logging (so a malformed
+    // NEX_POLICY_DENY has somewhere to warn) and before the first credential fetch.
+    //
+    // Note there is no per-command classification. The gate sits at the HTTP layer and
+    // decides per REQUEST, so `update-set current` reading or writing depending on
+    // --set, and `script-sync sync` going both ways, need no special handling here.
+    installCliPolicy(this.flags as PolicyFlags, (message) => this.authLogger.warn(message));
     // const wrapper:CredentialWrapper = new CredentialWrapper();
     // const credential:Creds = await (flags.auth ? wrapper.getStoredCredentialsByAlias(flags.auth) : wrapper.getStoredCredentialsByAlias( 'fluent-default'));
     // const credentialArgs = {"_": "get-credentials", auth: flags.auth || "fluent-default"};
