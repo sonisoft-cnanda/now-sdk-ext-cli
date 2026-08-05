@@ -45,7 +45,7 @@
     "@types/node": "^26",
     "@typescript-eslint/typescript-estree": "^8.4.0",
     "chai": "^6",
-    "conventional-changelog-conventionalcommits": "^9.1.0",
+    "conventional-changelog-conventionalcommits": "^10.2.1",
     "eslint": "^9",
     "eslint-config-oclif": "^6.0.148",
     "eslint-config-prettier": "^10",
