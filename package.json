@@ -44,7 +44,7 @@
     "@types/mocha": "^10",
     "@types/node": "^18",
     "@typescript-eslint/typescript-estree": "^8.4.0",
-    "chai": "^4",
+    "chai": "^6",
     "conventional-changelog-conventionalcommits": "^9.1.0",
     "eslint": "^9",
     "eslint-config-oclif": "^6.0.148",
