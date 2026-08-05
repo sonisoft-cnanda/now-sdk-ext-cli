@@ -65,6 +65,13 @@ A test placed outside those paths runs in neither.
 - `flushLogs()` is awaited in both `catch()` and `finally()`. Winston buffers, and
   `super.catch()` can terminate the process before `finally()` runs, which loses the
   failure line — the one worth keeping.
+- **Instance changes are permitted by default**; `--read-only` / `--deny-write` /
+  `--deny-execute` and `NEX_POLICY_DENY` take that away. Enforcement is in core at the
+  HTTP layer and decides per REQUEST, so commands need no per-command classification —
+  a command that reads or writes depending on its flags works with no special handling.
+  Do not add per-command gating.
+- The flags are deliberately deny-direction. `--allow-*` would grant nothing at a
+  permissive default and cannot override `NEX_POLICY_DENY`; a test asserts none exist.
 - Output goes through a display service; commands should not build tables inline.
 - `nex exec` is the only interactive surface (a REPL). `nex log` is a long-running
   tail with a SIGINT handler.

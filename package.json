@@ -17,7 +17,7 @@
     "@servicenow/sdk-cli": "4.9.2",
     "@servicenow/sdk-cli-core": "3.0.3",
     "@servicenow/sdk-core": "4.9.2",
-    "@sonisoft/now-sdk-ext-core": "^6.0.0",
+    "@sonisoft/now-sdk-ext-core": "^6.1.0",
     "@sonisoft/sn-credstore": "^1.0.0",
     "@ts-morph/common": "^0.24.0",
     "chalk": "^4.1.2",
@@ -105,26 +105,56 @@
     ],
     "topicSeparator": " ",
     "topics": {
-      "atf": {
-        "description": "Execute ATF (Automated Test Framework) tests and test suites on a ServiceNow instance."
+      "aggregate": {
+        "description": "Run aggregate statistics (COUNT, AVG, MIN, MAX, SUM) on ServiceNow tables with optional grouping."
       },
       "app": {
         "description": "Operations on ServiceNow Applications."
       },
+      "atf": {
+        "description": "Execute ATF (Automated Test Framework) tests and test suites on a ServiceNow instance."
+      },
+      "attachment": {
+        "description": "Manage attachments on ServiceNow records."
+      },
+      "batch": {
+        "description": "Perform batch create and update operations on ServiceNow records."
+      },
+      "bulk": {
+        "description": "Bulk update or delete ServiceNow records matching an encoded query (dry-run by default)."
+      },
       "exec": {
         "description": "Execute scripts remotely on a ServiceNow instance. Immitates using Scripts - Background from within ServiceNow."
+      },
+      "flow": {
+        "description": "Execute and manage Flow Designer flows, subflows, and actions on a ServiceNow instance."
+      },
+      "health": {
+        "description": "Run consolidated health checks and diagnostics on a ServiceNow instance."
       },
       "log": {
         "description": "Tail and monitor ServiceNow system logs in real-time."
       },
-      "search": {
-        "description": "Search platform code across ServiceNow instances."
+      "policy": {
+        "description": "Inspect what this invocation may change on the instance."
+      },
+      "query": {
+        "description": "Query ServiceNow tables, search applications, list columns, and read syslog records."
       },
       "schema": {
         "description": "Discover and inspect ServiceNow table schemas and field definitions."
       },
+      "scope": {
+        "description": "Manage ServiceNow application scopes."
+      },
       "script-sync": {
         "description": "Synchronize scripts between local files and ServiceNow instances."
+      },
+      "search": {
+        "description": "Search platform code across ServiceNow instances."
+      },
+      "store": {
+        "description": "Search, install, and update applications from the ServiceNow Store."
       },
       "task": {
         "description": "Perform operations on ServiceNow tasks, incidents, and change requests."
@@ -134,33 +164,6 @@
       },
       "workflow": {
         "description": "Create and manage ServiceNow workflows."
-      },
-      "attachment": {
-        "description": "Manage attachments on ServiceNow records."
-      },
-      "scope": {
-        "description": "Manage ServiceNow application scopes."
-      },
-      "batch": {
-        "description": "Perform batch create and update operations on ServiceNow records."
-      },
-      "store": {
-        "description": "Search, install, and update applications from the ServiceNow Store."
-      },
-      "query": {
-        "description": "Query ServiceNow tables, search applications, list columns, and read syslog records."
-      },
-      "aggregate": {
-        "description": "Run aggregate statistics (COUNT, AVG, MIN, MAX, SUM) on ServiceNow tables with optional grouping."
-      },
-      "health": {
-        "description": "Run consolidated health checks and diagnostics on a ServiceNow instance."
-      },
-      "bulk": {
-        "description": "Bulk update or delete ServiceNow records matching an encoded query (dry-run by default)."
-      },
-      "flow": {
-        "description": "Execute and manage Flow Designer flows, subflows, and actions on a ServiceNow instance."
       },
       "xml": {
         "description": "Export and import ServiceNow records as XML."
