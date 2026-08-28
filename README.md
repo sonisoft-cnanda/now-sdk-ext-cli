@@ -505,6 +505,19 @@ nex flow cancel --context-id ctx-abc123 --reason "No longer needed" --auth dev
 
 # Send a message to a waiting flow (e.g., approval)
 nex flow message --context-id ctx-abc123 --message approved --payload '{"approver":"admin"}' --auth dev
+
+# Read a flow's design-time definition (nothing is executed; no context is created)
+nex flow definition --sys-id 887dda5583237210fdb8f7b6feaad32c --auth dev
+
+# Read a subflow definition
+nex flow definition -i 887dda5583237210fdb8f7b6feaad32c --type subflow --auth dev
+
+# Read a custom action definition with its ordered steps
+nex flow definition -i 887dda5583237210fdb8f7b6feaad32c --type action --auth dev
+
+# Redirect the full JSON definition to a file, or pipe it into another tool
+nex flow definition -i 887dda5583237210fdb8f7b6feaad32c --json --auth dev > flow.json
+nex flow definition -i 887dda5583237210fdb8f7b6feaad32c --type action --json --auth dev | jq .summary.steps
 ```
 
 **Features:**
@@ -512,6 +525,8 @@ nex flow message --context-id ctx-abc123 --message approved --payload '{"approve
 - Foreground (wait) or background execution modes
 - Query flow context status, outputs, and errors
 - Cancel running flows and send messages to paused flows
+- Read design-time definitions of flows, subflows, and actions — read-only, and
+  distinct from `flow details`, which reports on one past execution
 - JSON output for automation and CI/CD
 
 ### Bulk Record Operations
@@ -728,6 +743,7 @@ rather than silently denying nothing.
 * [`nex exec SCOPE [FILE]`](#nex-exec-scope-file)
 * [`nex flow action`](#nex-flow-action)
 * [`nex flow cancel`](#nex-flow-cancel)
+* [`nex flow definition`](#nex-flow-definition)
 * [`nex flow error`](#nex-flow-error)
 * [`nex flow message`](#nex-flow-message)
 * [`nex flow outputs`](#nex-flow-outputs)
@@ -1815,6 +1831,79 @@ EXAMPLES
 ```
 
 _See code: [src/commands/flow/cancel.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v2.0.0-alpha.0/src/commands/flow/cancel.ts)_
+
+## `nex flow definition`
+
+Retrieve the read-only design-time definition of a flow, subflow, or action.
+
+```
+USAGE
+  $ nex flow definition -i <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
+    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-t flow|subflow|action] [--scope
+    <value>]
+
+FLAGS
+  -a, --auth=<value>    Auth alias to use.
+  -i, --sys-id=<value>  (required) sys_id of the flow, subflow, or action to retrieve
+  -j, --json            Output the complete typed result as JSON
+  -t, --type=<option>   [default: flow] Artifact type to retrieve. Must match what the sys_id actually is.
+                        <options: flow|subflow|action>
+      --scope=<value>   Scope sys_id or name for the transaction scope parameter. Optional — ServiceNow resolves the
+                        artifact's own scope when omitted.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Retrieve the read-only design-time definition of a flow, subflow, or action.
+
+  Returns what the artifact IS, not what a run of it did: triggers, actions, nested subflows, flow logic, inputs and
+  outputs as Workflow Studio stores them. Nothing is executed, published or modified, and no flow context is created or
+  required.
+
+  This is the design-time counterpart to `flow details`, which describes one past execution and needs a context sys_id.
+
+  The type is never inferred from the sys_id: --type selects the artifact that is asked for, and a sys_id of a different
+  type fails with a type_mismatch rather than being relabelled.
+
+  With --json, stdout carries exactly one JSON document — the complete typed result including the untouched ServiceNow
+  payload — so it can be piped or redirected. Without it, a short summary is printed; definition bodies, step scripts
+  and input values are never printed or logged.
+
+EXAMPLES
+  Summarise a flow definition
+
+    $ nex flow definition --sys-id 887dda5583237210fdb8f7b6feaad32c --auth dev
+
+  Retrieve a subflow definition
+
+    $ nex flow definition -i 887dda5583237210fdb8f7b6feaad32c --type subflow --auth dev
+
+  Retrieve a custom action definition with its ordered steps
+
+    $ nex flow definition -i 887dda5583237210fdb8f7b6feaad32c --type action --auth dev
+
+  Redirect the full JSON definition to a file
+
+    $ nex flow definition -i 887dda5583237210fdb8f7b6feaad32c --json --auth dev > flow.json
+
+  Pipe the JSON definition into another tool
+
+    $ nex flow definition -i 887dda5583237210fdb8f7b6feaad32c --type action --json --auth dev | jq .summary.steps
+```
+
+_See code: [src/commands/flow/definition.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/flow/definition.ts)_
 
 ## `nex flow error`
 

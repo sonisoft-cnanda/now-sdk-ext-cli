@@ -42,7 +42,7 @@ nex bulk update -t incident -q "active=true" -d '{"priority":"4"}' --auth dev
 | `nex schema field -t <table> -f <field>` | Explain a field | |
 | `nex schema validate-catalog -s <id>` | Validate catalog item | |
 
-### Flow (12 commands)
+### Flow (13 commands)
 
 | Command | Description | Key Flags |
 |---------|-------------|-----------|
@@ -51,6 +51,7 @@ nex bulk update -t incident -q "active=true" -d '{"priority":"4"}' --auth dev
 | `nex flow action -n <name>` | Execute flow action | `-i` inputs, `-m` mode |
 | `nex flow test -f <id> -o '{...}'` | Test unpublished flow | `--scope`, `--no-synchronous` |
 | `nex flow copy -s <src> -n <name> -t <scope>` | Copy a flow | |
+| `nex flow definition -i <sys_id>` | Read the design-time definition (read-only, no context) | `-t` type (flow/subflow/action), `--scope`, `-j` |
 | `nex flow status -c <ctx>` | Quick state check | States: COMPLETE, ERROR, IN_PROGRESS, WAITING, QUEUED, CANCELLED |
 | `nex flow details -c <ctx>` | Per-action execution breakdown | `--include-definition`, `--scope` |
 | `nex flow logs -c <ctx>` | Execution log entries | `-l` limit, `-o` order (asc/desc) |
@@ -70,6 +71,7 @@ nex bulk update -t incident -q "active=true" -d '{"priority":"4"}' --auth dev
 | Error message? | `flow error -c <ctx>` |
 | Debug trail | `flow logs -c <ctx> --order asc` |
 | Latest error | `flow logs -c <ctx> --limit 5 --order desc` |
+| What is the flow made of? | `flow definition -i <sys_id>` (design-time, no run) |
 
 ### Script Execution
 
