@@ -82,11 +82,17 @@ a clean lint run says nothing about them. Type-check separately with
 
 The unit/integration split is by path pattern, not directory intent:
 
-- `test:unit` → `(services|common)`
-- `test:integration` → `commands`
+- `test:unit` → `(services|common|\.unit\.test)`
+- `test:integration` → `commands`, minus `\.unit\.test`
 
 A test in `test/helpers/` or `test/util/` matches **neither** and runs in no CI
 job. Put unit tests for `bin/` code under `test/common/`.
+
+Only `test:unit` runs in CI. A **deterministic** test for a command must
+therefore be named `*.unit.test.ts` (e.g.
+`test/commands/flow/definition.unit.test.ts`) — the suffix, not the directory,
+is what puts it behind the PR gate. Name it `*.integration.test.ts` and it
+lands in the job nobody runs.
 
 ---
 

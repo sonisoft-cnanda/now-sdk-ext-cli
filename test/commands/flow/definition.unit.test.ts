@@ -209,7 +209,7 @@ function exitCodeOf(error: unknown): number | undefined {
   return err?.oclif?.exit ?? err?.exitCode
 }
 
-describe('flow definition - Integration Tests', () => {
+describe('flow definition - Unit Tests', () => {
   let consoleSpy: ReturnType<typeof jest.spyOn>
 
   beforeEach(() => {

@@ -17,6 +17,9 @@ export interface FlowTestResult {
 }
 
 export class FlowDisplayService {
+  /** Widest description the one-line summary will print before eliding. */
+  private static readonly DESCRIPTION_MAX_LENGTH = 160;
+
   /**
    * Render an action design-time definition: metadata plus ordered steps.
    *
@@ -43,8 +46,9 @@ export class FlowDisplayService {
       lines.push(`  Active:         ${summary.active}`);
       lines.push(`  Scope:          ${summary.scopeName || summary.scope}`);
 
-      if (summary.description) {
-        lines.push(`  Description:    ${summary.description}`);
+      const description = summary.description ? this._summaryDescription(summary.description) : '';
+      if (description) {
+        lines.push(`  Description:    ${description}`);
       }
 
       lines.push("");
@@ -104,8 +108,9 @@ export class FlowDisplayService {
       lines.push(`  Active:         ${summary.active}`);
       lines.push(`  Scope:          ${summary.scopeName || summary.scope}`);
 
-      if (summary.description) {
-        lines.push(`  Description:    ${summary.description}`);
+      const description = summary.description ? this._summaryDescription(summary.description) : '';
+      if (description) {
+        lines.push(`  Description:    ${description}`);
       }
 
       lines.push("");
@@ -573,5 +578,26 @@ export class FlowDisplayService {
       default: { return '\u2022';
       }
     }
+  }
+
+  /**
+   * Reduce a design-time description to one summary line.
+   *
+   * Workflow Studio stores the description as authored, which for a shipped
+   * subflow is frequently a block of HTML hundreds of characters long. Printing
+   * it verbatim buries the counts underneath it, so the tags come out, the
+   * whitespace collapses, and anything past the cutoff is elided. The full text
+   * is never lost \u2014 it is on the `--json` path, untouched.
+   */
+  private _summaryDescription(description: string): string {
+    const flattened = description
+      .replaceAll(/<[^>]*>/g, ' ')
+      .replaceAll('&nbsp;', ' ')
+      .replaceAll(/\s+/g, ' ')
+      .trim();
+
+    return flattened.length > FlowDisplayService.DESCRIPTION_MAX_LENGTH
+      ? `${flattened.slice(0, FlowDisplayService.DESCRIPTION_MAX_LENGTH).trimEnd()}\u2026`
+      : flattened;
   }
 }

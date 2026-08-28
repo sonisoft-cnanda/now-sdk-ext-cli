@@ -637,6 +637,50 @@ describe('FlowDisplayService', () => {
         expect(output).not.toContain('Description:')
       })
 
+      it('should strip HTML out of the description and keep it on one line', () => {
+        const html = {
+          ...flowResult,
+          summary: {
+            ...flowResult.summary,
+            description: '<p>Waits for the&nbsp;tracker</p>\n<p>then <b>continues</b></p>',
+          },
+        }
+        const output = service.formatArtifactDefinitionResult(html, false).join('\n')
+        expect(output).toContain('Description:    Waits for the tracker then continues')
+        expect(output).not.toContain('<p>')
+        expect(output).not.toContain('&nbsp;')
+      })
+
+      it('should elide a description longer than the summary line allows', () => {
+        const long = {
+          ...flowResult,
+          summary: { ...flowResult.summary, description: 'x'.repeat(400) },
+        }
+        const line = service
+          .formatArtifactDefinitionResult(long, false)
+          .find((l) => l.includes('Description:'))!
+        expect(line).toContain('…')
+        expect(line.length).toBeLessThan(200)
+      })
+
+      it('should omit the description line when it is nothing but markup', () => {
+        const markupOnly = {
+          ...flowResult,
+          summary: { ...flowResult.summary, description: '<p>&nbsp;</p>' },
+        }
+        const output = service.formatArtifactDefinitionResult(markupOnly, false).join('\n')
+        expect(output).not.toContain('Description:')
+      })
+
+      it('should keep the full description on the JSON path', () => {
+        const html = {
+          ...flowResult,
+          summary: { ...flowResult.summary, description: `<p>${'x'.repeat(400)}</p>` },
+        }
+        const output = service.formatArtifactDefinitionResult(html, true).join('\n')
+        expect(output).toContain(`<p>${'x'.repeat(400)}</p>`)
+      })
+
       it('should say so when a successful result carries no summary', () => {
         const noSummary = { ...flowResult, summary: undefined }
         const output = service.formatArtifactDefinitionResult(noSummary, false).join('\n')
@@ -730,6 +774,20 @@ describe('FlowDisplayService', () => {
         const output = service.formatActionDefinitionResult(actionResult, false).join('\n')
         expect(output).not.toContain('gs.info')
         expect(output).not.toContain('step001')
+      })
+
+      it('should strip and elide the description the same way a flow does', () => {
+        const html = {
+          ...actionResult,
+          summary: { ...actionResult.summary, description: `<p>Calculates ${'y'.repeat(400)}</p>` },
+        }
+        const line = service
+          .formatActionDefinitionResult(html, false)
+          .find((l) => l.includes('Description:'))!
+        expect(line).toContain('Calculates')
+        expect(line).not.toContain('<p>')
+        expect(line).toContain('…')
+        expect(line.length).toBeLessThan(200)
       })
 
       it('should handle an action with no steps', () => {
