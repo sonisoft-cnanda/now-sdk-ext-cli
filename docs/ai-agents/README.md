@@ -91,6 +91,10 @@ Before your agent can use `nex` commands, ensure:
    dev` — which looks like a missing alias, so the obvious fix does not help.
    `nex auth doctor` tells the two apart.
 
+## Transaction safety
+
+`nex transaction kill` changes a live ServiceNow instance and aborts real work. Never pass an identifier that did not come from a `nex transaction list` invocation you just ran for this exact task, and always require explicit human intent before adding `--confirm`. Platform acceptance is asynchronous; use a separate later list to verify that the transaction cleared.
+
 ## Customization
 
 ### Adding Instance-Specific Aliases

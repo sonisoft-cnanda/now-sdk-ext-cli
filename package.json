@@ -159,6 +159,9 @@
       "task": {
         "description": "Perform operations on ServiceNow tasks, incidents, and change requests."
       },
+      "transaction": {
+        "description": "List active transactions across all cluster nodes and terminate a selected transaction."
+      },
       "update-set": {
         "description": "Manage ServiceNow update sets."
       },

@@ -6,7 +6,7 @@
 
 ## Overview
 
-`nex` (`@sonisoft/now-sdk-ext-cli`) is a CLI tool that extends the ServiceNow SDK with commands across 21 topics. It enables programmatic interaction with ServiceNow instances for querying data, executing scripts, managing flows, running tests, deploying applications, and more.
+`nex` (`@sonisoft/now-sdk-ext-cli`) is a CLI tool that extends the ServiceNow SDK with commands across 22 topics. It enables programmatic interaction with ServiceNow instances for querying data, executing scripts, managing flows, running tests, deploying applications, and more.
 
 **Every command requires authentication** via the `--auth <alias>` flag, which specifies the target ServiceNow instance using a pre-configured credential alias.
 
@@ -186,6 +186,9 @@ Every command at a glance:
 | `nex task resolve` | Resolve an incident |
 | `nex task close` | Close an incident |
 | `nex task approve` | Approve a change request |
+| **Transaction** | |
+| `nex transaction list` | List active transactions from all responding cluster nodes |
+| `nex transaction kill` | Submit a kill request for one selected transaction (requires `--confirm`) |
 | **Update-Set** | |
 | `nex update-set` | List update sets |
 | `nex update-set create` | Create a new update set |
@@ -1303,6 +1306,56 @@ nex task approve -n CHG0030002 -c "Reviewed and approved. Low risk." --auth dev
 
 ---
 
+### Transaction
+
+Discover active transactions across every responding cluster node and submit a kill request for one deliberately selected transaction.
+
+> **Warning**: `nex transaction kill` aborts real work belonging to a real user. Only pass an identifier that came from a `nex transaction list` you just ran for this task, and only with explicit human intent. Never guess an identifier.
+
+#### `nex transaction list`
+
+One-shot collection from all responding nodes. Read-only, so it runs unchanged under `--read-only` / `--deny-write`.
+
+| Flag | Short | Type | Required | Default | Description |
+|------|-------|------|----------|---------|-------------|
+| `--limit` | `-l` | integer | no | `1000` | Max transactions to return |
+| `--query` | `-q` | string | no | — | Encoded query to filter transactions |
+| `--poll-interval-ms` | | integer | no | `1000` | Interval between collection status polls |
+| `--timeout-ms` | | integer | no | `60000` | Collection timeout in ms |
+| `--json` | `-j` | boolean | no | `false` | Output as JSON |
+
+Defaults come from core: omit a flag and core's own default applies.
+
+```bash
+nex transaction list --auth dev
+
+# Complete, untruncated records for programmatic selection
+nex transaction list --json --auth dev | jq '.transactions[] | select(.user == "admin")'
+```
+
+#### `nex transaction kill`
+
+Submits a kill request for exactly one transaction. **Acceptance is not removal** — the platform clears the transaction asynchronously, so verify with a separate later list.
+
+| Flag | Short | Type | Required | Default | Description |
+|------|-------|------|----------|---------|-------------|
+| `--transaction-id` | `-t` | string | yes | — | Exact 32-character hex sys_id from `nex transaction list` |
+| `--confirm` | | boolean | no | `false` | Required. Without it the command refuses and makes no request |
+| `--json` | `-j` | boolean | no | `false` | Output as JSON |
+
+```bash
+# Refuses without --confirm; makes no request
+nex transaction kill -t 8f9a1234567890abcdef1234567890c1 --auth dev
+
+# Submit the request for one deliberately selected transaction
+nex transaction kill -t 8f9a1234567890abcdef1234567890c1 --confirm --auth dev
+
+# Verify separately — acceptance does not mean it has cleared yet
+nex transaction list --json --auth dev | jq '.transactions[].sys_id'
+```
+
+---
+
 ### Update-Set
 
 Manage ServiceNow update sets for change tracking and deployment.
@@ -1692,6 +1745,8 @@ nex task approve -n CHG0030002 -c "Reviewed and approved." --auth dev
 | Pull a script | `nex script-sync pull -n <name> -t <type>` | `-o` output path |
 | Push a script | `nex script-sync push -n <name> -t <type> -f <file>` | |
 | Check instance health | `nex health check` | `--json` |
+| See active cluster transactions | `nex transaction list` | `-q` query, `-l` limit, `--timeout-ms`, `--json` |
+| Kill one selected transaction | `nex transaction kill -t <sys-id>` | `--confirm` required; verify with a later list |
 | Tail live logs | `nex log` | `-f` filter, `-i` interval |
 | Add a task comment | `nex task comment -n <number> -c <text>` | `--work-note` |
 | Resolve an incident | `nex task resolve -n <number> --notes <text>` | `--close-code` |
