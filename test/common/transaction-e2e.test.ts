@@ -11,6 +11,8 @@ const BUILT = fs.existsSync(path.join(process.cwd(), 'dist', 'commands'))
 async function nex(args: string[]): Promise<string> {
   const childEnv = {...process.env}
   delete childEnv.NODE_ENV
+  delete childEnv.SN_CRED_STORE_ENABLE
+  childEnv.SN_CRED_STORE_DISABLE = '1'
   for (const key of Object.keys(childEnv)) if (key.startsWith('JEST_')) delete childEnv[key]
 
   try {

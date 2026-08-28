@@ -1,12 +1,15 @@
 import {beforeEach, describe, expect, it, jest} from '@jest/globals'
+import {isPolicyRefusal, redactMessage, refusalFor, stripSecretsFromError} from '@sonisoft/now-sdk-ext-core'
 
 const getTransactions = jest.fn<any>()
 const killTransaction = jest.fn<any>()
 const managerConstructor = jest.fn(() => ({getTransactions, killTransaction}))
+const policyRefusalCheck = jest.fn(isPolicyRefusal)
 
 jest.unstable_mockModule('@sonisoft/now-sdk-ext-core', () => ({
   ...jest.requireActual('@sonisoft/now-sdk-ext-core'),
   ClusterTransactionManager: managerConstructor,
+  isPolicyRefusal: policyRefusalCheck,
   ServiceNowInstance: jest.fn(() => ({})),
 }))
 
@@ -65,6 +68,18 @@ describe('transaction commands', () => {
     expect(await TransactionList.run(['--auth', 'test', '--json'])).toEqual({count: 1, transactions: [record]})
   })
 
+  it('emits exactly one complete JSON document on stdout', async () => {
+    const output = jest.spyOn(console, 'log').mockImplementation(() => undefined)
+    try {
+      await TransactionList.run(['--auth', 'test', '--json'])
+      const stdout = output.mock.calls.flat().join('\n')
+      expect(JSON.parse(stdout)).toEqual({count: 1, transactions: [record]})
+      expect(output).toHaveBeenCalledTimes(1)
+    } finally {
+      output.mockRestore()
+    }
+  })
+
   it('fails collection without returning a partial success result', async () => {
     getTransactions.mockRejectedValueOnce(new Error('collection failed'))
     const {result} = await capture(() => TransactionList.run(['--auth', 'test', '--json']))
@@ -108,5 +123,63 @@ describe('transaction commands', () => {
     expect(error).toBeDefined()
     expect(result).toBeUndefined()
     expect(killTransaction).toHaveBeenCalledTimes(1)
+  })
+
+  it('preserves a core policy refusal without reporting acceptance or refreshing', async () => {
+    const refusal = refusalFor('write', '--deny-write', 'Remove --deny-write only after reviewing the mutation.')
+    killTransaction.mockRejectedValueOnce(refusal)
+
+    const {error, result} = await capture(() => TransactionKill.run([
+      '--auth', 'test', '--transaction-id', record.sys_id, '--confirm', '--deny-write', '--json',
+    ]))
+
+    expect(result).toBeUndefined()
+    expect(error).toBeDefined()
+    expect(policyRefusalCheck).toHaveBeenCalledWith(refusal)
+    expect(isPolicyRefusal(refusal)).toBe(true)
+    expect(killTransaction).toHaveBeenCalledTimes(1)
+    expect(getTransactions).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['list', () => {
+      const error = new Error('Could not parse the collection execution id: password=hunter2; JSESSIONID=opaque-cookie; X-UserToken=opaque-csrf')
+      error.message = redactMessage(error.message)
+      getTransactions.mockRejectedValueOnce(stripSecretsFromError(error))
+      return TransactionList.run(['--auth', 'test', '--json', '--log-level', 'debug'])
+    }],
+    ['kill', () => {
+      const error = new Error('kill failed: password=hunter2; JSESSIONID=opaque-cookie; X-UserToken=opaque-csrf')
+      error.message = redactMessage(error.message)
+      killTransaction.mockRejectedValueOnce(stripSecretsFromError(error))
+      return TransactionKill.run([
+        '--auth', 'test', '--transaction-id', record.sys_id, '--confirm', '--json', '--log-level', 'debug',
+      ])
+    }],
+  ])('keeps %s failure output and logs credential-safe', async (_command, action) => {
+    const stderr = jest.spyOn(process.stderr, 'write').mockImplementation(() => true)
+    const stdout = jest.spyOn(process.stdout, 'write').mockImplementation(() => true)
+    const consoleLog = jest.spyOn(console, 'log').mockImplementation(() => undefined)
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => undefined)
+
+    try {
+      const {error, result} = await capture(action)
+      expect(error).toBeUndefined()
+      expect(result).toBeUndefined()
+
+      const emitted = [
+        ...stdout.mock.calls, ...stderr.mock.calls, ...consoleLog.mock.calls, ...consoleError.mock.calls,
+      ].flat().join(' ')
+      for (const secret of ['hunter2', 'opaque-cookie', 'opaque-csrf', 'opaque-collection']) {
+        expect(emitted).not.toContain(secret)
+      }
+      expect(emitted).not.toContain(record.url)
+      expect(emitted).not.toContain(record.thread)
+    } finally {
+      stdout.mockRestore()
+      stderr.mockRestore()
+      consoleLog.mockRestore()
+      consoleError.mockRestore()
+    }
   })
 })
