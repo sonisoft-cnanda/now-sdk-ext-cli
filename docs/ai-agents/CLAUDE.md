@@ -141,6 +141,7 @@ Every command at a glance:
 | `nex flow action` | Execute a flow action by scoped name |
 | `nex flow test` | Test a flow without requiring it to be published |
 | `nex flow copy` | Copy a flow into a target scoped application |
+| `nex flow definition` | Read the design-time definition of a flow, subflow, or action |
 | `nex flow status` | Get the status of a flow execution context |
 | `nex flow details` | Get rich per-action execution details for a flow context |
 | `nex flow logs` | Get execution log entries for a flow context |
@@ -597,7 +598,7 @@ nex exec global --auth dev
 
 ### Flow
 
-Execute and manage Flow Designer flows, subflows, and actions. This is the most comprehensive topic with 12 commands covering the full flow development lifecycle.
+Execute and manage Flow Designer flows, subflows, and actions. This is the most comprehensive topic with 13 commands covering the full flow development lifecycle.
 
 #### `nex flow run`
 
@@ -690,6 +691,30 @@ Copy an existing flow into a target scoped application. Creates a new editable c
 ```bash
 nex flow copy -s global.change__standard -n "My Custom Change Flow" -t <scope-id> --auth dev
 ```
+
+#### `nex flow definition`
+
+Read the **design-time** definition of a flow, subflow, or action — what the artifact *is*, not what a run of it did. Nothing is executed or modified, and no flow context is created or needed. This is the design-time counterpart to `nex flow details`, which reports on one past execution.
+
+The type is never inferred from the sys_id: `--type` selects what is asked for, and a sys_id of a different type fails with `type_mismatch` rather than being relabelled.
+
+| Flag | Short | Type | Required | Default | Description |
+|------|-------|------|----------|---------|-------------|
+| `--sys-id` | `-i` | string | yes | — | sys_id of the flow, subflow, or action |
+| `--type` | `-t` | option | no | `flow` | `flow`, `subflow`, or `action` |
+| `--scope` | | string | no | — | Scope sys_id or name for the transaction scope |
+| `--json` | `-j` | boolean | no | `false` | Output the complete typed result as JSON |
+
+With `--json`, stdout is exactly one JSON document — the typed result plus the untouched ServiceNow payload — so it pipes and redirects cleanly. Without it, a short summary is printed; definition bodies, step scripts and input values are never printed or logged.
+
+```bash
+nex flow definition -i 887dda5583237210fdb8f7b6feaad32c --auth dev
+nex flow definition -i 887dda5583237210fdb8f7b6feaad32c --type subflow --auth dev
+nex flow definition -i 887dda5583237210fdb8f7b6feaad32c --type action --json --auth dev | jq '.summary.steps'
+nex flow definition -i 887dda5583237210fdb8f7b6feaad32c --json --auth dev > flow.json
+```
+
+Failures are classified rather than described: `invalid_identifier`, `type_mismatch`, `not_found`, `permission_denied`, `api_error`, `malformed_response`, `request_failed`. Each exits non-zero.
 
 #### `nex flow status`
 

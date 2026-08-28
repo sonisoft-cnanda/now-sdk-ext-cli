@@ -1,4 +1,4 @@
-import type { FlowContextDetailsResult, FlowLogResult } from '@sonisoft/now-sdk-ext-core'
+import type { ActionDefinitionResult, FlowArtifactDefinitionResult, FlowContextDetailsResult, FlowLogResult } from '@sonisoft/now-sdk-ext-core'
 
 export interface FlowCopyResult {
   success: boolean;
@@ -17,6 +17,119 @@ export interface FlowTestResult {
 }
 
 export class FlowDisplayService {
+  /**
+   * Render an action design-time definition: metadata plus ordered steps.
+   *
+   * As with a flow definition, only the summary projection is printed — the raw
+   * `metadata`/`steps` payloads stay on the JSON path.
+   */
+  formatActionDefinitionResult(result: ActionDefinitionResult, jsonOutput: boolean): string[] {
+    if (jsonOutput) {
+      return [JSON.stringify(result, null, 2)];
+    }
+
+    const lines: string[] = [];
+    const icon = result.success ? '\u2714' : '\u2718';
+
+    lines.push(`\n${icon} Action Definition — ${result.sysId}`);
+    lines.push("  " + "\u2500".repeat(60));
+    lines.push(`  Type:           ${result.artifactType ?? 'action'}`);
+
+    const { summary } = result;
+    if (summary) {
+      lines.push(`  Name:           ${summary.name}`);
+      lines.push(`  Internal Name:  ${summary.internalName}`);
+      lines.push(`  State:          ${summary.state}`);
+      lines.push(`  Active:         ${summary.active}`);
+      lines.push(`  Scope:          ${summary.scopeName || summary.scope}`);
+
+      if (summary.description) {
+        lines.push(`  Description:    ${summary.description}`);
+      }
+
+      lines.push("");
+      lines.push("  Contents:");
+      lines.push(`    Inputs:       ${summary.inputCount}`);
+      lines.push(`    Outputs:      ${summary.outputCount}`);
+      lines.push(`    Steps:        ${summary.stepCount}`);
+
+      if (summary.steps.length > 0) {
+        lines.push("");
+        lines.push("  Steps:");
+        for (const step of summary.steps) {
+          lines.push(`    ${step.order}. ${step.label} [${step.stepTypeName}]`);
+        }
+      }
+    } else if (result.success) {
+      lines.push("");
+      lines.push("  No summary was reported. Re-run with --json for the full definition.");
+    }
+
+    if (result.errorMessage) {
+      lines.push("");
+      lines.push(`  Error: ${result.errorMessage}${result.failureReason ? ` (${result.failureReason})` : ''}`);
+    }
+
+    lines.push("  " + "\u2500".repeat(60));
+    return lines;
+  }
+
+  /**
+   * Render a flow or subflow design-time definition.
+   *
+   * The JSON form is the whole typed core result, opaque `definition` payload
+   * included, so it can be piped or redirected straight into a file. The text
+   * form deliberately renders only the summary projection: the definition body
+   * carries step scripts and input values, which do not belong on a terminal.
+   */
+  formatArtifactDefinitionResult(result: FlowArtifactDefinitionResult, jsonOutput: boolean): string[] {
+    if (jsonOutput) {
+      return [JSON.stringify(result, null, 2)];
+    }
+
+    const lines: string[] = [];
+    const icon = result.success ? '\u2714' : '\u2718';
+    // artifactType is what ServiceNow reported, never what was asked for.
+    const label = this._artifactLabel(result.artifactType ?? result.reportedType);
+
+    lines.push(`\n${icon} ${label} Definition — ${result.sysId}`);
+    lines.push("  " + "\u2500".repeat(60));
+    lines.push(`  Type:           ${result.artifactType ?? result.reportedType ?? 'unknown'}`);
+
+    const { summary } = result;
+    if (summary) {
+      lines.push(`  Name:           ${summary.name}`);
+      lines.push(`  Internal Name:  ${summary.internalName}`);
+      lines.push(`  Status:         ${summary.status}`);
+      lines.push(`  Active:         ${summary.active}`);
+      lines.push(`  Scope:          ${summary.scopeName || summary.scope}`);
+
+      if (summary.description) {
+        lines.push(`  Description:    ${summary.description}`);
+      }
+
+      lines.push("");
+      lines.push("  Contents:");
+      lines.push(`    Triggers:     ${summary.triggerCount}`);
+      lines.push(`    Actions:      ${summary.actionCount}`);
+      lines.push(`    Subflows:     ${summary.subflowCount}`);
+      lines.push(`    Flow Logic:   ${summary.flowLogicCount}`);
+      lines.push(`    Inputs:       ${summary.inputCount}`);
+      lines.push(`    Outputs:      ${summary.outputCount}`);
+    } else if (result.success) {
+      lines.push("");
+      lines.push("  No summary was reported. Re-run with --json for the full definition.");
+    }
+
+    if (result.errorMessage) {
+      lines.push("");
+      lines.push(`  Error: ${result.errorMessage}${result.failureReason ? ` (${result.failureReason})` : ''}`);
+    }
+
+    lines.push("  " + "\u2500".repeat(60));
+    return lines;
+  }
+
   formatCopyResult(result: FlowCopyResult, jsonOutput: boolean): string[] {
     if (jsonOutput) {
       return [JSON.stringify(result, null, 2)];
@@ -403,6 +516,19 @@ export class FlowDisplayService {
 
     lines.push("  " + "\u2500".repeat(60));
     return lines;
+  }
+
+  private _artifactLabel(artifactType?: string): string {
+    switch (artifactType) {
+      case 'flow': { return 'Flow';
+      }
+
+      case 'subflow': { return 'Subflow';
+      }
+
+      default: { return 'Flow Artifact';
+      }
+    }
   }
 
   private _mapLogLevel(level: string): string {
