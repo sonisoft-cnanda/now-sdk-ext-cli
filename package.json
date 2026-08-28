@@ -192,8 +192,8 @@
     "prepack": "oclif manifest && oclif readme",
     "semantic-release": "semantic-release",
     "test": "node --experimental-vm-modules node_modules/.bin/jest --forceExit --verbose=true --silent=false --json=false --useStderr=false",
-    "test:unit": "node --experimental-vm-modules node_modules/.bin/jest --testPathPatterns='(services|common)' --forceExit --coverage --collectCoverage --coverageDirectory=\"./coverage\" --ci --reporters=default --reporters=jest-junit --watchAll=false",
-    "test:integration": "node --experimental-vm-modules node_modules/.bin/jest --testPathPatterns='commands' --forceExit",
+    "test:unit": "node --experimental-vm-modules node_modules/.bin/jest --testPathPatterns='(services|common|\\.unit\\.test)' --forceExit --coverage --collectCoverage --coverageDirectory=\"./coverage\" --ci --reporters=default --reporters=jest-junit --watchAll=false",
+    "test:integration": "node --experimental-vm-modules node_modules/.bin/jest --testPathPatterns='commands' --testPathIgnorePatterns='/node_modules/' --testPathIgnorePatterns='\\.unit\\.test' --forceExit",
     "test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --coverage --forceExit"
   },
   "types": "dist/index.d.ts"

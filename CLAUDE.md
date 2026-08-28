@@ -43,13 +43,18 @@ npm run lint         # eslint src/  (NOTE: src only — see AGENTS.md)
 ## Testing
 
 ```bash
-npm run test:unit         # services + common only
+npm run test:unit         # services + common + any *.unit.test.ts
 npm run test:integration  # commands/ — hits a real instance
 ```
 
 The split is by **path pattern**, not by directory convention:
-`test:unit` matches `(services|common)`, `test:integration` matches `commands`.
-A test placed outside those paths runs in neither.
+`test:unit` matches `(services|common|\.unit\.test)`, `test:integration` matches
+`commands` minus `\.unit\.test`. A test placed outside those paths runs in neither.
+
+CI runs only `test:unit`. A deterministic test for a command therefore has to be
+named `*.unit.test.ts` — it can still live beside its siblings in
+`test/commands/<topic>/`, but the suffix is what puts it behind the PR gate and
+keeps the instance-hitting `*.integration.test.ts` runs out of it.
 
 ## Key Patterns
 
