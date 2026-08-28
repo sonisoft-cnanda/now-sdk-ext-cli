@@ -17,7 +17,6 @@ import {promisify} from 'node:util'
 const execFileAsync = promisify(execFile)
 const REPO = process.cwd()
 const RUN = path.join(REPO, 'bin', 'run.js')
-const BUILT = fs.existsSync(path.join(REPO, 'dist', 'commands'))
 const SECRET = 'fabricated-password-never-print'
 
 interface NexResult {
@@ -68,9 +67,7 @@ function writeFixture(storePath: string): void {
   }), {mode: 0o600})
 }
 
-const maybe = BUILT ? describe : describe.skip
-
-maybe('credential-store tooling eval', () => {
+describe('credential-store tooling eval', () => {
   let runDir: string
   let storePath: string
 
