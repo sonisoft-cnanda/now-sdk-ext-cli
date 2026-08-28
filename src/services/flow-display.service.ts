@@ -1,19 +1,19 @@
 import type { ActionDefinitionResult, FlowArtifactDefinitionResult, FlowContextDetailsResult, FlowLogResult } from '@sonisoft/now-sdk-ext-core'
 
 export interface FlowCopyResult {
-  success: boolean;
-  newFlowSysId?: string;
-  errorMessage?: string;
   errorCode?: number;
+  errorMessage?: string;
+  newFlowSysId?: string;
+  success: boolean;
 }
 
 export interface FlowTestResult {
-  success: boolean;
   contextId?: string;
-  flowId?: string;
-  state?: string;
-  outputs?: Record<string, unknown>;
   errorMessage?: string;
+  flowId?: string;
+  outputs?: Record<string, unknown>;
+  state?: string;
+  success: boolean;
 }
 
 export class FlowDisplayService {
@@ -135,6 +135,26 @@ export class FlowDisplayService {
     return lines;
   }
 
+  formatCancelResult(result: any, jsonOutput: boolean): string[] {
+    if (jsonOutput) {
+      return [JSON.stringify(result, null, 2)];
+    }
+
+    const lines: string[] = [];
+    const icon = result.success ? '\u2714' : '\u2718';
+
+    lines.push(`\n${icon} Flow Cancel — ${result.contextId}`);
+    lines.push("  " + "\u2500".repeat(50));
+    lines.push(`  ${result.success ? 'Flow cancelled successfully.' : 'Failed to cancel flow.'}`);
+
+    if (result.errorMessage) {
+      lines.push(`  Error: ${result.errorMessage}`);
+    }
+
+    lines.push("  " + "\u2500".repeat(50));
+    return lines;
+  }
+
   formatCopyResult(result: FlowCopyResult, jsonOutput: boolean): string[] {
     if (jsonOutput) {
       return [JSON.stringify(result, null, 2)];
@@ -171,23 +191,104 @@ export class FlowDisplayService {
     return lines;
   }
 
-  formatCancelResult(result: any, jsonOutput: boolean): string[] {
+  formatDetailsResult(result: FlowContextDetailsResult, jsonOutput: boolean): string[] {
     if (jsonOutput) {
       return [JSON.stringify(result, null, 2)];
     }
 
     const lines: string[] = [];
-    const icon = result.success ? '\u2714' : '\u2718';
+    const ctx = result.flowContext;
+    const stateIcon = ctx ? this._stateIcon(ctx.state) : (result.success ? '\u2714' : '\u2718');
 
-    lines.push(`\n${icon} Flow Cancel — ${result.contextId}`);
-    lines.push("  " + "\u2500".repeat(50));
-    lines.push(`  ${result.success ? 'Flow cancelled successfully.' : 'Failed to cancel flow.'}`);
+    lines.push(`\n${stateIcon} Flow Execution Details — ${result.contextId}`);
+    lines.push("  " + "\u2500".repeat(60));
+
+    if (ctx) {
+      lines.push(`  Flow:           ${ctx.name}`);
+      lines.push(`  State:          ${ctx.state}`);
+      lines.push(`  Runtime:        ${ctx.runTime}ms`);
+      lines.push(`  Test Run:       ${ctx.isTestRun}`);
+      lines.push(`  Executed As:    ${ctx.executedAs}`);
+      lines.push(`  Initiated By:   ${ctx.flowInitiatedBy}`);
+
+      if (ctx.executionSource?.callingSource) {
+        lines.push(`  Triggered By:   ${ctx.executionSource.callingSource}`);
+      }
+
+      if (ctx.executionSource?.executionSourceTable) {
+        lines.push(`  Source Table:   ${ctx.executionSource.executionSourceTable}`);
+      }
+
+      if (ctx.executionSource?.executionSourceRecordDisplay) {
+        lines.push(`  Source Record:  ${ctx.executionSource.executionSourceRecordDisplay}`);
+      }
+    }
+
+    const report = result.flowReport;
+    if (report) {
+      const actionReports = Object.values(report.actionOperationsReports ?? {});
+      const subflowReports = Object.values(report.subflowOperationsReports ?? {});
+      const allReports = [...actionReports, ...subflowReports].sort(
+        (a, b) => (Number.parseInt(a.operationsCore.order, 10) || 0) - (Number.parseInt(b.operationsCore.order, 10) || 0)
+      );
+
+      if (allReports.length > 0) {
+        lines.push("");
+        lines.push("  Action Results:");
+        for (const [idx, action] of allReports.entries()) {
+          const label = action.stepLabel ?? action.actionTypeName ?? `Action ${action.actionName}`;
+          const {state} = action.operationsCore;
+          const {runTime} = action.operationsCore;
+          lines.push(`    ${idx + 1}. ${label}  [${state}, ${runTime}ms]`);
+
+          if (action.operationsCore.error) {
+            lines.push(`       Error: ${action.operationsCore.error}`);
+          }
+
+          const inputs = action.operationsInput?.data;
+          if (inputs && Object.keys(inputs).length > 0) {
+            const simplified: Record<string, unknown> = {};
+            for (const [k, v] of Object.entries(inputs)) {
+              simplified[k] = v.displayValue ?? v.value;
+            }
+
+            lines.push(`       Inputs: ${JSON.stringify(simplified)}`);
+          }
+
+          const outputs = action.operationsOutput?.data;
+          if (outputs && Object.keys(outputs).length > 0) {
+            const simplified: Record<string, unknown> = {};
+            for (const [k, v] of Object.entries(outputs)) {
+              simplified[k] = v.displayValue ?? v.value;
+            }
+
+            lines.push(`       Outputs: ${JSON.stringify(simplified)}`);
+          }
+        }
+      }
+
+      const flowOutputs = report.operationsOutput?.data;
+      if (flowOutputs && Object.keys(flowOutputs).length > 0) {
+        lines.push("");
+        lines.push("  Flow Outputs:");
+        for (const [k, v] of Object.entries(flowOutputs)) {
+          lines.push(`    ${k}: ${v.displayValue ?? v.value}`);
+        }
+      }
+    }
+
+    const avail = result.flowReportAvailabilityDetails;
+    if (avail?.errorMessage) {
+      lines.push("");
+      lines.push(`  Note: ${avail.errorMessage}`);
+    }
 
     if (result.errorMessage) {
+      lines.push("");
       lines.push(`  Error: ${result.errorMessage}`);
     }
 
-    lines.push("  " + "\u2500".repeat(50));
+    lines.push("  " + "\u2500".repeat(60));
     return lines;
   }
 
@@ -249,6 +350,41 @@ export class FlowDisplayService {
       lines.push("");
       lines.push("  Debug Output:");
       lines.push(`    ${result.debugOutput}`);
+    }
+
+    if (result.errorMessage) {
+      lines.push("");
+      lines.push(`  Error: ${result.errorMessage}`);
+    }
+
+    lines.push("  " + "\u2500".repeat(60));
+    return lines;
+  }
+
+  formatLogsResult(result: FlowLogResult, jsonOutput: boolean): string[] {
+    if (jsonOutput) {
+      return [JSON.stringify(result, null, 2)];
+    }
+
+    const lines: string[] = [];
+    const icon = result.success ? '\u2714' : '\u2718';
+
+    lines.push(`\n${icon} Flow Execution Logs — ${result.contextId}`);
+    lines.push("  " + "\u2500".repeat(60));
+    lines.push(`  Entries: ${result.entries.length}`);
+
+    if (result.entries.length === 0) {
+      lines.push("");
+      lines.push("  No log entries found. Logs may be empty for simple successful");
+      lines.push("  executions, or flow logging may be disabled (reporting level NONE).");
+    } else {
+      lines.push("");
+      for (const [idx, entry] of result.entries.entries()) {
+        const level = this._mapLogLevel(entry.level);
+        const action = (entry.action || '(flow)').slice(0, 30).padEnd(30);
+        const ts = entry.createdOn ? ` [${entry.createdOn}]` : '';
+        lines.push(`  [${idx + 1}] ${level} | ${action} | ${entry.message}${ts}`);
+      }
     }
 
     if (result.errorMessage) {
@@ -376,142 +512,6 @@ export class FlowDisplayService {
         const display = typeof value === 'object' ? JSON.stringify(value) : String(value);
         lines.push(`    ${key}: ${display}`);
       }
-    }
-
-    if (result.errorMessage) {
-      lines.push("");
-      lines.push(`  Error: ${result.errorMessage}`);
-    }
-
-    lines.push("  " + "\u2500".repeat(60));
-    return lines;
-  }
-
-  formatDetailsResult(result: FlowContextDetailsResult, jsonOutput: boolean): string[] {
-    if (jsonOutput) {
-      return [JSON.stringify(result, null, 2)];
-    }
-
-    const lines: string[] = [];
-    const ctx = result.flowContext;
-    const stateIcon = ctx ? this._stateIcon(ctx.state) : (result.success ? '\u2714' : '\u2718');
-
-    lines.push(`\n${stateIcon} Flow Execution Details — ${result.contextId}`);
-    lines.push("  " + "\u2500".repeat(60));
-
-    if (ctx) {
-      lines.push(`  Flow:           ${ctx.name}`);
-      lines.push(`  State:          ${ctx.state}`);
-      lines.push(`  Runtime:        ${ctx.runTime}ms`);
-      lines.push(`  Test Run:       ${ctx.isTestRun}`);
-      lines.push(`  Executed As:    ${ctx.executedAs}`);
-      lines.push(`  Initiated By:   ${ctx.flowInitiatedBy}`);
-
-      if (ctx.executionSource?.callingSource) {
-        lines.push(`  Triggered By:   ${ctx.executionSource.callingSource}`);
-      }
-
-      if (ctx.executionSource?.executionSourceTable) {
-        lines.push(`  Source Table:   ${ctx.executionSource.executionSourceTable}`);
-      }
-
-      if (ctx.executionSource?.executionSourceRecordDisplay) {
-        lines.push(`  Source Record:  ${ctx.executionSource.executionSourceRecordDisplay}`);
-      }
-    }
-
-    const report = result.flowReport;
-    if (report) {
-      const actionReports = Object.values(report.actionOperationsReports ?? {});
-      const subflowReports = Object.values(report.subflowOperationsReports ?? {});
-      const allReports = [...actionReports, ...subflowReports].sort(
-        (a, b) => (parseInt(a.operationsCore.order, 10) || 0) - (parseInt(b.operationsCore.order, 10) || 0)
-      );
-
-      if (allReports.length > 0) {
-        lines.push("");
-        lines.push("  Action Results:");
-        allReports.forEach((action, idx) => {
-          const label = action.stepLabel ?? action.actionTypeName ?? `Action ${action.actionName}`;
-          const state = action.operationsCore.state;
-          const runTime = action.operationsCore.runTime;
-          lines.push(`    ${idx + 1}. ${label}  [${state}, ${runTime}ms]`);
-
-          if (action.operationsCore.error) {
-            lines.push(`       Error: ${action.operationsCore.error}`);
-          }
-
-          const inputs = action.operationsInput?.data;
-          if (inputs && Object.keys(inputs).length > 0) {
-            const simplified: Record<string, unknown> = {};
-            for (const [k, v] of Object.entries(inputs)) {
-              simplified[k] = v.displayValue ?? v.value;
-            }
-
-            lines.push(`       Inputs: ${JSON.stringify(simplified)}`);
-          }
-
-          const outputs = action.operationsOutput?.data;
-          if (outputs && Object.keys(outputs).length > 0) {
-            const simplified: Record<string, unknown> = {};
-            for (const [k, v] of Object.entries(outputs)) {
-              simplified[k] = v.displayValue ?? v.value;
-            }
-
-            lines.push(`       Outputs: ${JSON.stringify(simplified)}`);
-          }
-        });
-      }
-
-      const flowOutputs = report.operationsOutput?.data;
-      if (flowOutputs && Object.keys(flowOutputs).length > 0) {
-        lines.push("");
-        lines.push("  Flow Outputs:");
-        for (const [k, v] of Object.entries(flowOutputs)) {
-          lines.push(`    ${k}: ${v.displayValue ?? v.value}`);
-        }
-      }
-    }
-
-    const avail = result.flowReportAvailabilityDetails;
-    if (avail?.errorMessage) {
-      lines.push("");
-      lines.push(`  Note: ${avail.errorMessage}`);
-    }
-
-    if (result.errorMessage) {
-      lines.push("");
-      lines.push(`  Error: ${result.errorMessage}`);
-    }
-
-    lines.push("  " + "\u2500".repeat(60));
-    return lines;
-  }
-
-  formatLogsResult(result: FlowLogResult, jsonOutput: boolean): string[] {
-    if (jsonOutput) {
-      return [JSON.stringify(result, null, 2)];
-    }
-
-    const lines: string[] = [];
-    const icon = result.success ? '\u2714' : '\u2718';
-
-    lines.push(`\n${icon} Flow Execution Logs — ${result.contextId}`);
-    lines.push("  " + "\u2500".repeat(60));
-    lines.push(`  Entries: ${result.entries.length}`);
-
-    if (result.entries.length === 0) {
-      lines.push("");
-      lines.push("  No log entries found. Logs may be empty for simple successful");
-      lines.push("  executions, or flow logging may be disabled (reporting level NONE).");
-    } else {
-      lines.push("");
-      result.entries.forEach((entry, idx) => {
-        const level = this._mapLogLevel(entry.level);
-        const action = (entry.action || '(flow)').slice(0, 30).padEnd(30);
-        const ts = entry.createdOn ? ` [${entry.createdOn}]` : '';
-        lines.push(`  [${idx + 1}] ${level} | ${action} | ${entry.message}${ts}`);
-      });
     }
 
     if (result.errorMessage) {

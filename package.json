@@ -18,7 +18,7 @@
     "@servicenow/sdk-cli-core": "3.0.3",
     "@servicenow/sdk-core": "4.9.2",
     "@sonisoft/now-sdk-ext-core": "^6.3.0",
-    "@sonisoft/sn-credstore": "^1.0.0",
+    "@sonisoft/sn-credstore": "1.1.0",
     "@ts-morph/common": "^0.24.0",
     "chalk": "^4.1.2",
     "cometd": "^9.0.1",
