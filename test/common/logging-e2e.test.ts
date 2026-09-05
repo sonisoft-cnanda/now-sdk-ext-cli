@@ -119,6 +119,7 @@ const auth = createRequire(import.meta.url)(${JSON.stringify(path.join(REPO, 'no
 auth.getCredentials = async () => {
   logger.info('Access Token has expired, refreshing token');
   logger.error('Simulated refresh failure', {password: 'fixture-sdk-password'}, new Error('Bearer fixture-sdk-bearer'));
+  logger.error(new Error('SDK standalone failure; Bearer fixture-sdk-bare'));
   return undefined;
 };
 `)
@@ -132,6 +133,10 @@ auth.getCredentials = async () => {
     expect(stderr).toContain('[redacted]')
     expect(stderr).not.toContain('fixture-sdk-password')
     expect(stderr).not.toContain('fixture-sdk-bearer')
+    expect(stderr).toContain('SDK standalone failure')
+    expect(stderr).toContain('"name":"Error"')
+    expect(stderr).toContain('"stack":')
+    expect(stderr).not.toContain('fixture-sdk-bare')
     if (stdout.trim()) expect(() => JSON.parse(stdout) as unknown).not.toThrow()
   })
 

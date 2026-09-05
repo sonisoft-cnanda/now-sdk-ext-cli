@@ -167,6 +167,7 @@ protected instance!:ServiceNowInstance;
     this.authLogger = LogFactory.createLogger("AuthenticatedCommand");
     if (this.jsonEnabled()) {
       const sdkLog = LogFactory.createLogger('ServiceNow SDK')
+      sdkLogger.setLevel('silent')
       for (const level of ['info', 'warn', 'error', 'debug'] as const) {
         sdkLogger[level] = (...args: unknown[]): void => {
           const message = args.map(arg => {
