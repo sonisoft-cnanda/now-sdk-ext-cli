@@ -120,6 +120,7 @@ auth.getCredentials = async () => {
   logger.info('Access Token has expired, refreshing token');
   logger.error('Simulated refresh failure', {password: 'fixture-sdk-password'}, new Error('Bearer fixture-sdk-bearer'));
   logger.error(new Error('SDK standalone failure; Bearer fixture-sdk-bare'));
+  logger.error('SDK string failure; Bearer fixture-sdk-string');
   return undefined;
 };
 `)
@@ -137,6 +138,8 @@ auth.getCredentials = async () => {
     expect(stderr).toContain('"name":"Error"')
     expect(stderr).toContain('"stack":')
     expect(stderr).not.toContain('fixture-sdk-bare')
+    expect(stderr).toContain('SDK string failure')
+    expect(stderr).not.toContain('fixture-sdk-string')
     if (stdout.trim()) expect(() => JSON.parse(stdout) as unknown).not.toThrow()
   })
 
