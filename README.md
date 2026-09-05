@@ -6214,3 +6214,28 @@ MIT License - see [LICENSE](LICENSE) file for details.
 Made with ❤️ for the ServiceNow Developer Community
 
 **Ready to get started?** → [Jump to Quick Start](#-quick-start)
+
+## Playwright sessions from SDK aliases
+
+```bash
+nex auth browser-session -a dev206299 --cred-store --output playwright/.auth/dev.json --json
+```
+
+Uses SDK OAuth refresh and exports cookie-only Playwright storage state. Output is
+metadata/path only; the file contains secrets and is written atomically with mode
+0600. Existing output requires `--force`; symlinks are refused. Ignore the auth
+directory in Git and exclude it from test artifacts.
+
+Pass the file as Playwright's `storageState`. Remote Docker browsers receive the
+state over the Playwright connection; they need no credential-store mount.
+Generate a fresh session per test, especially when impersonating. For long tests,
+renew at an explicit safe checkpoint and open a new context; state files cannot
+refresh themselves.
+
+Regular nex commands now pass an alias-bound provider to core so long-running
+operations can renew credentials. Read-only authentication failures can retry once;
+writes and stateful workflows are not automatically replayed. nex permission flags
+do not constrain actions performed later by Playwright.
+
+Use the same backend/path for `now-sdk-x` and `nex --cred-store`. Plain now-sdk
+normally uses the keyring and does not synchronize a separate credential store.

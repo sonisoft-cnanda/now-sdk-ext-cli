@@ -1,9 +1,8 @@
  
 
 import { Command, Flags, Interfaces } from '@oclif/core'
-import { getCredentials } from "@servicenow/sdk-cli/dist/auth/index.js";
 import { logger as sdkLogger } from '@servicenow/sdk-cli/dist/logger/index.js';
-import { configureLogging, flushLogs, isPolicyRefusal, Logger, redactValue, ServiceNowInstance, ServiceNowSettingsInstance } from '@sonisoft/now-sdk-ext-core';
+import { configureLogging, flushLogs, isPolicyRefusal, Logger, redactValue, resolveSessionCredentials, ServiceNowInstance, ServiceNowSettingsInstance } from '@sonisoft/now-sdk-ext-core';
 
 import { LogFactory } from '../util/log-factory.js';
 import { installCliPolicy, type PolicyFlags } from './policy.js';
@@ -196,7 +195,7 @@ protected instance!:ServiceNowInstance;
 
     let credential;
     try {
-      credential = await getCredentials(alias);
+      credential = await resolveSessionCredentials(alias);
     } catch (error) {
       // getCredentials throws for an unknown alias, but it also throws when the
       // store itself is unreachable. Those need different remediation, and
@@ -219,7 +218,8 @@ protected instance!:ServiceNowInstance;
 
     const snSettings: ServiceNowSettingsInstance = {
       alias: flags.auth,
-      credential
+      credential,
+      credentialProvider: () => resolveSessionCredentials(alias),
     }
     this.instance = new ServiceNowInstance(snSettings);
   }

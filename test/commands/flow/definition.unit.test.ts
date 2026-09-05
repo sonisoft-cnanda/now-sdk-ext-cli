@@ -133,6 +133,7 @@ const mutatingMocks = [
 // the command talks to the real core (and a real instance) instead.
 jest.unstable_mockModule('@sonisoft/now-sdk-ext-core', () => {
   return {
+    resolveSessionCredentials: async (alias: string) => (await import('@servicenow/sdk-cli/dist/auth/index.js')).getCredentials(alias),
     FlowManager: jest.fn().mockImplementation(() => ({
       cancelFlow: mockCancelFlow,
       copyFlow: mockCopyFlow,
