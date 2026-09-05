@@ -6239,3 +6239,7 @@ do not constrain actions performed later by Playwright.
 
 Use the same backend/path for `now-sdk-x` and `nex --cred-store`. Plain now-sdk
 normally uses the keyring and does not synchronize a separate credential store.
+
+When upgrading a shared store, stop all clients first, upgrade every client
+(including standalone `now-sdk-x`) to sn-credstore 1.1.1 or later, then restart.
+The new lock protocol cannot safely run alongside older clients.

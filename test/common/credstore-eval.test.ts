@@ -127,8 +127,10 @@ describe('credential-store tooling eval', () => {
     const result = await nex(['health', 'check', '--auth', 'eval-alias', '--cred-store'], env)
 
     expect(result.exitCode).not.toBe(0)
-    expect(result.stderr).toContain('is not a valid keystore')
-    expect(result.stderr).toContain('Re-import with:')
+    expect(result.stderr).toContain('Credential lookup or renewal failed')
+    expect(result.stderr).toContain('nex auth doctor')
+    expect(result.stderr).not.toContain('Reauthenticate')
+    expect(fs.readFileSync(storePath, 'utf8')).toBe('{not valid json')
     expect(fs.readdirSync(runDir).some((name) => name.startsWith('credentials.json.corrupt.'))).toBe(true)
     expect(result.stdout + result.stderr).not.toContain(SECRET)
   })
