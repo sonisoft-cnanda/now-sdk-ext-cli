@@ -1,7 +1,7 @@
 {
   "name": "@sonisoft/now-sdk-ext-cli",
   "description": "A CLI extending the functionality of the ServiceNow SDK.",
-  "version": "5.4.0",
+  "version": "5.5.0",
   "author": "Chris Nanda",
   "bin": {
     "nex": "./bin/run.js"
