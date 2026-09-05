@@ -41,6 +41,9 @@ Execute individual ATF tests or entire test suites with detailed results, perfec
 - **Syslog Reader**: Query system logs with filtering
 - **Code Search**: Search scripts across the platform
 
+#### Table Behavior
+Discover business rules, UI actions, client scripts, UI/data policies, workflows, flow triggers and state models. Retrieve scripts, definitions and dependencies in the same call or in targeted batches. See [Table Behavior Discovery](#table-behavior-discovery).
+
 #### 📊 Aggregate & Analytics
 - **Record Counts**: Count records with optional filters
 - **Aggregate Statistics**: Run AVG, MIN, MAX, SUM across table fields
@@ -94,6 +97,7 @@ Execute individual ATF tests or entire test suites with detailed results, perfec
   - [Script Execution with REPL](#script-execution-with-repl)
   - [Company Repository](#company-repository-integration)
   - [Query & Search](#query--search)
+  - [Table Behavior Discovery](#table-behavior-discovery)
   - [Aggregate & Analytics](#aggregate--analytics)
   - [Instance Health Check](#instance-health-check)
   - [Cluster Transactions](#cluster-transactions)
@@ -127,9 +131,7 @@ Execute individual ATF tests or entire test suites with detailed results, perfec
 > npm install -g @servicenow/sdk@4.3.0
 >
 > # 2. Re-add each instance alias
-> snc configure profile set
-> # — or —
-> npx @servicenow/sdk auth --add <your-alias>
+> npx @servicenow/sdk auth --add https://dev12345.service-now.com --alias dev --type oauth
 >
 > # 3. Verify your aliases work
 > npx @servicenow/sdk auth --list
@@ -174,7 +176,7 @@ Verify installation:
 now-sdk --version
 ```
 
-**Important**: The `now-sdk-ext-cli` does not manage credentials directly. It uses authentication credentials configured via the ServiceNow SDK (`now-sdk auth` command). This provides:
+Create credentials with the ServiceNow SDK (`now-sdk auth`). Use `nex auth` commands to inspect aliases, diagnose credential access, and select a default alias. This provides:
 - Secure credential storage in your system's keychain
 - Centralized authentication management across ServiceNow tools
 - Support for multiple instance profiles
@@ -182,8 +184,7 @@ now-sdk --version
 
 ### Node.js
 
-- **Minimum Version**: Node.js 18.0.0 or higher
-- **Recommended**: Node.js 22.x (LTS) or later
+- **Minimum Version**: Node.js 26.0.0 or higher
 
 ### ServiceNow Instance
 
@@ -493,6 +494,82 @@ nex transaction kill --transaction-id 8f9a1234567890abcdef1234567890c1 --confirm
 
 > **Warning:** A kill request aborts real work. Only pass an identifier you deliberately selected from a current `nex transaction list` result. Platform acceptance does not mean the transaction has cleared immediately; run a separate later list to confirm.
 
+### Table Behavior Discovery
+
+Available in **nex 5.5.0**, using core **6.4.1**. Use `nex schema` for table structure and `nex behavior` for configuration that can affect records. Both behavior commands are read-only.
+
+```bash
+nex behavior --table change_request --auth dev --read-only --json
+```
+
+| Category | Functional context |
+| --- | --- |
+| `business_rules` | Operation flags, before/after/async timing, order, conditions and script availability |
+| `ui_actions` | Form/list/workspace placement, roles, visibility conditions and scripts |
+| `client_scripts` | Client events, target fields, views and inherited applicability |
+| `ui_policies` | Conditions and mandatory, visible or read-only field actions |
+| `data_policies` | Server field requirements and enforcement settings |
+| `workflows` | Legacy workflow versions, start conditions, activities and transitions |
+| `flows` | Record triggers, conditions and optional current flow definitions |
+| `state_models` | State fields, transition gates and required fields in supported generic layouts |
+
+Defaults include active configuration and applicable ancestors, all eight categories, 50 items per category and a 64 KiB JSON response budget. Conditions and declarative field actions are included in summaries; script bodies and full definitions are opt-in.
+
+Request the detail needed for an investigation immediately:
+
+```bash
+nex behavior --table change_request --category business_rules \
+  --details scripts --auth dev --read-only --json
+
+nex behavior --table change_request --category flows \
+  --details definitions --details dependencies --dependency-depth 1 \
+  --max-bytes 262144 --auth dev --read-only --json
+```
+
+Retrieve 1–50 known artifacts without repeating table discovery. Repeat `--reference` with `kind:sourceTable:sysId` values from results. Replace these example IDs with real source IDs:
+
+```bash
+nex behavior details \
+  --reference flows:sys_hub_flow:0123456789abcdef0123456789abcdef \
+  --reference business_rules:sys_script:abcdef0123456789abcdef0123456789 \
+  --details scripts --details definitions --details dependencies \
+  --dependency-depth 1 --max-bytes 262144 --auth dev --read-only --json
+```
+
+Known subflows, actions, Script Includes and decision tables are also supported. Preserve references returned by discovery: a flow inventory reference can identify its trigger record. For a known flow ID, use `flows:sys_hub_flow:<sys_id>`.
+
+| Control | Use |
+| --- | --- |
+| `--category` | Repeat to select categories; default all eight |
+| `--include-inactive` | Include inactive/draft candidates where discoverable |
+| `--no-include-inherited` | Restrict table associations to the requested table |
+| `--name`, `--sys-id` | Filter metadata names or up to 50 source IDs; repeat `--sys-id` |
+| `--limit` | Items per category, 1–200; default 50 |
+| `--cursor` | Continue exactly one selected category with unchanged table and filters |
+| `--details` | Repeat for `scripts`, `definitions`, or `dependencies`; available on both commands |
+| `--dependency-depth` | 0 by default; 1 expands at most 50 unique dependency references and requires `--details dependencies` |
+| `--max-bytes` | JSON budget, 4,096–1,048,576 bytes; default 65,536 |
+| `--scope` | Transaction scope for flow definition reads |
+
+Continue a category using its returned `nextCursor`, retaining the original filters and detail selection:
+
+```bash
+nex behavior --table change_request --category business_rules \
+  --auth dev --read-only --json
+
+nex behavior --table change_request --category business_rules \
+  --cursor '<nextCursor from the previous response>' \
+  --auth dev --read-only --json
+```
+
+**Read completeness before drawing conclusions.** Each category has `status` (`complete`, `partial`, `unavailable`, or `failed`), `items`, `warnings`, and an optional `nextCursor`. Detail batches return `remainingReferences`; oversized details are omitted whole with `omittedDetails` and warnings, never cut mid-script. Increase `--max-bytes`, narrow the batch, or follow the cursor. Even an empty designer-scan page can require continuation. Visibility is limited to configuration accessible to the authenticated account.
+
+For Change Management ATF planning, combine schema choices with behavior conditions, required fields, state transitions and dependent artifacts. Keep client UI requirements separate from server enforcement. Build assertions from that configuration, then validate execution with ATF results, logs and flow contexts. Discovery does not evaluate conditions or predict execution order; runtime trigger metadata and current design definitions have separate provenance and can differ.
+
+`--json` prints one JSON document. SDK diagnostics pass through the shared redacting logger to stderr; core 6.4.1 waits for pending file-log writes during bounded shutdown flushing. Live behavior validation used an Australia instance; Zurich validation remains outstanding.
+
+See the [behavior guide](docs/table-behavior.md) and [core API reference](https://github.com/sonisoft-cnanda/now-sdk-ext-core/blob/main/docs/TableBehaviorDiscovery.md) for source tables, dependency limits and recovery details.
+
 ### Flow Designer Operations
 
 Execute and manage Flow Designer flows, subflows, and actions from the CLI.
@@ -577,148 +654,6 @@ nex bulk update --table incident --query "state=7" --data '{"active":"false"}' -
 
 ## 📖 Commands
 
-<!-- toc -->
-* [@sonisoft/now-sdk-ext-cli](#sonisoftnow-sdk-ext-cli)
-* [Add credentials (interactive - will prompt for username/password)](#add-credentials-interactive---will-prompt-for-usernamepassword)
-* [Set as default (optional)](#set-as-default-optional)
-* [List configured authentication profiles](#list-configured-authentication-profiles)
-* [One-time migration of existing keyring credentials.](#one-time-migration-of-existing-keyring-credentials)
-* [Run this from a desktop session — the keyring will prompt to unlock.](#run-this-from-a-desktop-session--the-keyring-will-prompt-to-unlock)
-* [Start interactive REPL](#start-interactive-repl)
-* [Execute an ATF test](#execute-an-atf-test)
-* [List repository applications](#list-repository-applications)
-* [Install from repository](#install-from-repository)
-* [Execute a single test](#execute-a-single-test)
-* [Execute a test suite by ID](#execute-a-test-suite-by-id)
-* [Execute by name with JSON output (perfect for CI/CD)](#execute-by-name-with-json-output-perfect-for-cicd)
-* [Configure browser and performance settings](#configure-browser-and-performance-settings)
-* [Install applications from batch definition](#install-applications-from-batch-definition)
-* [Uninstall an application](#uninstall-an-application)
-* [List repository applications (what's available to install)](#list-repository-applications-whats-available-to-install)
-* [Install from company repository](#install-from-company-repository)
-* [List installed repository apps](#list-installed-repository-apps)
-* [Script with placeholders: {username}, {table}](#script-with-placeholders-username-table)
-* [See what's available](#see-whats-available)
-* [Filter for installable apps](#filter-for-installable-apps)
-* [Install by scope (automatic lookup)](#install-by-scope-automatic-lookup)
-* [Install specific version](#install-specific-version)
-* [Background installation](#background-installation)
-* [Query any table with encoded queries](#query-any-table-with-encoded-queries)
-* [Search applications by name](#search-applications-by-name)
-* [List columns for a table](#list-columns-for-a-table)
-* [Query system logs](#query-system-logs)
-* [Search platform code](#search-platform-code)
-* [Count records](#count-records)
-* [Run aggregate statistics (AVG, MIN, MAX, SUM)](#run-aggregate-statistics-avg-min-max-sum)
-* [Grouped aggregation with display values](#grouped-aggregation-with-display-values)
-* [Multiple group-by fields with HAVING clause](#multiple-group-by-fields-with-having-clause)
-* [Full health check](#full-health-check)
-* [Check only version and stuck jobs](#check-only-version-and-stuck-jobs)
-* [Health check with custom stuck job threshold (60 minutes)](#health-check-with-custom-stuck-job-threshold-60-minutes)
-* [JSON output for monitoring/alerting](#json-output-for-monitoringalerting)
-* [List active transactions](#list-active-transactions)
-* [Return complete, untruncated records as JSON](#return-complete-untruncated-records-as-json)
-* [Submit a kill request for one deliberately selected transaction](#submit-a-kill-request-for-one-deliberately-selected-transaction)
-* [Execute a flow in foreground (waits for completion)](#execute-a-flow-in-foreground-waits-for-completion)
-* [Execute with inputs](#execute-with-inputs)
-* [Execute a subflow](#execute-a-subflow)
-* [Execute an action](#execute-an-action)
-* [Check flow status](#check-flow-status)
-* [Retrieve flow outputs](#retrieve-flow-outputs)
-* [Check for errors](#check-for-errors)
-* [Cancel a running flow](#cancel-a-running-flow)
-* [Send a message to a waiting flow (e.g., approval)](#send-a-message-to-a-waiting-flow-eg-approval)
-* [Dry-run: preview which records would be updated (safe default)](#dry-run-preview-which-records-would-be-updated-safe-default)
-* [Confirm bulk update (actually modifies records)](#confirm-bulk-update-actually-modifies-records)
-* [Dry-run: preview which records would be deleted](#dry-run-preview-which-records-would-be-deleted)
-* [Confirm bulk delete with limit](#confirm-bulk-delete-with-limit)
-* [JSON output for scripting](#json-output-for-scripting)
-* [Usage](#usage)
-* [Commands](#commands)
-* [Global scope](#global-scope)
-* [Custom application scope](#custom-application-scope)
-* [Development](#development)
-* [Production](#production)
-* [GitHub Actions](#github-actions)
-* [1. Enable autocomplete](#1-enable-autocomplete)
-* [2. Follow shell-specific instructions (bash/zsh/fish)](#2-follow-shell-specific-instructions-bashzshfish)
-* [3. Reload shell](#3-reload-shell)
-* [4. Start using it!](#4-start-using-it)
-* [Autocomplete queries ServiceNow and shows:](#autocomplete-queries-servicenow-and-shows)
-* [Ready to execute!](#ready-to-execute)
-* [Add credentials interactively (will prompt for username/password)](#add-credentials-interactively-will-prompt-for-usernamepassword)
-* [For OAuth authentication](#for-oauth-authentication)
-* [List all configured authentication profiles](#list-all-configured-authentication-profiles)
-* [Set default authentication profile (optional)](#set-default-authentication-profile-optional)
-* [Delete an authentication profile](#delete-an-authentication-profile)
-* [Use specific authentication profile via --auth flag](#use-specific-authentication-profile-via---auth-flag)
-* [Use default profile (if set with --use)](#use-default-profile-if-set-with---use)
-* [All commands support the --auth flag](#all-commands-support-the---auth-flag)
-* [Set credentials in environment](#set-credentials-in-environment)
-* [Add authentication profile (will use environment variables)](#add-authentication-profile-will-use-environment-variables)
-* [1. List available repository apps](#1-list-available-repository-apps)
-* [2. Install application from repository](#2-install-application-from-repository)
-* [3. Configure using REPL](#3-configure-using-repl)
-* [4. Run tests](#4-run-tests)
-* [5. Deploy to production with parameterized script](#5-deploy-to-production-with-parameterized-script)
-* [6. Verify deployment](#6-verify-deployment)
-* [Execute a single test](#execute-a-single-test)
-* [Execute a test suite and wait for results](#execute-a-test-suite-and-wait-for-results)
-* [Execute by name (no need to look up sys_id)](#execute-by-name-no-need-to-look-up-sys_id)
-* [Performance test with specific browser](#performance-test-with-specific-browser)
-* [CI/CD integration with JSON output](#cicd-integration-with-json-output)
-* [Custom polling for long tests](#custom-polling-for-long-tests)
-* [Browse company repository](#browse-company-repository)
-* [Install from repository](#install-from-repository)
-* [Batch install multiple apps](#batch-install-multiple-apps)
-* [Uninstall application](#uninstall-application)
-* [Execute script file](#execute-script-file)
-* [Execute in custom scope](#execute-in-custom-scope)
-* [Pipe output](#pipe-output)
-* [Start REPL](#start-repl)
-* [Execute multi-line scripts interactively](#execute-multi-line-scripts-interactively)
-* [Single parameter](#single-parameter)
-* [Multiple parameters](#multiple-parameters)
-* [From environment variables](#from-environment-variables)
-* [daily-tests.sh](#daily-testssh)
-* [setup-environment.sh](#setup-environmentsh)
-* [Install required apps from repository](#install-required-apps-from-repository)
-* [Configure via parameterized script](#configure-via-parameterized-script)
-* [Validate with ATF](#validate-with-atf)
-* [migrate-data.sh](#migrate-datash)
-* [Export from source](#export-from-source)
-* [Transform data](#transform-data)
-* [Import to target with parameters](#import-to-target-with-parameters)
-* [Validate](#validate)
-* [List all configured authentication profiles](#list-all-configured-authentication-profiles)
-* [Delete and re-add credentials if needed](#delete-and-re-add-credentials-if-needed)
-* [Set as default](#set-as-default)
-* [Verify installation](#verify-installation)
-* [Reinstall if needed](#reinstall-if-needed)
-* [Check PATH includes npm global binaries](#check-path-includes-npm-global-binaries)
-* [Increase poll interval](#increase-poll-interval)
-* [Check instance performance](#check-instance-performance)
-* [Check test suite complexity](#check-test-suite-complexity)
-* [Review ServiceNow logs](#review-servicenow-logs)
-* [Verify user has required roles:](#verify-user-has-required-roles)
-* [- atf_test_runner for ATF operations](#--atf_test_runner-for-atf-operations)
-* [- admin for app management](#--admin-for-app-management)
-* [- appropriate scope access for scripts](#--appropriate-scope-access-for-scripts)
-* [General help](#general-help)
-* [Command-specific help](#command-specific-help)
-* [Command-specific help](#command-specific-help)
-* [Enable autocomplete](#enable-autocomplete)
-* [Clone the repository](#clone-the-repository)
-* [Install dependencies](#install-dependencies)
-* [Build](#build)
-* [Run tests (960+ tests)](#run-tests-960-tests)
-* [Run linter](#run-linter)
-* [Test locally](#test-locally)
-* [All tests](#all-tests)
-* [Specific test file](#specific-test-file)
-* [With coverage](#with-coverage)
-<!-- tocstop -->
-
 # Usage
 <!-- usage -->
 ```sh-session
@@ -726,7 +661,7 @@ $ npm install -g @sonisoft/now-sdk-ext-cli
 $ nex COMMAND
 running command...
 $ nex (--version)
-@sonisoft/now-sdk-ext-cli/5.2.0 linux-x64 node-v26.5.0
+@sonisoft/now-sdk-ext-cli/5.5.0 darwin-arm64 node-v26.7.0
 $ nex --help [COMMAND]
 USAGE
   $ nex COMMAND
@@ -780,14 +715,16 @@ rather than silently denying nothing.
 * [`nex autocomplete [SHELL]`](#nex-autocomplete-shell)
 * [`nex batch create`](#nex-batch-create)
 * [`nex batch update`](#nex-batch-update)
+* [`nex behavior`](#nex-behavior)
+* [`nex behavior details`](#nex-behavior-details)
 * [`nex bulk delete`](#nex-bulk-delete)
 * [`nex bulk update`](#nex-bulk-update)
 * [`nex exec SCOPE [FILE]`](#nex-exec-scope-file)
 * [`nex flow action`](#nex-flow-action)
 * [`nex flow cancel`](#nex-flow-cancel)
 * [`nex flow copy`](#nex-flow-copy)
-* [`nex flow details`](#nex-flow-details)
 * [`nex flow definition`](#nex-flow-definition)
+* [`nex flow details`](#nex-flow-details)
 * [`nex flow error`](#nex-flow-error)
 * [`nex flow logs`](#nex-flow-logs)
 * [`nex flow message`](#nex-flow-message)
@@ -902,7 +839,7 @@ EXAMPLES
     $ nex aggregate count --table incident --query "active=true" --json --auth dev
 ```
 
-_See code: [src/commands/aggregate/count.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/aggregate/count.ts)_
+_See code: [src/commands/aggregate/count.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/aggregate/count.ts)_
 
 ## `nex aggregate group`
 
@@ -970,7 +907,7 @@ EXAMPLES
     $ nex aggregate group --table incident --group-by priority --count --having "count>10" --auth dev
 ```
 
-_See code: [src/commands/aggregate/group.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/aggregate/group.ts)_
+_See code: [src/commands/aggregate/group.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/aggregate/group.ts)_
 
 ## `nex aggregate query`
 
@@ -1033,7 +970,7 @@ EXAMPLES
     $ nex aggregate query --table incident --sum reassignment_count --json --auth dev
 ```
 
-_See code: [src/commands/aggregate/query.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/aggregate/query.ts)_
+_See code: [src/commands/aggregate/query.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/aggregate/query.ts)_
 
 ## `nex app`
 
@@ -1096,7 +1033,7 @@ EXAMPLES
     $ nex app -u -i a1b2c3d4e5f6 -s x_my_custom_app -a dev-instance
 ```
 
-_See code: [src/commands/app/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/app/index.ts)_
+_See code: [src/commands/app/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/app/index.ts)_
 
 ## `nex app install`
 
@@ -1164,7 +1101,7 @@ EXAMPLES
     $ nex app install -b -d ./apps.json -a dev-instance --log-level debug
 ```
 
-_See code: [src/commands/app/install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/app/install.ts)_
+_See code: [src/commands/app/install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/app/install.ts)_
 
 ## `nex app repo-install`
 
@@ -1249,7 +1186,7 @@ EXAMPLES
     $ nex app repo-install -s x_my_app -a dev-instance --log-level debug
 ```
 
-_See code: [src/commands/app/repo-install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/app/repo-install.ts)_
+_See code: [src/commands/app/repo-install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/app/repo-install.ts)_
 
 ## `nex app repo-list`
 
@@ -1324,7 +1261,7 @@ EXAMPLES
     $ nex app repo-list -a dev-instance
 ```
 
-_See code: [src/commands/app/repo-list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/app/repo-list.ts)_
+_See code: [src/commands/app/repo-list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/app/repo-list.ts)_
 
 ## `nex app uninstall`
 
@@ -1386,7 +1323,7 @@ EXAMPLES
     $ nex app uninstall -i a1b2c3d4e5f6 -s x_my_custom_app -a dev-instance
 ```
 
-_See code: [src/commands/app/uninstall.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/app/uninstall.ts)_
+_See code: [src/commands/app/uninstall.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/app/uninstall.ts)_
 
 ## `nex atf`
 
@@ -1469,7 +1406,7 @@ EXAMPLES
     $ nex atf --suite-id e077e00b83103210621e78c6feaad383 --poll-interval 10000 --auth dev-instance
 ```
 
-_See code: [src/commands/atf/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/atf/index.ts)_
+_See code: [src/commands/atf/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/atf/index.ts)_
 
 ## `nex attachment get`
 
@@ -1512,7 +1449,7 @@ EXAMPLES
     $ nex attachment get -s att123 --json --auth dev
 ```
 
-_See code: [src/commands/attachment/get.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/attachment/get.ts)_
+_See code: [src/commands/attachment/get.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/attachment/get.ts)_
 
 ## `nex attachment list`
 
@@ -1557,7 +1494,7 @@ EXAMPLES
     $ nex attachment list -t incident -r abc123 --limit 50 --json --auth dev
 ```
 
-_See code: [src/commands/attachment/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/attachment/list.ts)_
+_See code: [src/commands/attachment/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/attachment/list.ts)_
 
 ## `nex attachment upload`
 
@@ -1604,7 +1541,7 @@ EXAMPLES
     $ nex attachment upload -t incident -r abc123 -f ./data.csv --content-type text/csv --auth dev
 ```
 
-_See code: [src/commands/attachment/upload.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/attachment/upload.ts)_
+_See code: [src/commands/attachment/upload.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/attachment/upload.ts)_
 
 ## `nex auth delete [ALIAS]`
 
@@ -1639,7 +1576,7 @@ EXAMPLES
     $ nex auth delete --all
 ```
 
-_See code: [src/commands/auth/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/auth/delete.ts)_
+_See code: [src/commands/auth/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/auth/delete.ts)_
 
 ## `nex auth doctor`
 
@@ -1667,7 +1604,7 @@ EXAMPLES
     $ nex auth doctor --json
 ```
 
-_See code: [src/commands/auth/doctor.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/auth/doctor.ts)_
+_See code: [src/commands/auth/doctor.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/auth/doctor.ts)_
 
 ## `nex auth list`
 
@@ -1700,7 +1637,7 @@ EXAMPLES
     $ nex auth list --json
 ```
 
-_See code: [src/commands/auth/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/auth/list.ts)_
+_See code: [src/commands/auth/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/auth/list.ts)_
 
 ## `nex auth use ALIAS`
 
@@ -1728,7 +1665,7 @@ EXAMPLES
     $ nex auth use dev206299
 ```
 
-_See code: [src/commands/auth/use.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/auth/use.ts)_
+_See code: [src/commands/auth/use.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/auth/use.ts)_
 
 ## `nex autocomplete [SHELL]`
 
@@ -1803,7 +1740,7 @@ EXAMPLES
     $ nex batch create --file ./records.json --no-transaction --auth dev
 ```
 
-_See code: [src/commands/batch/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/batch/create.ts)_
+_See code: [src/commands/batch/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/batch/create.ts)_
 
 ## `nex batch update`
 
@@ -1847,7 +1784,110 @@ EXAMPLES
     $ nex batch update --file ./updates.json --stop-on-error --auth dev
 ```
 
-_See code: [src/commands/batch/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/batch/update.ts)_
+_See code: [src/commands/batch/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/batch/update.ts)_
+
+## `nex behavior`
+
+Discover table behavior: rules, UI actions/scripts, UI/data policies, workflows, flows and state models. Active and applicable inherited behavior is included by default. Conditions describe configuration, not a prediction of execution. Select categories and details to control output size.
+
+```
+USAGE
+  $ nex behavior -t <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
+    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--dependency-depth <value>]
+    [--details scripts|definitions|dependencies...] [--max-bytes <value>] [--scope <value>] [--category
+    business_rules|ui_actions|client_scripts|ui_policies|data_policies|workflows|flows|state_models...] [--cursor
+    <value>] [--include-inactive] [--include-inherited] [--limit <value>] [--name <value>] [--sys-id <value>...]
+
+FLAGS
+  -a, --auth=<value>              Auth alias to use.
+  -t, --table=<value>             (required) Target table name
+      --category=<option>...      Category to inspect; repeat to select several, default all
+                                  <options: business_rules|ui_actions|client_scripts|ui_policies|data_policies|workflows
+                                  |flows|state_models>
+      --cursor=<value>            Continuation token; requires exactly one --category and the same filters
+      --dependency-depth=<value>  Expand one dependency level; requires --details dependencies
+      --details=<option>...       Include selected detail now; repeat for multiple kinds
+                                  <options: scripts|definitions|dependencies>
+      --include-inactive          Include inactive/published and draft candidates when discoverable
+      --[no-]include-inherited    Include applicable ancestor behavior
+      --json                      Emit one JSON document
+      --limit=<value>             [default: 50] Maximum items per category
+      --max-bytes=<value>         [default: 65536] Maximum JSON response bytes; omissions include retrieval references
+      --name=<value>              Metadata name contains this text
+      --scope=<value>             Transaction scope for flow definition reads
+      --sys-id=<value>...         Metadata source sys_id to include; repeat for multiple records
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Discover table behavior: rules, UI actions/scripts, UI/data policies, workflows, flows and state models. Active and
+  applicable inherited behavior is included by default. Conditions describe configuration, not a prediction of
+  execution. Select categories and details to control output size.
+
+EXAMPLES
+  $ nex behavior --table incident --auth dev --json
+
+  $ nex behavior --table change_request --category business_rules --details scripts --auth dev --json
+```
+
+_See code: [src/commands/behavior/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/behavior/index.ts)_
+
+## `nex behavior details`
+
+Retrieve known behavior artifacts without rediscovery. Repeat --reference kind:source_table:sys_id for up to 50 records. Add --details scripts, --details definitions or --details dependencies to include bodies immediately. Source references are returned by behavior discovery; flows also accept flows:sys_hub_flow:<sys_id>.
+
+```
+USAGE
+  $ nex behavior details --reference <value>... [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--dependency-depth
+    <value>] [--details scripts|definitions|dependencies...] [--max-bytes <value>] [--scope <value>]
+
+FLAGS
+  -a, --auth=<value>              Auth alias to use.
+      --dependency-depth=<value>  Expand one dependency level; requires --details dependencies
+      --details=<option>...       Include selected detail now; repeat for multiple kinds
+                                  <options: scripts|definitions|dependencies>
+      --json                      Emit one JSON document
+      --max-bytes=<value>         [default: 65536] Maximum JSON response bytes; omissions include retrieval references
+      --reference=<value>...      (required) kind:source_table:sys_id; repeat for a batch
+      --scope=<value>             Transaction scope for flow definition reads
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Retrieve known behavior artifacts without rediscovery. Repeat --reference kind:source_table:sys_id for up to 50
+  records. Add --details scripts, --details definitions or --details dependencies to include bodies immediately. Source
+  references are returned by behavior discovery; flows also accept flows:sys_hub_flow:<sys_id>.
+
+EXAMPLES
+  $ nex behavior details --reference business_rules:sys_script:0123456789abcdef0123456789abcdef --details scripts --auth dev --json
+```
+
+_See code: [src/commands/behavior/details.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/behavior/details.ts)_
 
 ## `nex bulk delete`
 
@@ -1911,7 +1951,7 @@ EXAMPLES
     $ nex bulk delete --table u_staging --query "processed=true" --confirm --json --auth dev
 ```
 
-_See code: [src/commands/bulk/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/bulk/delete.ts)_
+_See code: [src/commands/bulk/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/bulk/delete.ts)_
 
 ## `nex bulk update`
 
@@ -1980,7 +2020,7 @@ EXAMPLES
     $ nex bulk update --table incident --query "active=true" --data '{"state":"6"}' --confirm --json --auth dev
 ```
 
-_See code: [src/commands/bulk/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/bulk/update.ts)_
+_See code: [src/commands/bulk/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/bulk/update.ts)_
 
 ## `nex exec SCOPE [FILE]`
 
@@ -2110,7 +2150,7 @@ EXAMPLES
     $ nex exec global ./script.js --auth dev-instance --params '{"token":"abc123","env":"dev"}'
 ```
 
-_See code: [src/commands/exec/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/exec/index.ts)_
+_See code: [src/commands/exec/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/exec/index.ts)_
 
 ## `nex flow action`
 
@@ -2164,7 +2204,7 @@ EXAMPLES
       '{"table":"incident","values":{"short_description":"Test"}}' --auth dev
 ```
 
-_See code: [src/commands/flow/action.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/flow/action.ts)_
+_See code: [src/commands/flow/action.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/flow/action.ts)_
 
 ## `nex flow cancel`
 
@@ -2211,7 +2251,7 @@ EXAMPLES
     $ nex flow cancel --context-id abc123def456 --reason "No longer needed" --auth dev
 ```
 
-_See code: [src/commands/flow/cancel.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/flow/cancel.ts)_
+_See code: [src/commands/flow/cancel.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/flow/cancel.ts)_
 
 ## `nex flow copy`
 
@@ -2276,68 +2316,7 @@ EXAMPLES
       dev
 ```
 
-_See code: [src/commands/flow/copy.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/flow/copy.ts)_
-
-## `nex flow details`
-
-Get rich execution details for a flow context.
-
-```
-USAGE
-  $ nex flow details -c <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--scope <value>] [-d]
-
-FLAGS
-  -a, --auth=<value>        Auth alias to use.
-  -c, --context-id=<value>  (required) Flow context sys_id returned by flow test, flow run, flow subflow, or flow action
-  -d, --include-definition  Include the full flow definition snapshot in the response
-  -j, --json                Output results as JSON
-      --scope=<value>       Scope sys_id for the ProcessFlow API transaction scope parameter
-
-GLOBAL FLAGS
-  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
-                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
-  --deny-write          Refuse any change to instance data for this invocation.
-  --log-dir=<value>     Directory to write log files to. Implies --log-file.
-  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
-                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
-                        stderr only.
-  --log-level=<option>  [default: info] Specify level for logging.
-                        <options: debug|warn|error|info|trace>
-  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
-                        unaffected.
-
-DESCRIPTION
-  Get rich execution details for a flow context.
-
-  Returns per-action timing, inputs, outputs, and high-level metadata (state, runtime, who ran it, test vs production).
-  This is the primary diagnostic command after flow test or flow run.
-
-  Uses the ProcessFlow operations API (GET /api/now/processflow/operations/flow/context/{id}), the same endpoint Flow
-  Designer uses to display execution details.
-
-  NOTE: Requires flow operations logging to be enabled on the instance. If the execution report is unavailable, a notice
-  will explain why.
-
-  Typical workflow:
-  flow test → flow details → diagnose → modify flow → flow test again
-
-EXAMPLES
-  Get execution details after testing a flow
-
-    $ nex flow details --context-id d4e5f6789012345678abcdef01234567 --auth dev
-
-  Get details with explicit scope
-
-    $ nex flow details -c d4e5f6789012345678abcdef01234567 --scope x_myapp --auth dev
-
-  Get details with JSON output for scripting
-
-    $ nex flow details -c d4e5f6789012345678abcdef01234567 --json --auth dev
-```
-
-_See code: [src/commands/flow/details.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/flow/details.ts)_
+_See code: [src/commands/flow/copy.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/flow/copy.ts)_
 
 ## `nex flow definition`
 
@@ -2410,7 +2389,68 @@ EXAMPLES
     $ nex flow definition -i 887dda5583237210fdb8f7b6feaad32c --type action --json --auth dev | jq .summary.steps
 ```
 
-_See code: [src/commands/flow/definition.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/flow/definition.ts)_
+_See code: [src/commands/flow/definition.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/flow/definition.ts)_
+
+## `nex flow details`
+
+Get rich execution details for a flow context.
+
+```
+USAGE
+  $ nex flow details -c <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
+    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--scope <value>] [-d]
+
+FLAGS
+  -a, --auth=<value>        Auth alias to use.
+  -c, --context-id=<value>  (required) Flow context sys_id returned by flow test, flow run, flow subflow, or flow action
+  -d, --include-definition  Include the full flow definition snapshot in the response
+  -j, --json                Output results as JSON
+      --scope=<value>       Scope sys_id for the ProcessFlow API transaction scope parameter
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Get rich execution details for a flow context.
+
+  Returns per-action timing, inputs, outputs, and high-level metadata (state, runtime, who ran it, test vs production).
+  This is the primary diagnostic command after flow test or flow run.
+
+  Uses the ProcessFlow operations API (GET /api/now/processflow/operations/flow/context/{id}), the same endpoint Flow
+  Designer uses to display execution details.
+
+  NOTE: Requires flow operations logging to be enabled on the instance. If the execution report is unavailable, a notice
+  will explain why.
+
+  Typical workflow:
+  flow test → flow details → diagnose → modify flow → flow test again
+
+EXAMPLES
+  Get execution details after testing a flow
+
+    $ nex flow details --context-id d4e5f6789012345678abcdef01234567 --auth dev
+
+  Get details with explicit scope
+
+    $ nex flow details -c d4e5f6789012345678abcdef01234567 --scope x_myapp --auth dev
+
+  Get details with JSON output for scripting
+
+    $ nex flow details -c d4e5f6789012345678abcdef01234567 --json --auth dev
+```
+
+_See code: [src/commands/flow/details.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/flow/details.ts)_
 
 ## `nex flow error`
 
@@ -2452,7 +2492,7 @@ EXAMPLES
     $ nex flow error --context-id abc123def456 --auth dev
 ```
 
-_See code: [src/commands/flow/error.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/flow/error.ts)_
+_See code: [src/commands/flow/error.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/flow/error.ts)_
 
 ## `nex flow logs`
 
@@ -2510,7 +2550,7 @@ EXAMPLES
     $ nex flow logs -c d4e5f6789012345678abcdef01234567 --json --auth dev
 ```
 
-_See code: [src/commands/flow/logs.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/flow/logs.ts)_
+_See code: [src/commands/flow/logs.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/flow/logs.ts)_
 
 ## `nex flow message`
 
@@ -2560,7 +2600,7 @@ EXAMPLES
     $ nex flow message --context-id abc123def456 --message "data_ready" --payload '{"status":"ok"}' --auth dev
 ```
 
-_See code: [src/commands/flow/message.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/flow/message.ts)_
+_See code: [src/commands/flow/message.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/flow/message.ts)_
 
 ## `nex flow outputs`
 
@@ -2606,7 +2646,7 @@ EXAMPLES
     $ nex flow outputs --context-id abc123def456 --json --auth dev
 ```
 
-_See code: [src/commands/flow/outputs.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/flow/outputs.ts)_
+_See code: [src/commands/flow/outputs.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/flow/outputs.ts)_
 
 ## `nex flow run`
 
@@ -2672,7 +2712,7 @@ EXAMPLES
     $ nex flow run --name global.my_flow --mode background --auth dev
 ```
 
-_See code: [src/commands/flow/run.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/flow/run.ts)_
+_See code: [src/commands/flow/run.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/flow/run.ts)_
 
 ## `nex flow status`
 
@@ -2716,7 +2756,7 @@ EXAMPLES
     $ nex flow status --context-id abc123def456 --auth dev
 ```
 
-_See code: [src/commands/flow/status.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/flow/status.ts)_
+_See code: [src/commands/flow/status.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/flow/status.ts)_
 
 ## `nex flow subflow`
 
@@ -2776,7 +2816,7 @@ EXAMPLES
     $ nex flow subflow --name x_myapp.process_record --inputs '{"table":"incident","sys_id":"abc123"}' --auth dev
 ```
 
-_See code: [src/commands/flow/subflow.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/flow/subflow.ts)_
+_See code: [src/commands/flow/subflow.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/flow/subflow.ts)_
 
 ## `nex flow test`
 
@@ -2839,7 +2879,7 @@ EXAMPLES
     $ nex flow test -f 887dda5583237210fdb8f7b6feaad32c -o '{"current":"abc123"}' --json --auth dev
 ```
 
-_See code: [src/commands/flow/test.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/flow/test.ts)_
+_See code: [src/commands/flow/test.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/flow/test.ts)_
 
 ## `nex health check`
 
@@ -2909,7 +2949,7 @@ EXAMPLES
     $ nex health check --json --auth dev
 ```
 
-_See code: [src/commands/health/check.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/health/check.ts)_
+_See code: [src/commands/health/check.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/health/check.ts)_
 
 ## `nex help [COMMAND]`
 
@@ -3045,7 +3085,7 @@ EXAMPLES
     $ nex log --no-color --auth dev-instance
 ```
 
-_See code: [src/commands/log/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/log/index.ts)_
+_See code: [src/commands/log/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/log/index.ts)_
 
 ## `nex plugins`
 
@@ -3367,7 +3407,7 @@ EXAMPLES
   NEX_POLICY_DENY=all nex policy status
 ```
 
-_See code: [src/commands/policy/status.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/policy/status.ts)_
+_See code: [src/commands/policy/status.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/policy/status.ts)_
 
 ## `nex query`
 
@@ -3430,7 +3470,7 @@ EXAMPLES
     $ nex query --table sys_user --query "active=true" --limit 5 --json --auth dev
 ```
 
-_See code: [src/commands/query/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/query/index.ts)_
+_See code: [src/commands/query/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/query/index.ts)_
 
 ## `nex query app`
 
@@ -3483,7 +3523,7 @@ EXAMPLES
     $ nex query app --search "HR" --active --auth dev
 ```
 
-_See code: [src/commands/query/app.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/query/app.ts)_
+_See code: [src/commands/query/app.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/query/app.ts)_
 
 ## `nex query columns`
 
@@ -3538,7 +3578,7 @@ EXAMPLES
     $ nex query columns --table incident --json --auth dev
 ```
 
-_See code: [src/commands/query/columns.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/query/columns.ts)_
+_See code: [src/commands/query/columns.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/query/columns.ts)_
 
 ## `nex query syslog`
 
@@ -3595,7 +3635,7 @@ EXAMPLES
     $ nex query syslog --query "sourceLIKEincident" --json --auth dev
 ```
 
-_See code: [src/commands/query/syslog.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/query/syslog.ts)_
+_See code: [src/commands/query/syslog.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/query/syslog.ts)_
 
 ## `nex schema`
 
@@ -3654,7 +3694,7 @@ EXAMPLES
     $ nex schema --table incident --include-choices --include-relationships --auth dev
 ```
 
-_See code: [src/commands/schema/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/schema/index.ts)_
+_See code: [src/commands/schema/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/schema/index.ts)_
 
 ## `nex schema field`
 
@@ -3701,7 +3741,7 @@ EXAMPLES
     $ nex schema field --table incident --field priority --json --auth dev
 ```
 
-_See code: [src/commands/schema/field.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/schema/field.ts)_
+_See code: [src/commands/schema/field.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/schema/field.ts)_
 
 ## `nex schema validate-catalog`
 
@@ -3747,7 +3787,7 @@ EXAMPLES
     $ nex schema validate-catalog --sys-id a1b2c3d4e5f6 --json --auth dev
 ```
 
-_See code: [src/commands/schema/validate-catalog.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/schema/validate-catalog.ts)_
+_See code: [src/commands/schema/validate-catalog.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/schema/validate-catalog.ts)_
 
 ## `nex scope`
 
@@ -3794,7 +3834,7 @@ EXAMPLES
     $ nex scope -l --json --auth dev
 ```
 
-_See code: [src/commands/scope/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/scope/index.ts)_
+_See code: [src/commands/scope/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/scope/index.ts)_
 
 ## `nex scope set`
 
@@ -3837,7 +3877,7 @@ EXAMPLES
     $ nex scope set -a abc123def456ghi789jkl012mno345pq --json --auth dev
 ```
 
-_See code: [src/commands/scope/set.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/scope/set.ts)_
+_See code: [src/commands/scope/set.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/scope/set.ts)_
 
 ## `nex script-sync pull`
 
@@ -3897,7 +3937,7 @@ EXAMPLES
     $ nex script-sync pull -n MyClientScript -t sys_script_client --json --auth dev-instance
 ```
 
-_See code: [src/commands/script-sync/pull.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/script-sync/pull.ts)_
+_See code: [src/commands/script-sync/pull.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/script-sync/pull.ts)_
 
 ## `nex script-sync push`
 
@@ -3958,7 +3998,7 @@ EXAMPLES
     $ nex script-sync push -n MyUIScript -t sys_ui_script -f ./scripts/ui-script.js --json --auth dev-instance
 ```
 
-_See code: [src/commands/script-sync/push.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/script-sync/push.ts)_
+_See code: [src/commands/script-sync/push.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/script-sync/push.ts)_
 
 ## `nex script-sync sync`
 
@@ -4017,7 +4057,7 @@ EXAMPLES
     $ nex script-sync sync -d ./scripts --json --auth dev-instance
 ```
 
-_See code: [src/commands/script-sync/sync.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/script-sync/sync.ts)_
+_See code: [src/commands/script-sync/sync.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/script-sync/sync.ts)_
 
 ## `nex search`
 
@@ -4084,7 +4124,7 @@ EXAMPLES
     $ nex search --term "GlideRecord" --limit 10 --json --auth dev-instance
 ```
 
-_See code: [src/commands/search/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/search/index.ts)_
+_See code: [src/commands/search/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/search/index.ts)_
 
 ## `nex search add-table`
 
@@ -4144,7 +4184,7 @@ EXAMPLES
       dev-instance
 ```
 
-_See code: [src/commands/search/add-table.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/search/add-table.ts)_
+_See code: [src/commands/search/add-table.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/search/add-table.ts)_
 
 ## `nex search groups`
 
@@ -4193,7 +4233,7 @@ EXAMPLES
     $ nex search groups --json --auth dev-instance
 ```
 
-_See code: [src/commands/search/groups.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/search/groups.ts)_
+_See code: [src/commands/search/groups.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/search/groups.ts)_
 
 ## `nex search tables`
 
@@ -4244,7 +4284,7 @@ EXAMPLES
     $ nex search tables --search-group "Business Rules" --json --auth dev-instance
 ```
 
-_See code: [src/commands/search/tables.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/search/tables.ts)_
+_See code: [src/commands/search/tables.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/search/tables.ts)_
 
 ## `nex store install`
 
@@ -4297,7 +4337,7 @@ EXAMPLES
     $ nex store install -a abc123 -v 1.0.0 --demo-data --auth dev
 ```
 
-_See code: [src/commands/store/install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/store/install.ts)_
+_See code: [src/commands/store/install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/store/install.ts)_
 
 ## `nex store search`
 
@@ -4348,7 +4388,7 @@ EXAMPLES
     $ nex store search --tab updates --limit 10 --auth dev
 ```
 
-_See code: [src/commands/store/search.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/store/search.ts)_
+_See code: [src/commands/store/search.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/store/search.ts)_
 
 ## `nex store update`
 
@@ -4400,7 +4440,7 @@ EXAMPLES
     $ nex store update -a abc123 -v 2.0.0 --timeout 3600000 --auth dev
 ```
 
-_See code: [src/commands/store/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/store/update.ts)_
+_See code: [src/commands/store/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/store/update.ts)_
 
 ## `nex store validate`
 
@@ -4439,7 +4479,7 @@ EXAMPLES
     $ nex store validate --file ./batch-definition.json --auth dev
 ```
 
-_See code: [src/commands/store/validate.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/store/validate.ts)_
+_See code: [src/commands/store/validate.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/store/validate.ts)_
 
 ## `nex task approve`
 
@@ -4490,7 +4530,7 @@ EXAMPLES
     $ nex task approve -n CHG0010001 -c "Looks good, approved" --auth dev
 ```
 
-_See code: [src/commands/task/approve.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/task/approve.ts)_
+_See code: [src/commands/task/approve.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/task/approve.ts)_
 
 ## `nex task assign`
 
@@ -4551,7 +4591,7 @@ EXAMPLES
     $ nex task assign --number CHG0010001 --table change_request --user admin --auth dev
 ```
 
-_See code: [src/commands/task/assign.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/task/assign.ts)_
+_See code: [src/commands/task/assign.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/task/assign.ts)_
 
 ## `nex task close`
 
@@ -4605,7 +4645,7 @@ EXAMPLES
     $ nex task close -n INC0010001 --notes "Closed" --close-code "Solved (Permanently)" --auth dev
 ```
 
-_See code: [src/commands/task/close.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/task/close.ts)_
+_See code: [src/commands/task/close.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/task/close.ts)_
 
 ## `nex task comment`
 
@@ -4665,7 +4705,7 @@ EXAMPLES
     $ nex task comment --number CHG0010001 --table change_request --comment "Approved" --auth dev
 ```
 
-_See code: [src/commands/task/comment.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/task/comment.ts)_
+_See code: [src/commands/task/comment.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/task/comment.ts)_
 
 ## `nex task find`
 
@@ -4721,7 +4761,7 @@ EXAMPLES
     $ nex task find -n INC0010001 --json --auth dev
 ```
 
-_See code: [src/commands/task/find.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/task/find.ts)_
+_See code: [src/commands/task/find.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/task/find.ts)_
 
 ## `nex task resolve`
 
@@ -4775,7 +4815,7 @@ EXAMPLES
     $ nex task resolve -n INC0010001 --notes "Fixed" --close-code "Solved (Permanently)" --auth dev
 ```
 
-_See code: [src/commands/task/resolve.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/task/resolve.ts)_
+_See code: [src/commands/task/resolve.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/task/resolve.ts)_
 
 ## `nex transaction kill`
 
@@ -4818,7 +4858,7 @@ EXAMPLES
   $ nex transaction kill --transaction-id 8f9a1234567890abcdef1234567890c1 --confirm --json --auth dev
 ```
 
-_See code: [src/commands/transaction/kill.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/transaction/kill.ts)_
+_See code: [src/commands/transaction/kill.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/transaction/kill.ts)_
 
 ## `nex transaction list`
 
@@ -4865,7 +4905,7 @@ EXAMPLES
   $ nex transaction list --timeout-ms 120000 --poll-interval-ms 2000 --auth dev
 ```
 
-_See code: [src/commands/transaction/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/transaction/list.ts)_
+_See code: [src/commands/transaction/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/transaction/list.ts)_
 
 ## `nex update-set`
 
@@ -4913,7 +4953,7 @@ EXAMPLES
     $ nex update-set --json --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/update-set/index.ts)_
+_See code: [src/commands/update-set/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/update-set/index.ts)_
 
 ## `nex update-set clone`
 
@@ -4957,7 +4997,7 @@ EXAMPLES
     $ nex update-set clone --source us-001 --name "Cloned Set" --json --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/clone.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/update-set/clone.ts)_
+_See code: [src/commands/update-set/clone.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/update-set/clone.ts)_
 
 ## `nex update-set create`
 
@@ -5006,7 +5046,7 @@ EXAMPLES
     $ nex update-set create --name "My Feature Set" --application x_my_app --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/update-set/create.ts)_
+_See code: [src/commands/update-set/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/update-set/create.ts)_
 
 ## `nex update-set current`
 
@@ -5053,7 +5093,7 @@ EXAMPLES
     $ nex update-set current --json --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/current.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/update-set/current.ts)_
+_See code: [src/commands/update-set/current.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/update-set/current.ts)_
 
 ## `nex update-set inspect`
 
@@ -5096,7 +5136,7 @@ EXAMPLES
     $ nex update-set inspect --sys-id us-001 --json --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/inspect.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/update-set/inspect.ts)_
+_See code: [src/commands/update-set/inspect.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/update-set/inspect.ts)_
 
 ## `nex update-set move`
 
@@ -5146,7 +5186,7 @@ EXAMPLES
     $ nex update-set move --target us-002 --source us-001 --json --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/move.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/update-set/move.ts)_
+_See code: [src/commands/update-set/move.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/update-set/move.ts)_
 
 ## `nex workflow create`
 
@@ -5189,7 +5229,7 @@ EXAMPLES
     $ nex workflow create -s ./workflow.json --json --auth dev
 ```
 
-_See code: [src/commands/workflow/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/workflow/create.ts)_
+_See code: [src/commands/workflow/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/workflow/create.ts)_
 
 ## `nex workflow publish`
 
@@ -5233,7 +5273,7 @@ EXAMPLES
     $ nex workflow publish -v wfv-001 -s act-001 --json --auth dev
 ```
 
-_See code: [src/commands/workflow/publish.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/workflow/publish.ts)_
+_See code: [src/commands/workflow/publish.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/workflow/publish.ts)_
 
 ## `nex xml export`
 
@@ -5291,7 +5331,7 @@ EXAMPLES
     $ nex xml export --table sys_script --sys-id abc123 --json --auth dev
 ```
 
-_See code: [src/commands/xml/export.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/xml/export.ts)_
+_See code: [src/commands/xml/export.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/xml/export.ts)_
 
 ## `nex xml import`
 
@@ -5343,7 +5383,7 @@ EXAMPLES
     $ nex xml import --file ./records.xml --table incident --json --auth dev
 ```
 
-_See code: [src/commands/xml/import.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.2.0/src/commands/xml/import.ts)_
+_See code: [src/commands/xml/import.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.5.0/src/commands/xml/import.ts)_
 <!-- commandsstop -->
 
 ---
@@ -5657,7 +5697,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '22'
+          node-version: '26'
       
       - name: Install Dependencies
         run: |
@@ -5691,7 +5731,7 @@ jobs:
 
 ```yaml
 servicenow-tests:
-  image: node:22
+  image: node:26
   stage: test
   before_script:
     - npm install -g @servicenow/sdk
