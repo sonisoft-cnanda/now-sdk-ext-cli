@@ -110,14 +110,15 @@ maybe('nex logging (end to end)', () => {
     }
   })
 
-  it('keeps SDK credential-refresh diagnostics out of JSON stdout', async () => {
+  it('preserves redacted SDK credential-refresh errors on stderr in JSON mode', async () => {
     const preload = path.join(workdir, 'sdk-refresh.mjs')
     fs.writeFileSync(preload, `
-import auth from ${JSON.stringify(path.join(REPO, 'node_modules/@servicenow/sdk-cli/dist/auth/index.js'))};
+import { createRequire } from 'node:module';
 import { logger } from ${JSON.stringify(path.join(REPO, 'node_modules/@servicenow/sdk-cli/dist/logger/index.js'))};
+const auth = createRequire(import.meta.url)(${JSON.stringify(path.join(REPO, 'node_modules/@servicenow/sdk-cli/dist/auth/index.js'))});
 auth.getCredentials = async () => {
   logger.info('Access Token has expired, refreshing token');
-  logger.error('Simulated refresh failure');
+  logger.error('Simulated refresh failure', {password: 'fixture-sdk-password'}, new Error('Bearer fixture-sdk-bearer'));
   return undefined;
 };
 `)
@@ -127,6 +128,10 @@ auth.getCredentials = async () => {
     })
     expect(stdout).not.toContain('[now-sdk]')
     expect(stdout + stderr).toContain('mock-refresh')
+    expect(stderr).toContain('Simulated refresh failure')
+    expect(stderr).toContain('[redacted]')
+    expect(stderr).not.toContain('fixture-sdk-password')
+    expect(stderr).not.toContain('fixture-sdk-bearer')
     if (stdout.trim()) expect(() => JSON.parse(stdout) as unknown).not.toThrow()
   })
 

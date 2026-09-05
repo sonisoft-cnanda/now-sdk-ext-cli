@@ -3,7 +3,7 @@
 import { Command, Flags, Interfaces } from '@oclif/core'
 import { getCredentials } from "@servicenow/sdk-cli/dist/auth/index.js";
 import { logger as sdkLogger } from '@servicenow/sdk-cli/dist/logger/index.js';
-import { configureLogging, flushLogs, isPolicyRefusal, Logger, ServiceNowInstance, ServiceNowSettingsInstance } from '@sonisoft/now-sdk-ext-core';
+import { configureLogging, flushLogs, isPolicyRefusal, Logger, redactValue, ServiceNowInstance, ServiceNowSettingsInstance } from '@sonisoft/now-sdk-ext-core';
 
 import { LogFactory } from '../util/log-factory.js';
 import { installCliPolicy, type PolicyFlags } from './policy.js';
@@ -141,7 +141,6 @@ protected instance!:ServiceNowInstance;
    
     this.flags = flags as Flags<T>
     this.args = args as Args<T>
-    if (this.jsonEnabled()) sdkLogger.setLevel('silent');
 
     // The flag is declared as 'log-level' in baseFlags, so oclif keys the parsed
     // value under that exact name. Reading `flags.logLevel` always yielded
@@ -166,6 +165,19 @@ protected instance!:ServiceNowInstance;
 
     this.logger = LogFactory.createLogger(this.ctor.name);
     this.authLogger = LogFactory.createLogger("AuthenticatedCommand");
+    if (this.jsonEnabled()) {
+      const sdkLog = LogFactory.createLogger('ServiceNow SDK')
+      for (const level of ['info', 'warn', 'error', 'debug'] as const) {
+        sdkLogger[level] = (...args: unknown[]): void => {
+          const message = args.map(arg => {
+            if (typeof arg === 'string') return arg
+            try { return JSON.stringify(redactValue(arg)) ?? String(arg) }
+            catch { return '[unserializable]' }
+          }).join(' ')
+          sdkLog[level](message || 'ServiceNow SDK')
+        }
+      }
+    }
 
     // Install the permission ladder before anything can issue a request. Core's gate
     // is inert until this runs, so ordering matters: after logging (so a malformed

@@ -162,6 +162,7 @@ jest.unstable_mockModule('@sonisoft/now-sdk-ext-core', () => {
     DENY_ENV: 'NEX_POLICY_DENY',
     allowFromEnvironment: jest.fn<any>().mockReturnValue(undefined),
     configureLogging: jest.fn(),
+    redactValue: jest.fn((value: unknown) => value),
     denyFromEnvironment: jest.fn<any>().mockReturnValue(undefined),
     denyLayer: jest.fn<any>().mockReturnValue({ name: 'test-deny' }),
     flushLogs: jest.fn<any>().mockResolvedValue(undefined),
