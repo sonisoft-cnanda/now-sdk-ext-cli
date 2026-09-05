@@ -141,6 +141,9 @@
       "query": {
         "description": "Query ServiceNow tables, search applications, list columns, and read syslog records."
       },
+      "behavior": {
+        "description": "Discover table behavior, requirements and automation definitions."
+      },
       "schema": {
         "description": "Discover and inspect ServiceNow table schemas and field definitions."
       },

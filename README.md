@@ -68,6 +68,7 @@ Execute individual ATF tests or entire test suites with detailed results, perfec
 - **Batch Operations**: Install multiple applications from JSON definitions or batch create/update records
 - **Progress Monitoring**: Real-time progress for long-running operations
 - **Schema Discovery**: Inspect table schemas and field definitions
+- **[Table Behavior](docs/table-behavior.md)**: Inspect automation, field requirements, and related artifact details
 - **Script Sync**: Pull and push scripts between local files and ServiceNow
 - **Task Management**: Comment, assign, resolve, and close incidents and changes
 - **Update Sets**: Create, inspect, clone, and manage update sets

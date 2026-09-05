@@ -2,6 +2,7 @@
 
 import { Command, Flags, Interfaces } from '@oclif/core'
 import { getCredentials } from "@servicenow/sdk-cli/dist/auth/index.js";
+import { logger as sdkLogger } from '@servicenow/sdk-cli/dist/logger/index.js';
 import { configureLogging, flushLogs, isPolicyRefusal, Logger, ServiceNowInstance, ServiceNowSettingsInstance } from '@sonisoft/now-sdk-ext-core';
 
 import { LogFactory } from '../util/log-factory.js';
@@ -140,6 +141,7 @@ protected instance!:ServiceNowInstance;
    
     this.flags = flags as Flags<T>
     this.args = args as Args<T>
+    if (this.jsonEnabled()) sdkLogger.setLevel('silent');
 
     // The flag is declared as 'log-level' in baseFlags, so oclif keys the parsed
     // value under that exact name. Reading `flags.logLevel` always yielded
