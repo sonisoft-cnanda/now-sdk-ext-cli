@@ -12,7 +12,7 @@
     "@oclif/plugin-help": "^6.2.10",
     "@oclif/plugin-plugins": "^5.4.6",
     "@servicenow/glide": "^27.0.5",
-    "@servicenow/sdk": "4.9.2",
+    "@servicenow/sdk": "4.11.2",
     "@servicenow/sdk-build-core": "4.9.2",
     "@servicenow/sdk-cli": "4.9.2",
     "@servicenow/sdk-cli-core": "3.0.3",
