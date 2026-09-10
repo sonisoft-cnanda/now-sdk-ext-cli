@@ -58,6 +58,13 @@ export class ServiceNowInstance {
   getUserName = jest.fn().mockImplementation(() => this.username)
 }
 
+export class ClusterTransactionManager {
+  getTransactions = jest.fn(() => Promise.resolve([]))
+  killTransaction = jest.fn((sysId: string) => Promise.resolve({accepted: true, sysId}))
+
+  constructor(_instance?: any) {}
+}
+
 export class Logger {
   debug = jest.fn()
   error = jest.fn()
