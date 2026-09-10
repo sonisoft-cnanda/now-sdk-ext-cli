@@ -535,4 +535,289 @@ describe('FlowDisplayService', () => {
       })
     })
   })
+  describe('formatArtifactDefinitionResult', () => {
+    const flowResult = {
+      success: true,
+      sysId: '887dda5583237210fdb8f7b6feaad32c',
+      artifactType: 'flow' as const,
+      reportedType: 'flow',
+      definition: { sys_id: '887dda5583237210fdb8f7b6feaad32c', name: 'Test Flow', script: 'gs.info("secret")' },
+      summary: {
+        sysId: '887dda5583237210fdb8f7b6feaad32c',
+        name: 'Test Flow',
+        internalName: 'test_flow',
+        description: 'A flow used by tests',
+        scope: 'global_scope_sys_id',
+        scopeName: 'global',
+        status: 'published',
+        active: true,
+        triggerCount: 1,
+        actionCount: 4,
+        subflowCount: 2,
+        flowLogicCount: 3,
+        inputCount: 2,
+        outputCount: 1,
+      },
+    }
+
+    describe('JSON output', () => {
+      it('should return the whole typed result as one JSON document', () => {
+        const lines = service.formatArtifactDefinitionResult(flowResult, true)
+        expect(lines).toHaveLength(1)
+        const parsed = JSON.parse(lines[0])
+        expect(parsed.success).toBe(true)
+        expect(parsed.sysId).toBe('887dda5583237210fdb8f7b6feaad32c')
+        expect(parsed.artifactType).toBe('flow')
+        expect(parsed.definition).toEqual(flowResult.definition)
+        expect(parsed.summary.actionCount).toBe(4)
+      })
+    })
+
+    describe('text output', () => {
+      it('should identify the artifact type and sys_id', () => {
+        const output = service.formatArtifactDefinitionResult(flowResult, false).join('\n')
+        expect(output).toContain('Flow Definition')
+        expect(output).toContain('887dda5583237210fdb8f7b6feaad32c')
+        expect(output).toContain('Type:           flow')
+      })
+
+      it('should show name, status and scope', () => {
+        const output = service.formatArtifactDefinitionResult(flowResult, false).join('\n')
+        expect(output).toContain('Test Flow')
+        expect(output).toContain('test_flow')
+        expect(output).toContain('published')
+        expect(output).toContain('global')
+      })
+
+      it('should show collection counts', () => {
+        const output = service.formatArtifactDefinitionResult(flowResult, false).join('\n')
+        expect(output).toContain('Triggers:     1')
+        expect(output).toContain('Actions:      4')
+        expect(output).toContain('Subflows:     2')
+        expect(output).toContain('Flow Logic:   3')
+        expect(output).toContain('Inputs:       2')
+        expect(output).toContain('Outputs:      1')
+      })
+
+      it('should not print the definition body', () => {
+        const output = service.formatArtifactDefinitionResult(flowResult, false).join('\n')
+        expect(output).not.toContain('gs.info')
+        expect(output).not.toContain('sys_id:')
+      })
+
+      it('should label a subflow as a subflow', () => {
+        const subflow = {
+          ...flowResult,
+          artifactType: 'subflow' as const,
+          reportedType: 'subflow',
+          summary: { ...flowResult.summary, name: 'Test Subflow', status: 'draft' },
+        }
+        const output = service.formatArtifactDefinitionResult(subflow, false).join('\n')
+        expect(output).toContain('Subflow Definition')
+        expect(output).toContain('Test Subflow')
+        expect(output).toContain('draft')
+      })
+
+      it('should fall back to the reported type when it is not one it knows', () => {
+        const odd = { ...flowResult, artifactType: undefined, reportedType: 'flow_variant' }
+        const output = service.formatArtifactDefinitionResult(odd, false).join('\n')
+        expect(output).toContain('Flow Artifact Definition')
+        expect(output).toContain('Type:           flow_variant')
+      })
+
+      it('should scope-fall back to the scope sys_id when no scope name is reported', () => {
+        const noScopeName = { ...flowResult, summary: { ...flowResult.summary, scopeName: '' } }
+        const output = service.formatArtifactDefinitionResult(noScopeName, false).join('\n')
+        expect(output).toContain('global_scope_sys_id')
+      })
+
+      it('should omit the description line when it is empty', () => {
+        const noDescription = { ...flowResult, summary: { ...flowResult.summary, description: '' } }
+        const output = service.formatArtifactDefinitionResult(noDescription, false).join('\n')
+        expect(output).not.toContain('Description:')
+      })
+
+      it('should strip HTML out of the description and keep it on one line', () => {
+        const html = {
+          ...flowResult,
+          summary: {
+            ...flowResult.summary,
+            description: '<p>Waits for the&nbsp;tracker</p>\n<p>then <b>continues</b></p>',
+          },
+        }
+        const output = service.formatArtifactDefinitionResult(html, false).join('\n')
+        expect(output).toContain('Description:    Waits for the tracker then continues')
+        expect(output).not.toContain('<p>')
+        expect(output).not.toContain('&nbsp;')
+      })
+
+      it('should elide a description longer than the summary line allows', () => {
+        const long = {
+          ...flowResult,
+          summary: { ...flowResult.summary, description: 'x'.repeat(400) },
+        }
+        const line = service
+          .formatArtifactDefinitionResult(long, false)
+          .find((l) => l.includes('Description:'))!
+        expect(line).toContain('…')
+        expect(line.length).toBeLessThan(200)
+      })
+
+      it('should omit the description line when it is nothing but markup', () => {
+        const markupOnly = {
+          ...flowResult,
+          summary: { ...flowResult.summary, description: '<p>&nbsp;</p>' },
+        }
+        const output = service.formatArtifactDefinitionResult(markupOnly, false).join('\n')
+        expect(output).not.toContain('Description:')
+      })
+
+      it('should keep the full description on the JSON path', () => {
+        const html = {
+          ...flowResult,
+          summary: { ...flowResult.summary, description: `<p>${'x'.repeat(400)}</p>` },
+        }
+        const output = service.formatArtifactDefinitionResult(html, true).join('\n')
+        expect(output).toContain(`<p>${'x'.repeat(400)}</p>`)
+      })
+
+      it('should say so when a successful result carries no summary', () => {
+        const noSummary = { ...flowResult, summary: undefined }
+        const output = service.formatArtifactDefinitionResult(noSummary, false).join('\n')
+        expect(output).toContain('No summary was reported')
+      })
+
+      it('should render a failure with its classification and no success icon', () => {
+        const failure = {
+          success: false,
+          sysId: '887dda5583237210fdb8f7b6feaad32c',
+          failureReason: 'type_mismatch' as const,
+          errorMessage: 'The artifact is a subflow, not a flow.',
+        }
+        const output = service.formatArtifactDefinitionResult(failure, false).join('\n')
+        expect(output).toContain('\u2718')
+        expect(output).not.toContain('\u2714')
+        expect(output).toContain('The artifact is a subflow, not a flow.')
+        expect(output).toContain('type_mismatch')
+        expect(output).not.toContain('No summary was reported')
+      })
+    })
+  })
+
+  describe('formatActionDefinitionResult', () => {
+    const actionResult = {
+      success: true,
+      sysId: 'c3d4e5f607182939a4b5c6d7e8f90123',
+      artifactType: 'action' as const,
+      metadata: { sys_id: 'c3d4e5f607182939a4b5c6d7e8f90123', name: 'Test Action', script: 'gs.info("secret")' },
+      steps: [
+        { sys_id: 'step001', order: 100 },
+        { sys_id: 'step002', order: 200 },
+      ],
+      summary: {
+        sysId: 'c3d4e5f607182939a4b5c6d7e8f90123',
+        name: 'Test Action',
+        internalName: 'test_action',
+        description: 'An action used by tests',
+        scope: 'global_scope_sys_id',
+        scopeName: 'global',
+        state: 'published',
+        active: true,
+        inputCount: 3,
+        outputCount: 2,
+        stepCount: 2,
+        steps: [
+          { stepId: 'step001', order: 100, label: 'Script step', stepTypeName: 'Script', stepTypeId: 'type001' },
+          { stepId: 'step002', order: 200, label: 'Log step', stepTypeName: 'Log', stepTypeId: 'type002' },
+        ],
+      },
+    }
+
+    describe('JSON output', () => {
+      it('should return metadata and ordered steps as one JSON document', () => {
+        const lines = service.formatActionDefinitionResult(actionResult, true)
+        expect(lines).toHaveLength(1)
+        const parsed = JSON.parse(lines[0])
+        expect(parsed.success).toBe(true)
+        expect(parsed.artifactType).toBe('action')
+        expect(parsed.metadata).toEqual(actionResult.metadata)
+        expect(parsed.steps).toEqual(actionResult.steps)
+      })
+    })
+
+    describe('text output', () => {
+      it('should identify the action and its sys_id', () => {
+        const output = service.formatActionDefinitionResult(actionResult, false).join('\n')
+        expect(output).toContain('Action Definition')
+        expect(output).toContain('c3d4e5f607182939a4b5c6d7e8f90123')
+        expect(output).toContain('Type:           action')
+      })
+
+      it('should show name, state, scope and counts', () => {
+        const output = service.formatActionDefinitionResult(actionResult, false).join('\n')
+        expect(output).toContain('Test Action')
+        expect(output).toContain('published')
+        expect(output).toContain('global')
+        expect(output).toContain('Inputs:       3')
+        expect(output).toContain('Outputs:      2')
+        expect(output).toContain('Steps:        2')
+      })
+
+      it('should list the steps in the order core returned them', () => {
+        const output = service.formatActionDefinitionResult(actionResult, false).join('\n')
+        expect(output).toContain('100. Script step [Script]')
+        expect(output).toContain('200. Log step [Log]')
+        expect(output.indexOf('Script step')).toBeLessThan(output.indexOf('Log step'))
+      })
+
+      it('should not print the raw metadata or step payloads', () => {
+        const output = service.formatActionDefinitionResult(actionResult, false).join('\n')
+        expect(output).not.toContain('gs.info')
+        expect(output).not.toContain('step001')
+      })
+
+      it('should strip and elide the description the same way a flow does', () => {
+        const html = {
+          ...actionResult,
+          summary: { ...actionResult.summary, description: `<p>Calculates ${'y'.repeat(400)}</p>` },
+        }
+        const line = service
+          .formatActionDefinitionResult(html, false)
+          .find((l) => l.includes('Description:'))!
+        expect(line).toContain('Calculates')
+        expect(line).not.toContain('<p>')
+        expect(line).toContain('…')
+        expect(line.length).toBeLessThan(200)
+      })
+
+      it('should handle an action with no steps', () => {
+        const noSteps = {
+          ...actionResult,
+          summary: { ...actionResult.summary, stepCount: 0, steps: [] },
+        }
+        const output = service.formatActionDefinitionResult(noSteps, false).join('\n')
+        expect(output).toContain('Steps:        0')
+        expect(output).not.toContain('[Script]')
+      })
+
+      it('should say so when a successful result carries no summary', () => {
+        const noSummary = { ...actionResult, summary: undefined }
+        const output = service.formatActionDefinitionResult(noSummary, false).join('\n')
+        expect(output).toContain('No summary was reported')
+      })
+
+      it('should render a failure with its classification and no success icon', () => {
+        const failure = {
+          success: false,
+          sysId: 'c3d4e5f607182939a4b5c6d7e8f90123',
+          failureReason: 'permission_denied' as const,
+          errorMessage: 'The session is not permitted to read this action.',
+        }
+        const output = service.formatActionDefinitionResult(failure, false).join('\n')
+        expect(output).toContain('\u2718')
+        expect(output).not.toContain('\u2714')
+        expect(output).toContain('permission_denied')
+      })
+    })
+  })
 })
