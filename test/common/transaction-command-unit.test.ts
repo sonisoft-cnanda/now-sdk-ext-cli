@@ -8,6 +8,7 @@ const policyRefusalCheck = jest.fn(isPolicyRefusal)
 
 jest.unstable_mockModule('@sonisoft/now-sdk-ext-core', () => ({
   ...jest.requireActual('@sonisoft/now-sdk-ext-core'),
+  resolveSessionCredentials: async (alias: string) => (await import('@servicenow/sdk-cli/dist/auth/index.js')).getCredentials(alias),
   ClusterTransactionManager: managerConstructor,
   isPolicyRefusal: policyRefusalCheck,
   ServiceNowInstance: jest.fn(() => ({})),

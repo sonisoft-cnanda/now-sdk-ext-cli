@@ -91,6 +91,23 @@ Before your agent can use `nex` commands, ensure:
    dev` — which looks like a missing alias, so the obvious fix does not help.
    `nex auth doctor` tells the two apart.
 
+## Table behavior and ATF planning
+
+With nex 5.5.0+, inspect table behavior before building or debugging a process:
+
+```bash
+nex behavior --table change_request --auth dev --read-only --json
+nex behavior --table change_request --category business_rules --category flows \
+  --details scripts --details definitions --details dependencies \
+  --dependency-depth 1 --max-bytes 262144 --auth dev --read-only --json
+```
+
+Use schema discovery for fields and choice values. Behavior discovery adds business rules, UI actions, client scripts, UI/data policies, workflows, record-triggered flows and generic state models. Retrieve known references with `nex behavior details` instead of repeating inventory scans.
+
+For Change Management ATFs, inspect required fields, transition conditions, approvals and dependent artifacts. Preserve source IDs and runtime/design provenance. Follow category cursors; check warnings, `omittedDetails` and `remainingReferences` before treating results as complete. Conditions are configuration, not evaluated predictions; distinguish browser behavior from server enforcement and verify actual execution separately.
+
+See [README examples and flags](../../README.md#table-behavior-discovery) and the [behavior guide](../table-behavior.md).
+
 ## Transaction safety
 
 `nex transaction kill` changes a live ServiceNow instance and aborts real work. Never pass an identifier that did not come from a `nex transaction list` invocation you just ran for this exact task, and always require explicit human intent before adding `--confirm`. Platform acceptance is asynchronous; use a separate later list to verify that the transaction cleared.
@@ -130,14 +147,10 @@ Append custom workflow guides specific to your project:
 
 ### Keeping Updated
 
-When the `nex` CLI is upgraded with new commands, re-copy the guidance files from the latest package:
+When the CLI gains commands, review the current guidance in this repository and merge it into your project's existing instructions. Guidance files are not included in the npm package. From an updated repository checkout, copy them when creating a new project:
 
 ```bash
-# After upgrading nex
-npm update -g @sonisoft/now-sdk-ext-cli
-
-# Re-copy guidance files
-cp node_modules/@sonisoft/now-sdk-ext-cli/docs/ai-agents/CLAUDE.md ./CLAUDE.md
+cp docs/ai-agents/CLAUDE.md /path/to/new-project/CLAUDE.md
 ```
 
 ## How It Works
