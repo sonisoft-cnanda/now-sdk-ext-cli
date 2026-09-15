@@ -115,14 +115,18 @@ maybe('nex logging (end to end)', () => {
     fs.writeFileSync(preload, `
 import { createRequire } from 'node:module';
 import { logger } from ${JSON.stringify(path.join(REPO, 'node_modules/@servicenow/sdk-cli/dist/logger/index.js'))};
-const auth = createRequire(import.meta.url)(${JSON.stringify(path.join(REPO, 'node_modules/@servicenow/sdk-cli/dist/auth/index.js'))});
-auth.getCredentials = async () => {
+const require = createRequire(${JSON.stringify(path.join(REPO, 'package.json'))});
+const coreRequire = createRequire(require.resolve('@sonisoft/now-sdk-ext-core/package.json'));
+const getCredentials = async () => {
   logger.info('Access Token has expired, refreshing token');
   logger.error('Simulated refresh failure', {password: 'fixture-sdk-password'}, new Error('Bearer fixture-sdk-bearer'));
   logger.error(new Error('SDK standalone failure; Bearer fixture-sdk-bare'));
   logger.error('SDK string failure; Bearer fixture-sdk-string');
   return undefined;
 };
+for (const load of [require, coreRequire]) {
+  try { load('@servicenow/sdk-cli/dist/auth/index.js').getCredentials = getCredentials; } catch {}
+}
 `)
     const {stdout, stderr} = await nex(workdir, ['behavior', '--table', 'incident', '--auth', 'mock-refresh', '--json'], {
       NODE_OPTIONS: `--import=${preload}`,

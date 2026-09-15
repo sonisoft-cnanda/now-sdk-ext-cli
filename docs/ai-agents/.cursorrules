@@ -22,6 +22,15 @@ nex bulk update -t incident -q "active=true" -d '{"priority":"4"}' --auth dev
 
 ## Command Reference
 
+### Auth
+
+| Command | Description | Key Flags |
+|---------|-------------|-----------|
+| `nex auth open -a <alias>` | Open a verified UI session in dedicated Edge | `--cred-store`, `--browser`, `--cdp` |
+| `nex auth browser-session -a <alias> --output <file>` | Write Playwright storage state | `--cred-store`, `--force` |
+| `nex auth list` | List stored aliases | `--json` |
+| `nex auth doctor` | Diagnose credential storage | `--json` |
+
 ### Query & Data
 
 | Command | Description | Key Flags |
