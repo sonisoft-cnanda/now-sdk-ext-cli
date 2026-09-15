@@ -10,7 +10,7 @@
   "dependencies": {
     "@oclif/plugin-autocomplete": "^3.2.35",
     "@oclif/plugin-help": "^6.2.10",
-    "@oclif/plugin-plugins": "^5.4.6",
+    "@oclif/plugin-plugins": "^7.0.0",
     "@servicenow/glide": "^27.0.5",
     "@servicenow/sdk": "4.9.2",
     "@servicenow/sdk-build-core": "4.9.2",
