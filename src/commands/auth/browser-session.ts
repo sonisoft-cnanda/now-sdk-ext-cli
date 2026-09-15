@@ -1,7 +1,7 @@
 import {Command, Flags} from '@oclif/core'
-import {logger as sdkLogger} from '@servicenow/sdk-cli/dist/logger/index.js'
 import {createBrowserSession} from '@sonisoft/now-sdk-ext-core'
 
+import {silenceSdkLoggers} from '../../common/sdk-logger.js'
 import {writeBrowserSession} from '../../services/browser-session-writer.js'
 
 export default class BrowserSessionCommand extends Command {
@@ -16,7 +16,7 @@ export default class BrowserSessionCommand extends Command {
 
   async run(): Promise<unknown> {
     const {flags} = await this.parse(BrowserSessionCommand)
-    sdkLogger.setLevel('silent')
+    silenceSdkLoggers()
     if ((flags['cred-store'] || process.env.SN_CRED_STORE_ENABLE) && process.env.NOW_SDK_KEYCHAIN_PATCHED !== '1') {
       this.error('The requested credential store is inactive. Unset SN_CRED_STORE_DISABLE and check nex auth doctor.')
     }

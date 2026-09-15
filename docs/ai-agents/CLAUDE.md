@@ -55,6 +55,7 @@ Diagnose which path you are on before assuming credentials are missing:
 ```bash
 nex auth doctor    # active store, whether the shim is on, what is stored
 nex auth list      # aliases in the credential store
+nex auth open -a <alias> --cred-store   # dedicated Edge window, already logged in
 ```
 
 One-time setup, which **must** be run from a desktop session on a TTY because the
@@ -123,6 +124,8 @@ Every command at a glance:
 | `nex auth use` | Set the default credential alias |
 | `nex auth delete` | Remove a credential from the store |
 | `nex auth doctor` | Diagnose credential storage |
+| `nex auth open` | Open a verified UI session in a dedicated Edge window |
+| `nex auth browser-session` | Write a Playwright storage-state file from the same alias |
 | **Attachment** | |
 | `nex attachment get` | Get metadata for a specific attachment |
 | `nex attachment list` | List attachments on a record |
@@ -426,6 +429,28 @@ Set the default credential alias. Commands run without `--auth` use it.
 
 ```bash
 nex auth use dev
+```
+
+#### `nex auth open`
+
+Open a verified UI session in a dedicated desktop browser (default Edge). Use
+this for interactive login. Use `nex auth browser-session --output` for
+Playwright. Never print or commit cookie files. `--cred-store` is required in
+WSL. Platform notes: `docs/AUTH_OPEN.md`.
+
+```bash
+nex auth open -a <alias> --cred-store
+nex auth open -a <alias> --browser chrome
+nex auth open -a <alias> --cdp http://127.0.0.1:9222
+```
+
+#### `nex auth browser-session`
+
+Write an owner-only Playwright storage-state file from the stored alias. JSON
+output is metadata/path only.
+
+```bash
+nex auth browser-session -a <alias> --cred-store --output playwright/.auth/session.json --json
 ```
 
 #### `nex auth delete`

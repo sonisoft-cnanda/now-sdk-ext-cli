@@ -17,8 +17,8 @@
     "@servicenow/sdk-cli": "4.9.2",
     "@servicenow/sdk-cli-core": "3.0.3",
     "@servicenow/sdk-core": "4.9.2",
-    "@sonisoft/now-sdk-ext-core": "^6.5.1",
-    "@sonisoft/sn-credstore": "1.1.1",
+    "@sonisoft/now-sdk-ext-core": "^6.6.0",
+    "@sonisoft/sn-credstore": "^1.2.1",
     "@ts-morph/common": "^0.29.0",
     "chalk": "^4.1.2",
     "cometd": "^9.0.1",
@@ -197,6 +197,7 @@
     "test": "node --experimental-vm-modules node_modules/.bin/jest --forceExit --verbose=true --silent=false --json=false --useStderr=false",
     "test:unit": "node --experimental-vm-modules node_modules/.bin/jest --testPathPatterns='(services|common|\\.unit\\.test)' --forceExit --coverage --collectCoverage --coverageDirectory=\"./coverage\" --ci --reporters=default --reporters=jest-junit --watchAll=false",
     "test:integration": "node --experimental-vm-modules node_modules/.bin/jest --testPathPatterns='commands' --testPathIgnorePatterns='/node_modules/' --testPathIgnorePatterns='\\.unit\\.test' --forceExit",
+    "test:integration:auth": "node --experimental-vm-modules node_modules/.bin/jest --forceExit --runInBand --testTimeout=120000 --runTestsByPath test/commands/auth/open.integration.test.ts",
     "test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --coverage --forceExit"
   },
   "types": "dist/index.d.ts"
