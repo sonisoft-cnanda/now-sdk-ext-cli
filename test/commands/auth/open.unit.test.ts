@@ -22,6 +22,14 @@ const writeBrowserSession = jest.fn(async (_session: unknown, output: string) =>
 const resolveBrowser = jest.fn(async () => '/tmp/msedge')
 const allocatePort = jest.fn(async () => 9333)
 const spawnBrowser = jest.fn(() => undefined)
+const isWsl = jest.fn(() => false)
+const isWindowsBrowserBinary = jest.fn(() => false)
+const disposeBridge = jest.fn()
+const startBridge = jest.fn(async () => ({
+  cdpUrl: 'http://172.28.224.1:9333',
+  dispose: disposeBridge,
+  userDataDir: String.raw`C:\Users\me\AppData\Local\nex\ui-profiles\fixture`,
+}))
 
 jest.unstable_mockModule('@sonisoft/now-sdk-ext-core', () => ({
   createBrowserSession,
@@ -33,9 +41,12 @@ jest.unstable_mockModule('../../../src/services/browser-session-writer.js', () =
 jest.unstable_mockModule('../../../src/services/desktop-browser.service.js', () => ({
   BROWSER_LABELS: {edge: 'Edge', chrome: 'Chrome', brave: 'Brave'},
   allocateLoopbackPort: allocatePort,
+  isWindowsBrowserBinary,
+  isWsl,
   profileDirectory: (alias: string) => `/tmp/nex/ui-profiles/${alias}`,
   resolveBrowserBinary: resolveBrowser,
   spawnDedicatedBrowser: spawnBrowser,
+  startWslWindowsCdpBridge: startBridge,
 }))
 
 const {default: AuthOpen} = await import('../../../src/commands/auth/open.js')
@@ -50,6 +61,10 @@ beforeEach(() => {
   resolveBrowser.mockClear()
   allocatePort.mockClear()
   spawnBrowser.mockClear()
+  isWsl.mockClear().mockReturnValue(false)
+  isWindowsBrowserBinary.mockClear().mockReturnValue(false)
+  startBridge.mockClear()
+  disposeBridge.mockClear()
 })
 afterEach(() => {
   if (originalPatched === undefined) delete process.env.NOW_SDK_KEYCHAIN_PATCHED
@@ -103,6 +118,32 @@ describe('nex auth open', () => {
       cdpUrl: 'http://127.0.0.1:9222',
       session,
     })
+  })
+
+  it('uses the WSL CDP bridge when the resolved binary is Windows Edge', async () => {
+    isWsl.mockReturnValue(true)
+    isWindowsBrowserBinary.mockReturnValue(true)
+    resolveBrowser.mockResolvedValueOnce(
+      '/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
+    )
+    await captureOutput(async () => {
+      const result = await AuthOpen.run(['-a', 'fixture', '--cred-store'], process.cwd())
+      expect(result).toMatchObject({
+        cdpUrl: 'http://172.28.224.1:9333',
+        instanceUrl,
+      })
+    })
+    expect(startBridge).toHaveBeenCalledWith(
+      'fixture',
+      '/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
+    )
+    expect(spawnBrowser).not.toHaveBeenCalled()
+    expect(injectBrowserSessionCdp).toHaveBeenCalledWith({
+      cdpUrl: 'http://172.28.224.1:9333',
+      session,
+      timeoutMs: 30_000,
+    })
+    expect(disposeBridge).toHaveBeenCalled()
   })
 
   it('honors --browser when launching and records chrome in metadata', async () => {

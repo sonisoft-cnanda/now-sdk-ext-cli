@@ -435,7 +435,8 @@ nex auth use dev
 
 Open a verified UI session in a dedicated desktop browser (default Edge). Use
 this for interactive login. Use `nex auth browser-session --output` for
-Playwright. Never print or commit cookie files.
+Playwright. Never print or commit cookie files. `--cred-store` is required in
+WSL. Platform notes: `docs/AUTH_OPEN.md`.
 
 ```bash
 nex auth open -a <alias> --cred-store

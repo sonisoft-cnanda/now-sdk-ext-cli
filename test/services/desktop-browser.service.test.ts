@@ -6,10 +6,17 @@ import {
   allocateLoopbackPort,
   browserCandidates,
   browserLaunchArgs,
+  isWindowsBrowserBinary,
   isWsl,
+  parseDedicatedBrowserPort,
+  parseProcNetRouteGateway,
   profileDirectory,
   resolveBrowserBinary,
   spawnDedicatedBrowser,
+  startWslWindowsCdpBridge,
+  toWslPath,
+  windowsProfileDirectory,
+  wslWindowsHost,
 } from '../../src/services/desktop-browser.service.js'
 
 const cookieValue = 'synthetic-cookie'
@@ -80,6 +87,94 @@ describe('desktop browser discovery', () => {
       env: {PROGRAMFILES: 'C:\\Program Files', 'PROGRAMFILES(X86)': 'C:\\Program Files (x86)'},
       platform: 'win32',
     })[0]).toBe(String.raw`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`)
+  })
+
+  it('maps WSL Windows binaries and the vEthernet gateway', () => {
+    expect(isWindowsBrowserBinary('/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe')).toBe(true)
+    expect(isWindowsBrowserBinary('/tmp/msedge')).toBe(false)
+    expect(windowsProfileDirectory('dev206299', 'C:\\Users\\me\\AppData\\Local'))
+      .toBe(String.raw`C:\Users\me\AppData\Local\nex\ui-profiles\dev206299`)
+    expect(toWslPath(String.raw`C:\Users\me\AppData\Local\Temp\nex-cdp-relay.cjs`))
+      .toBe('/mnt/c/Users/me/AppData/Local/Temp/nex-cdp-relay.cjs')
+    expect(parseProcNetRouteGateway([
+      'Iface Destination Gateway Flags RefCnt Use Metric Mask',
+      'eth0 00000000 01E01CAC 0003 0 0 0 00000000',
+    ].join('\n'))).toBe('172.28.224.1')
+    expect(wslWindowsHost({NEX_WSL_HOST: '172.28.224.1'})).toBe('172.28.224.1')
+    expect(parseDedicatedBrowserPort(
+      String.raw`"C:\Edge\msedge.exe" --user-data-dir=C:\Users\me\AppData\Local\nex\ui-profiles\dev206299 --remote-debugging-port=36389`,
+      'dev206299',
+    )).toBe(36389)
+    expect(parseDedicatedBrowserPort(
+      String.raw`"C:\Edge\msedge.exe" --user-data-dir=C:\Users\me\AppData\Local\Microsoft\Edge\User Data --remote-debugging-port=9222`,
+      'dev206299',
+    )).toBeUndefined()
+  })
+
+  it('bridges Windows Edge CDP through the WSL vEthernet address', async () => {
+    const spawned: Array<{args: string[]; binary: string}> = []
+    const child = {kill: jest.fn(), unref: jest.fn()}
+    const written: string[] = []
+    const dirs: string[] = []
+    const bridge = await startWslWindowsCdpBridge('dev206299', '/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', {
+      exists: async () => true,
+      host: '172.28.224.1',
+      localAppData: 'C:\\Users\\me\\AppData\\Local',
+      mkdir: (async (path: string) => {
+        dirs.push(path)
+      }) as typeof import('node:fs/promises').mkdir,
+      nodeBinary: '/mnt/c/Program Files/nodejs/node.exe',
+      port: 9333,
+      spawn: ((binary: string, args: string[]) => {
+        spawned.push({args, binary})
+        return child
+      }) as typeof import('node:child_process').spawn,
+      writeFile: (async (path: string) => {
+        written.push(String(path))
+      }) as typeof import('node:fs/promises').writeFile,
+    })
+    expect(bridge.cdpUrl).toBe('http://172.28.224.1:9333')
+    expect(bridge.userDataDir).toBe(String.raw`C:\Users\me\AppData\Local\nex\ui-profiles\dev206299`)
+    expect(dirs).toContain('/mnt/c/Users/me/AppData/Local/nex/ui-profiles/dev206299')
+    expect(written).toContain('/mnt/c/Users/me/AppData/Local/Temp/nex-cdp-relay.cjs')
+    expect(spawned[0]?.args).toEqual(expect.arrayContaining([
+      String.raw`--user-data-dir=C:\Users\me\AppData\Local\nex\ui-profiles\dev206299`,
+      '--remote-debugging-port=9333',
+    ]))
+    expect(spawned[1]).toEqual({
+      binary: '/mnt/c/Program Files/nodejs/node.exe',
+      args: [String.raw`C:\Users\me\AppData\Local\Temp\nex-cdp-relay.cjs`, '172.28.224.1', '9333'],
+    })
+    expect(JSON.stringify(spawned)).not.toContain(cookieValue)
+    bridge.dispose()
+    expect(child.kill).toHaveBeenCalled()
+  })
+
+  it('reuses a dedicated Windows Edge that is already running', async () => {
+    const spawned: Array<{args: string[]; binary: string}> = []
+    const child = {kill: jest.fn(), unref: jest.fn()}
+    const bridge = await startWslWindowsCdpBridge('dev206299', '/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', {
+      existingPort: 36389,
+      exists: async () => true,
+      host: '172.28.224.1',
+      localAppData: 'C:\\Users\\me\\AppData\\Local',
+      mkdir: (async () => undefined) as typeof import('node:fs/promises').mkdir,
+      nodeBinary: '/mnt/c/Program Files/nodejs/node.exe',
+      port: 36389,
+      spawn: ((binary: string, args: string[]) => {
+        spawned.push({args, binary})
+        return child
+      }) as typeof import('node:child_process').spawn,
+      writeFile: (async () => undefined) as typeof import('node:fs/promises').writeFile,
+    })
+    expect(bridge.cdpUrl).toBe('http://172.28.224.1:36389')
+    expect(spawned).toHaveLength(1)
+    expect(spawned[0]?.args).toEqual([
+      String.raw`C:\Users\me\AppData\Local\Temp\nex-cdp-relay.cjs`,
+      '172.28.224.1',
+      '36389',
+    ])
+    expect(JSON.stringify(spawned)).not.toContain(cookieValue)
   })
 
   it('spawns detached without cookie values on argv', () => {

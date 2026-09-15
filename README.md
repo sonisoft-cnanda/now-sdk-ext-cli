@@ -6327,9 +6327,10 @@ nex auth open -a bcbsscdev --cred-store
 ```
 
 Mints a verified cookie session from the stored SDK alias and opens it in a
-dedicated Edge window. See [docs/AUTH_OPEN.md](docs/AUTH_OPEN.md). This is not
-your daily browser profile; close the window when finished. `--browser chrome|brave`
-and `--cdp http://127.0.0.1:9222` are optional.
+dedicated Edge window. See [docs/AUTH_OPEN.md](docs/AUTH_OPEN.md) for macOS,
+Windows, and WSL. This is not your daily browser profile; close the window
+when finished. `--browser chrome|brave` and `--cdp http://127.0.0.1:9222` are
+optional.
 
 ## Playwright sessions from SDK aliases
 

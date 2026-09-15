@@ -8,9 +8,12 @@ import {
   allocateLoopbackPort,
   BROWSER_LABELS,
   type DesktopBrowserName,
+  isWindowsBrowserBinary,
+  isWsl,
   profileDirectory,
   resolveBrowserBinary,
   spawnDedicatedBrowser,
+  startWslWindowsCdpBridge,
 } from '../../services/desktop-browser.service.js'
 
 function remediationOf(error: unknown): string | undefined {
@@ -48,20 +51,31 @@ export default class AuthOpen extends Command {
     }
 
     const browser = flags.browser as DesktopBrowserName
+    let disposeBridge: (() => void) | undefined
     try {
       const session = await createBrowserSession({alias: flags.auth})
       const path = flags.output ? await writeBrowserSession(session, flags.output, flags.force) : undefined
       let cdpUrl = flags.cdp
       if (!cdpUrl) {
         const binary = await resolveBrowserBinary(browser)
-        const port = await allocateLoopbackPort()
-        const userDataDir = profileDirectory(flags.auth)
-        await mkdir(userDataDir, {mode: 0o700, recursive: true})
-        spawnDedicatedBrowser({binary, port, userDataDir})
-        cdpUrl = `http://127.0.0.1:${port}`
+        if (isWsl() && isWindowsBrowserBinary(binary)) {
+          const bridge = await startWslWindowsCdpBridge(flags.auth, binary)
+          cdpUrl = bridge.cdpUrl
+          disposeBridge = bridge.dispose
+        } else {
+          const port = await allocateLoopbackPort()
+          const userDataDir = profileDirectory(flags.auth)
+          await mkdir(userDataDir, {mode: 0o700, recursive: true})
+          spawnDedicatedBrowser({binary, port, userDataDir})
+          cdpUrl = `http://127.0.0.1:${port}`
+        }
       }
 
-      await injectBrowserSessionCdp({cdpUrl, session})
+      await injectBrowserSessionCdp({
+        cdpUrl,
+        session,
+        ...(disposeBridge ? {timeoutMs: 30_000} : {}),
+      })
       const metadata = {
         alias: session.alias,
         browser,
@@ -76,6 +90,8 @@ export default class AuthOpen extends Command {
       const remediation = remediationOf(error)
       if (remediation) this.error(remediation)
       throw error
+    } finally {
+      disposeBridge?.()
     }
   }
 }
