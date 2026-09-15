@@ -51,7 +51,7 @@
     "eslint-config-prettier": "^10",
     "jest": "^30.4.2",
     "jest-junit": "^17.0.0",
-    "oclif": "^4",
+    "oclif": "^6",
     "rimraf": "^6.0.1",
     "semantic-release": "^25.0.8",
     "shx": "^0.4.0",
