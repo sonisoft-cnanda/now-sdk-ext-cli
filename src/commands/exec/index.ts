@@ -8,13 +8,14 @@ import * as readline from 'node:readline';
 
 import { AuthenticatedCommand } from '../../common/authenticated-command.js'
 import { getCachedScopes } from '../../common/scope-autocomplete.js'
+import { isScriptScopeError, scriptScopeSuggestions } from '../../common/script-scope-error.js'
 import { ScriptParameterService } from '../../services/script-parameter.service.js'
 
 export class Exec extends AuthenticatedCommand<typeof Exec> {
 
   static args = {
     scope: Args.string({
-      description: 'Scope to execute script in. Use "global" for global scope.',
+      description: 'Scope to execute script in: "global", the scope of an application developed on the instance (sys_app), or a scope sys_id. Installed store apps cannot be used.',
       required: true
     }),
     file: Args.string({description: 'File to execute in scripts background. If omitted, starts REPL mode.', required: false}),
@@ -56,6 +57,10 @@ static description = 'Execute JavaScript on a ServiceNow instance remotely using
     '  • Multiple parameters supported\n' +
     '  • All occurrences of each placeholder are replaced\n' +
     '  • Example: {token}, {username}, {environment}\n\n' +
+    'Scopes:\n' +
+    '  Scripts - Background runs in "global" or in an application developed on the instance (sys_app).\n' +
+    '  Installed store/repository apps (sys_store_app) cannot be used: run in global and call their\n' +
+    '  APIs fully qualified (e.g. sn_app.Util). An unusable scope fails before the script is sent.\n\n' +
     'REPL Controls:\n' +
     '  • Press Enter to add a new line\n' +
     '  • Type .exec or press Ctrl+D to execute the script\n' +
@@ -153,6 +158,14 @@ static flags = {
     }
   }
 
+  /** The flags that pick this connection, for repeating on a suggested command. */
+  private connectionArgs(): string {
+    return [
+      this.flags.auth ? `--auth ${this.flags.auth}` : '',
+      this.flags['cred-store'] ? '--cred-store' : '',
+    ].filter(Boolean).join(' ');
+  }
+
   private async executeFromFile(filePath: string, scope: string, params?: string): Promise<void> {
     this.log(`Executing script from file: ${filePath}`);
     this.log(`Scope: ${scope}`);
@@ -169,6 +182,12 @@ static flags = {
       await this.executeScript(script, scope);
     } catch (error) {
       this._logger.error("Error occurred when executing background script from file.", error as Error);
+      // The message already says what is wrong and what to do; the suggestions turn
+      // that into commands. The script was never sent to the instance.
+      if (isScriptScopeError(error)) {
+        this.error(error.message, {exit: 2, suggestions: scriptScopeSuggestions(error, this.connectionArgs())});
+      }
+
       this.error(error as Error);
     }
   }
@@ -241,6 +260,13 @@ static flags = {
         this.log(`\n  ${'─'.repeat(63)}`);
         this.log(`  ✗ Script execution failed`);
         this.log(`  Error: ${(error as Error).message}\n`);
+        if (isScriptScopeError(error)) {
+          for (const suggestion of scriptScopeSuggestions(error, this.connectionArgs())) {
+            this.log(`  • ${suggestion}`);
+          }
+
+          this.log(`  (Exit and restart the REPL with a different scope.)\n`);
+        }
       }
 
       scriptBuffer = [];

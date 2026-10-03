@@ -2097,7 +2097,8 @@ USAGE
     <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-p <value>]
 
 ARGUMENTS
-  SCOPE   Scope to execute script in. Use "global" for global scope.
+  SCOPE   Scope to execute script in: "global", the scope of an application developed on the instance (sys_app), or a
+          scope sys_id. Installed store apps cannot be used.
   [FILE]  File to execute in scripts background. If omitted, starts REPL mode.
 
 FLAGS
@@ -2147,6 +2148,11 @@ DESCRIPTION
   • Multiple parameters supported
   • All occurrences of each placeholder are replaced
   • Example: {token}, {username}, {environment}
+
+  Scopes:
+  Scripts - Background runs in "global" or in an application developed on the instance (sys_app).
+  Installed store/repository apps (sys_store_app) cannot be used: run in global and call their
+  APIs fully qualified (e.g. sn_app.Util). An unusable scope fails before the script is sent.
 
   REPL Controls:
   • Press Enter to add a new line

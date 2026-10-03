@@ -16,6 +16,8 @@ nex exec global --auth my-instance
 nex exec x_my_custom_app --auth my-instance
 ```
 
+The scope must be `global` or an application developed on the instance (`sys_app`). Installed store apps cannot be used; if the scope is unusable, each execution reports why and suggests what to run instead — exit and restart the REPL with a different scope.
+
 ## REPL Interface
 
 When you start the REPL, you'll see:

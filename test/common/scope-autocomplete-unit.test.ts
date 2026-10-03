@@ -59,7 +59,7 @@ describe('Scope Autocomplete - Unit Tests', () => {
         sysparm_query: 'scopeSTARTSWITHx_test'
       })
       
-      const url = `https://test.service-now.com/api/now/table/sys_scope?${params.toString()}`
+      const url = `https://test.service-now.com/api/now/table/sys_app?${params.toString()}`
       
       expect(url).toContain('sysparm_fields=scope%2Cname')
       expect(url).toContain('sysparm_limit=50')

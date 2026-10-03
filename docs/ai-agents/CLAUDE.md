@@ -604,7 +604,7 @@ Execute JavaScript on a ServiceNow instance using Scripts - Background. Full Gli
 
 | Arg | Type | Required | Description |
 |-----|------|----------|-------------|
-| `scope` | string | yes | Scope to execute in (`global` for global scope, or app scope) |
+| `scope` | string | yes | `global`, the scope of an application developed on the instance (a `sys_app`, e.g. `x_acme_myapp`), or a scope sys_id. Installed store apps (`sys_store_app`) cannot be used |
 | `file` | string | no | Script file path. If omitted, starts interactive REPL mode |
 
 | Flag | Short | Type | Required | Default | Description |
@@ -621,6 +621,14 @@ nex exec global ./scripts/query.js -p '{"table":"incident","query":"active=true"
 # Start interactive REPL
 nex exec global --auth dev
 ```
+
+**Scope rules.** Scripts - Background only runs in `global` or in an application developed on the instance (`sys_app`). An unusable scope fails *before* the script is sent, with exit code 2, a message saying what the scope is (e.g. an installed store app) and suggestions:
+
+```text
+Error: Scope 'x_acme_util' (Acme Utilities) is an installed store/repository application (sys_store_app). Scripts - Background can only run in "global" or in an application developed on this instance (sys_app). Run the script in "global" and call the application's API fully qualified (e.g. x_acme_util.MyScriptInclude), or use an application developed on this instance.
+```
+
+To use a store app's API, run in `global` and call it fully qualified (`x_acme_util.MyScriptInclude`). To list the scopes you can run in: `nex query -t sys_app -f scope,name --auth dev`.
 
 ---
 
