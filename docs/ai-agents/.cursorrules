@@ -89,6 +89,8 @@ nex bulk update -t incident -q "active=true" -d '{"priority":"4"}' --auth dev
 | `nex exec <scope> <file>` | Execute script file | `-p` params JSON |
 | `nex exec <scope>` | Start interactive REPL | (no file = REPL) |
 
+`<scope>` must be `global` or a `sys_app` (developed-on-instance) scope; store apps are rejected with exit 2 — run in `global` and call them fully qualified.
+
 ### Script Sync
 
 | Command | Description | Key Flags |

@@ -71,12 +71,14 @@ export async function queryScopes(authAlias: string | undefined, prefix: string 
     };
     const instance = new ServiceNowInstance(snSettings);
 
-    // Query sys_scope table via REST API
-    const url = `${instance.getHost()}/api/now/table/sys_scope`;
+    // Query sys_app, not sys_scope: Scripts - Background only runs in global or an
+    // application developed on the instance, so store apps would be offered only to be
+    // rejected. Global-scoped sys_apps are excluded — exec already offers "global".
+    const url = `${instance.getHost()}/api/now/table/sys_app`;
     const params = new URLSearchParams({
       sysparm_fields: 'scope,name',
       sysparm_limit: '50',
-      sysparm_query: prefix ? `scopeSTARTSWITH${prefix}^ORnameSTARTSWITH${prefix}` : ''
+      sysparm_query: `scope!=global${prefix ? `^scopeSTARTSWITH${prefix}^ORnameSTARTSWITH${prefix}` : ''}`
     });
 
     const response = await fetch(`${url}?${params.toString()}`, {
