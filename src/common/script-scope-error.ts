@@ -12,8 +12,11 @@ export const SCRIPT_SCOPE_ERROR_CODE = 'NEX_SCRIPT_SCOPE_UNAVAILABLE'
 
 export interface ScriptScopeErrorLike extends Error {
   code: string
+  /** The record the scope matched when it exists but cannot be used, e.g. a store app. */
+  foundAs?: {name?: string; scope?: string}
   reason?: string
   remediation?: string
+  /** The scope exactly as passed: a name, or a sys_id. */
   scope?: string
 }
 
@@ -30,8 +33,11 @@ export function isScriptScopeError(error: unknown): error is ScriptScopeErrorLik
  */
 export function scriptScopeSuggestions(error: ScriptScopeErrorLike, connectionArgs: string = ''): string[] {
   const auth = connectionArgs.trim() ? ` ${connectionArgs.trim()}` : ''
+  // When a sys_id was passed, the record it matched supplies the scope name.
+  const passedSysId = /^[\dA-Fa-f]{32}$/.test(error.scope ?? '')
+  const scopeName = error.foundAs?.scope || (passedSysId ? '' : error.scope ?? '')
   // Letters only: the fragment goes into a quoted encoded query.
-  const fragment = (error.scope ?? '').replace(/^x_/, '').replaceAll(/[^A-Za-z0-9]/g, ' ').trim().split(/\s+/)[0]
+  const fragment = scopeName.replace(/^x_/, '').replaceAll(/[^A-Za-z0-9]/g, ' ').trim().split(/\s+/)[0]
   const listScopes =
     `List the scopes scripts can run in: nex query -t sys_app -f scope,name` +
     `${fragment ? ` -q 'scopeLIKE${fragment}'` : ''}${auth}`
@@ -44,7 +50,7 @@ export function scriptScopeSuggestions(error: ScriptScopeErrorLike, connectionAr
 
     case 'NOT_A_DEVELOPED_APP': {
       return [
-        `Run in global and call the app fully qualified, e.g. ${error.scope ?? '<scope>'}.MyScriptInclude: nex exec global <file>${auth}`,
+        `Run in global and call the app fully qualified, e.g. ${scopeName || '<scope>'}.MyScriptInclude: nex exec global <file>${auth}`,
         listScopes,
       ]
     }

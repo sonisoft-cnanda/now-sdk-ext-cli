@@ -126,6 +126,34 @@ describe('exec - unusable scope', () => {
     expect(suggestions[0]).toContain('nex query -t sys_app')
   })
 
+  it('should name the app\'s scope, not the sys_id, when a store app\'s sys_id was passed', async () => {
+    const sysId = '040813ec1b374ed05048a979b04bcbc5'
+    mockExecuteScript.mockRejectedValue(Object.assign(
+      scriptScopeError('NOT_A_DEVELOPED_APP', sysId, `Scope sys_id '${sysId}' (Catalog Utilities, scope 'x_acme_cat_util') is an installed store/repository application (sys_store_app).`),
+      { foundAs: { name: 'Catalog Utilities', scope: 'x_acme_cat_util' } },
+    ))
+
+    const { error } = await captureOutput(async () => Exec.run([sysId, scriptFile, '--auth', 'qa'], ROOT))
+
+    expect(exitCodeOf(error)).toBe(2)
+    const suggestions = ((error as unknown as { suggestions?: string[] }).suggestions ?? []).join('\n')
+    expect(suggestions).toContain('x_acme_cat_util.MyScriptInclude')
+    expect(suggestions).toContain("-q 'scopeLIKEacme'")
+    expect(suggestions).not.toContain(sysId)
+  })
+
+  it('should list scopes without a filter when an unknown sys_id was passed', async () => {
+    const sysId = '0123456789abcdef0123456789abcdef'
+    mockExecuteScript.mockRejectedValue(scriptScopeError(
+      'SCOPE_NOT_FOUND', sysId, `No application with sys_id '${sysId}' exists on this instance.`))
+
+    const { error } = await captureOutput(async () => Exec.run([sysId, scriptFile, '--auth', 'qa'], ROOT))
+
+    const suggestions = ((error as unknown as { suggestions?: string[] }).suggestions ?? []).join('\n')
+    expect(suggestions).toContain('nex query -t sys_app -f scope,name --auth qa')
+    expect(suggestions).not.toContain('scopeLIKE')
+  })
+
   it('should leave other failures on the generic path', async () => {
     mockExecuteScript.mockRejectedValue(new Error('Error executing script: Status 500'))
 
