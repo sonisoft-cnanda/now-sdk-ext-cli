@@ -25,10 +25,16 @@ static examples = [
       description: 'List applications with available updates',
     },
   ]
-static flags = {
+  static flags = {
     limit: Flags.integer({
       default: 20,
       description: 'Maximum number of results to return',
+      required: false,
+    }),
+    offset: Flags.integer({
+      default: 0,
+      description: 'Number of results to skip',
+      min: 0,
       required: false,
     }),
     tab: Flags.string({
@@ -51,6 +57,7 @@ static flags = {
       const tab = flags.tab as string
       const {term} = flags
       const limit = flags.limit as number
+      const offset = flags.offset as number
 
       this.log(`Searching store applications (tab: ${tab})...`)
       if (term) {
@@ -60,11 +67,16 @@ static flags = {
       const appMgr = new ApplicationManager(this.instance)
       const results = await appMgr.searchApplications({
         limit,
+        offset,
         searchKey: term,
         tabContext: tab as APP_TAB_CONTEXT,
       })
 
-      const lines = formatSearchResults(results, (flags.json ?? false) ?? false)
+      if (!Array.isArray(results)) {
+        throw new TypeError('searchApplications did not return an array — core contract changed')
+      }
+
+      const lines = formatSearchResults(results, flags.json ?? false, limit)
       for (const line of lines) {
         (flags.json ?? false) ? console.log(line) : this.log(line)
       }
