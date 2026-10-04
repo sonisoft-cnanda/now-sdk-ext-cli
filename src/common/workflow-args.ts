@@ -1,4 +1,4 @@
-import type { WorkflowManager } from '@sonisoft/now-sdk-ext-core'
+import type { WorkflowExport, WorkflowManager } from '@sonisoft/now-sdk-ext-core'
 
 import { readFileSync } from 'node:fs'
 
@@ -87,4 +87,25 @@ export async function resolveExit(wm: WorkflowManager, versionSysId: string, act
   const match = exits.find(c => c.name.toLowerCase() === ref.toLowerCase())
   if (match) return match.sysId
   throw new Error(`The activity has no exit '${ref}'. Exits: ${exits.map(c => c.name).join(', ') || '(none)'}`)
+}
+
+/**
+ * A workflow export to work on: read from `--file` (a `nex workflow export` document, no
+ * instance needed) or exported from the instance.
+ */
+export async function loadWorkflowExport(
+  wm: () => WorkflowManager, workflow: string | undefined, file: string | undefined, version: 'current' | 'draft' | 'published',
+): Promise<WorkflowExport> {
+  if (file) {
+    if (workflow) throw new Error('Give either a workflow or --file, not both.')
+    const parsed = JSON.parse(readFileSync(file, 'utf8')) as Partial<WorkflowExport>
+    if (parsed?.format !== 'now-sdk-ext/legacy-workflow@1' || !Array.isArray(parsed.activities)) {
+      throw new Error(`${file} is not a \`nex workflow export\` document.`)
+    }
+
+    return parsed as WorkflowExport
+  }
+
+  if (!workflow) throw new Error('Specify the workflow, or --file with a `nex workflow export` document.')
+  return wm().exportWorkflow(workflow, { version })
 }

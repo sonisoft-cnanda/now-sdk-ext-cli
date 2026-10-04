@@ -16,8 +16,8 @@ static description = 'Export a legacy workflow version as one complete JSON defi
     'the instance, including whether they pause the workflow), display names for referenced records, the subflows it ' +
     'calls, and the catalog items and workflows that use it.\n\n' +
     'Exports your checked-out draft when you have one, otherwise the published version; --version chooses. ' +
-    'The JSON goes to stdout (or --output). Turn it into an outline or graph with the legacy-workflow skill\'s ' +
-    'workflow-graph.sh.'
+    'The JSON goes to stdout (or --output). Read it with `nex workflow outline --file` (outline, analysis, ' +
+    'Mermaid) and plan its move to Flow Designer with `nex workflow convert --file`.'
 static examples = [
     {
       command: '<%= config.bin %> <%= command.id %> "Laptop Request" --auth dev > laptop-request.json',

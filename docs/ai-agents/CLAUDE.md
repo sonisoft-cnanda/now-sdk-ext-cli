@@ -199,9 +199,17 @@ Every command at a glance:
 | `nex update-set inspect` | Inspect update set components |
 | `nex update-set clone` | Clone an update set and its records |
 | `nex update-set move` | Move records between update sets |
-| **Workflow** | |
-| `nex workflow create` | Create a workflow from a JSON specification |
-| `nex workflow publish` | Publish a workflow version |
+| **Workflow** (legacy Workflow Editor workflows) | |
+| `nex workflow list` / `show` | Find workflows; show a version's activities, exits, variables and transitions |
+| `nex workflow definitions` | Activity types as the instance defines them (`--script`, `--usage`) |
+| `nex workflow export` | One complete JSON definition of a version (read-only) |
+| `nex workflow outline` | Outline, node list, analysis or Mermaid graph of a workflow or an export file (read-only) |
+| `nex workflow convert` | Plan the move to Flow Designer and write a Fluent skeleton (read-only) |
+| `nex workflow new` / `checkout` / `discard` | Create a workflow; check out a draft; throw a draft away |
+| `nex workflow activity add\|update\|remove` | Edit activities (variables via the activity form) on your draft |
+| `nex workflow transition add\|remove`, `nex workflow condition add\|update\|remove` | Wire transitions and exits on your draft |
+| `nex workflow validate` / `publish` | Validate without publishing; publish your draft |
+| `nex workflow create` | Create a workflow from a JSON specification (direct inserts) |
 | **XML** | |
 | `nex xml export` | Export a record as XML |
 | `nex xml import` | Import XML records into an instance |
@@ -1476,7 +1484,29 @@ nex update-set move --target <target-id> --source <source-id> --auth dev
 
 ### Workflow
 
-Create and manage ServiceNow workflows.
+Legacy workflows (the Workflow Editor's `wf_*` records, not Flow Designer). Edits happen on a
+**draft** checked out to you, through the same server paths as the Workflow Editor; publish
+writes to your current update set. Activity types differ per instance: read them with
+`nex workflow definitions <type>` before adding one. The servicenow-skills `legacy-workflow`
+skill covers the details.
+
+```bash
+nex workflow export "Laptop Request" -o laptop.json --auth dev        # read-only
+nex workflow outline --file laptop.json [--analysis|--nodes|--mermaid] [--flow-hints]
+nex workflow convert --file laptop.json --plan laptop.plan.json --fluent ./my-app
+
+nex workflow checkout "Laptop Request" --auth dev
+nex workflow definitions Timer --auth dev
+nex workflow activity add -w "Laptop Request" -t Timer -n "Wait a day" --insert-after "Manager approval" \
+    --var timer_type= --var duration="1 00:00:00" --auth dev
+nex workflow validate "Laptop Request" --auth dev
+nex workflow publish -w "Laptop Request" --auth dev
+```
+
+`outline` and `convert` take a workflow (exported from the instance) or `--file` with a saved
+export, which needs no credentials. `convert --fluent <app>` writes
+`src/fluent/flows/<name>.now.ts` (refusing to overwrite without `--force`); it builds as
+generated, with `TODO(convert)` comments where design work remains.
 
 #### `nex workflow create`
 
@@ -1492,14 +1522,17 @@ nex workflow create -s ./workflow-spec.json --auth dev
 
 #### `nex workflow publish`
 
-Publish a workflow version.
+Validate and publish a workflow version: your checked-out draft of `--workflow`, or `--version-id`.
 
 | Flag | Short | Type | Required | Default | Description |
 |------|-------|------|----------|---------|-------------|
-| `--version-id` | `-v` | string | yes | — | Workflow version sys_id |
-| `--start-activity` | `-s` | string | yes | — | Start activity sys_id |
+| `--workflow` | `-w` | string | one of these | — | Workflow name or sys_id; publishes your draft |
+| `--version-id` | `-v` | string | one of these | — | Workflow version sys_id |
+| `--start-activity` | `-s` | string | no | — | Start activity sys_id (sets it first; needs `--version-id`) |
+| `--allow-warnings` | | boolean | no | false | Publish even when validation reports warnings |
 
 ```bash
+nex workflow publish -w "Laptop Request" --auth dev
 nex workflow publish -v <version-id> -s <start-activity-id> --auth dev
 ```
 

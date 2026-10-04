@@ -187,6 +187,10 @@ protected instance!:ServiceNowInstance;
     // decides per REQUEST, so `update-set current` reading or writing depending on
     // --set, and `script-sync sync` going both ways, need no special handling here.
     installCliPolicy(this.flags as PolicyFlags, (message) => this.authLogger.warn(message));
+
+    // A command working offline (from a file) must not demand credentials it will not use.
+    if (!this.needsInstance()) return;
+
     // const wrapper:CredentialWrapper = new CredentialWrapper();
     // const credential:Creds = await (flags.auth ? wrapper.getStoredCredentialsByAlias(flags.auth) : wrapper.getStoredCredentialsByAlias( 'fluent-default'));
     // const credentialArgs = {"_": "get-credentials", auth: flags.auth || "fluent-default"};
@@ -222,6 +226,14 @@ protected instance!:ServiceNowInstance;
       credentialProvider: () => resolveSessionCredentials(alias),
     }
     this.instance = new ServiceNowInstance(snSettings);
+  }
+
+  /**
+   * Whether this invocation talks to an instance. Commands that can also work from a
+   * file override this (reading `this.flags`), so they run without credentials there.
+   */
+  protected needsInstance(): boolean {
+    return true;
   }
 
   /**
