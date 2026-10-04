@@ -53,6 +53,10 @@ static flags = {
   async run(): Promise<void> {
     const { args, flags } = await this.parse(Outline)
     try {
+      if ((flags.analysis || flags.mermaid) && (flags['flow-hints'] || flags['all-values'] || flags['full-scripts'])) {
+        throw new Error('--flow-hints, --all-values and --full-scripts apply to the outline and --nodes.')
+      }
+
       const data = await loadWorkflowExport(() => new WorkflowManager(this.instance), args.workflow, flags.file, flags.version)
       if (flags.json && flags.analysis) {
         console.log(JSON.stringify(analyzeWorkflow(data), null, 2))

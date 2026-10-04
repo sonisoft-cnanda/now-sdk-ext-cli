@@ -103,6 +103,11 @@ describe('workflow outline / convert - Unit Tests', () => {
       expect(JSON.parse(stdout)).toEqual({ pathCount: 1 })
     })
 
+    it('refuses view options on views that ignore them', async () => {
+      expect((await run(Outline, ['--file', exportFile(), '--analysis', '--flow-hints'])).error?.message)
+        .toContain('--flow-hints, --all-values and --full-scripts apply to the outline and --nodes.')
+    })
+
     it('refuses files that are not exports, both inputs at once, and no input', async () => {
       expect((await run(Outline, ['--file', exportFile({ result: [] })])).error?.message).toContain('is not a `nex workflow export` document')
       expect((await run(Outline, ['Laptop', '--file', exportFile()])).error?.message).toContain('either a workflow or --file')
@@ -132,6 +137,12 @@ describe('workflow outline / convert - Unit Tests', () => {
       const again = await run(Convert, ['--file', exportFile(), '--fluent', app])
       expect(again.error?.message).toContain('already exists. Pass --force to overwrite it.')
       expect((await run(Convert, ['--file', exportFile(), '--fluent', app, '--force'])).error).toBeUndefined()
+    })
+
+    it('refuses to write the plan over the export it reads', async () => {
+      const file = exportFile()
+      expect((await run(Convert, ['--file', file, '--plan', file])).error?.message).toContain('--plan would overwrite the export given with --file.')
+      expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual(EXPORT)
     })
 
     it('exports from the instance and returns plan and files with --json', async () => {

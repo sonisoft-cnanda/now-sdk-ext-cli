@@ -48,6 +48,7 @@ static flags = {
     try {
       const wm = new WorkflowManager(this.instance)
       if ((flags.script || flags.usage) && !args.type) throw new Error('--script and --usage need an activity type.')
+      if (flags.script && flags.usage) throw new Error('--script and --usage are separate views; run them one at a time.')
       let lines: string[]
       if (!args.type) {
         lines = display.formatActivityTypes(await wm.listActivityDefinitions({

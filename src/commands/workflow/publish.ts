@@ -61,7 +61,7 @@ static flags = {
 
       if (flags['start-activity']) {
         const versionId = flags['version-id'] as string
-        this.log(`Publishing workflow version ${versionId}...`)
+        if (!json) this.log(`Publishing workflow version ${versionId}...`)
         await workflowMgr.publishWorkflow({
           startActivitySysId: flags['start-activity'],
           versionSysId: versionId,
@@ -74,7 +74,7 @@ static flags = {
       }
 
       const versionId = await resolveDraftVersion(workflowMgr, flags.workflow, flags['version-id'])
-      this.log(`Publishing workflow version ${versionId}...`)
+      if (!json) this.log(`Publishing workflow version ${versionId}...`)
       const result = await workflowMgr.publish(versionId, { allowWarnings: flags['allow-warnings'] })
       for (const line of displayService.formatPublish(result, json)) {
         json ? console.log(line) : this.log(line)

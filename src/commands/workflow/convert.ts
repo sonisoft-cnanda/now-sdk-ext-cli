@@ -69,6 +69,7 @@ static flags = {
       }
 
       if (flags.plan) {
+        if (flags.file && resolve(flags.plan) === resolve(flags.file)) throw new Error('--plan would overwrite the export given with --file.')
         writeFileSync(flags.plan, JSON.stringify(plan, null, 2) + '\n', 'utf8')
         notes.push(`Saved the plan to ${flags.plan}.`)
       }

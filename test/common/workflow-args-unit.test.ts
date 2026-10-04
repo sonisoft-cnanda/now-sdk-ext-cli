@@ -3,7 +3,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { parseInput, parseVariables, resolveActivity, resolveDraftVersion, resolveReadableVersion } from '../../src/common/workflow-args.js'
+import { parseInput, parseVariables, resolveActivity, resolveDraftVersion, resolveExit, resolveReadableVersion } from '../../src/common/workflow-args.js'
 
 const ID = 'a'.repeat(32)
 
@@ -11,7 +11,12 @@ function manager(overrides: Record<string, unknown> = {}): any {
   return {
     getDraftVersion: jest.fn<any>().mockResolvedValue('draft-1'),
     getWorkflowDefinition: jest.fn<any>().mockResolvedValue({
-      activities: [{ name: 'Begin', sysId: 'b' }, { name: 'Wait', sysId: 'w1' }, { name: 'Twin', sysId: 't1' }, { name: 'twin', sysId: 't2' }],
+      activities: [
+        { conditions: [{ name: 'Always', sysId: 'c1' }], name: 'Begin', sysId: 'b' }, { name: 'Wait', sysId: 'w1' },
+        { name: 'Twin', sysId: 't1' }, { name: 'twin', sysId: 't2' },
+        { conditions: [{ name: 'Approved', sysId: 'e1' }, { name: 'approved', sysId: 'e2' }, { name: 'Rejected', sysId: ID }], name: 'Appr', sysId: 'ap' },
+        { name: 'Listed', sysId: 'c'.repeat(32) },
+      ],
     }),
     resolveWorkflow: jest.fn<any>(),
     ...overrides,
@@ -46,10 +51,12 @@ describe('workflow-args', () => {
   })
 
   describe('versions', () => {
-    it('uses --version as given, otherwise the current user\'s draft', async () => {
+    it('uses --version as given, otherwise the current user\'s draft, and refuses a version that is not that draft', async () => {
       const wm = manager()
-      await expect(resolveDraftVersion(wm, 'WF', 'given')).resolves.toBe('given')
+      await expect(resolveDraftVersion(wm, undefined, 'given')).resolves.toBe('given')
       await expect(resolveDraftVersion(wm, 'WF')).resolves.toBe('draft-1')
+      await expect(resolveDraftVersion(wm, 'WF', 'draft-1')).resolves.toBe('draft-1')
+      await expect(resolveDraftVersion(wm, 'WF', 'other')).rejects.toThrow("Version other is not your draft of 'WF' (that is draft-1)")
       await expect(resolveDraftVersion(wm)).rejects.toThrow(/Specify the workflow/)
     })
 
@@ -65,16 +72,25 @@ describe('workflow-args', () => {
   })
 
   describe('resolveActivity', () => {
-    it('passes sys_ids through and resolves unique names case-insensitively', async () => {
+    it('accepts sys_ids on the version and resolves unique names case-insensitively', async () => {
       const wm = manager()
-      await expect(resolveActivity(wm, 'v', ID)).resolves.toBe(ID)
-      expect(wm.getWorkflowDefinition).not.toHaveBeenCalled()
+      await expect(resolveActivity(wm, 'v', 'c'.repeat(32))).resolves.toBe('c'.repeat(32))
+      await expect(resolveActivity(wm, 'v', ID)).rejects.toThrow(`Activity ${ID} is not on workflow version v.`)
       await expect(resolveActivity(wm, 'v', 'wait')).resolves.toBe('w1')
+    })
+
+    it('resolves exits of the activity only, refusing shared names', async () => {
+      const wm = manager()
+      await expect(resolveExit(wm, 'v', 'ap', 'rejected')).resolves.toBe(ID)
+      await expect(resolveExit(wm, 'v', 'ap', ID)).resolves.toBe(ID)
+      await expect(resolveExit(wm, 'v', 'b', ID)).rejects.toThrow(`Exit ${ID} does not belong to that activity.`)
+      await expect(resolveExit(wm, 'v', 'ap', 'Approved')).rejects.toThrow("2 exits are named 'Approved'; use a sys_id: e1, e2")
+      await expect(resolveExit(wm, 'v', 'ap', 'Maybe')).rejects.toThrow("The activity has no exit 'Maybe'. Exits: Approved, approved, Rejected")
     })
 
     it('explains missing and ambiguous names', async () => {
       const wm = manager()
-      await expect(resolveActivity(wm, 'v', 'Nope')).rejects.toThrow("No activity named 'Nope'. Activities: Begin, Wait, Twin, twin")
+      await expect(resolveActivity(wm, 'v', 'Nope')).rejects.toThrow("No activity named 'Nope'. Activities: Begin, Wait, Twin, twin, Appr, Listed")
       await expect(resolveActivity(wm, 'v', 'TWIN')).rejects.toThrow("2 activities are named 'TWIN'; use a sys_id: t1, t2")
     })
   })

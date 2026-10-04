@@ -44,8 +44,17 @@ static flags = {
       const json = JSON.stringify(exported, null, 2)
       if (flags.output) {
         writeFileSync(flags.output, json + '\n', 'utf8')
-        this.log(`Exported '${exported.workflow.name}' version ${exported.version.sysId} `
-          + `(${exported.activities.length} activities, ${exported.transitions.length} transitions) to ${flags.output}`)
+        const summary = {
+          activities: exported.activities.length, file: flags.output, transitions: exported.transitions.length,
+          versionSysId: exported.version.sysId, workflow: exported.workflow.name,
+        }
+        if (flags.json) {
+          console.log(JSON.stringify(summary, null, 2))
+          return
+        }
+
+        this.log(`Exported '${summary.workflow}' version ${summary.versionSysId} `
+          + `(${summary.activities} activities, ${summary.transitions} transitions) to ${flags.output}`)
         return
       }
 

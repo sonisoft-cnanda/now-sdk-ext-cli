@@ -33,9 +33,17 @@ export function parseVariables(vars: string[] | undefined, varsFile: string | un
  * checked-out draft of `--workflow`.
  */
 export async function resolveDraftVersion(wm: WorkflowManager, workflow?: string, version?: string): Promise<string> {
-  if (version) return version
-  if (!workflow) throw new Error('Specify the workflow (--workflow) or the draft version (--version).')
-  return wm.getDraftVersion(workflow)
+  if (!workflow) {
+    if (!version) throw new Error('Specify the workflow (--workflow) or the draft version (--version).')
+    return version
+  }
+
+  const draft = await wm.getDraftVersion(workflow)
+  if (version && version !== draft) {
+    throw new Error(`Version ${version} is not your draft of '${workflow}' (that is ${draft}). Give one or the other.`)
+  }
+
+  return draft
 }
 
 /**
@@ -56,8 +64,12 @@ export async function resolveReadableVersion(wm: WorkflowManager, workflow?: str
  * An activity on a version, by sys_id or by its (unique) name.
  */
 export async function resolveActivity(wm: WorkflowManager, versionSysId: string, ref: string): Promise<string> {
-  if (SYS_ID.test(ref)) return ref
   const definition = await wm.getWorkflowDefinition(versionSysId, { includeStatus: false, includeVariables: false })
+  if (SYS_ID.test(ref)) {
+    if (definition.activities.some(a => a.sysId === ref)) return ref
+    throw new Error(`Activity ${ref} is not on workflow version ${versionSysId}.`)
+  }
+
   const matches = definition.activities.filter(a => a.name.toLowerCase() === ref.toLowerCase())
   if (matches.length === 1) return matches[0].sysId
   if (matches.length === 0) {
@@ -81,11 +93,16 @@ export function parseInput(input: string | undefined): Record<string, unknown> |
  * An exit (wf_condition) of an activity, by sys_id or by name.
  */
 export async function resolveExit(wm: WorkflowManager, versionSysId: string, activitySysId: string, ref: string): Promise<string> {
-  if (SYS_ID.test(ref)) return ref
   const definition = await wm.getWorkflowDefinition(versionSysId, { includeStatus: false, includeVariables: false })
   const exits = definition.activities.find(a => a.sysId === activitySysId)?.conditions ?? []
-  const match = exits.find(c => c.name.toLowerCase() === ref.toLowerCase())
-  if (match) return match.sysId
+  if (SYS_ID.test(ref)) {
+    if (exits.some(c => c.sysId === ref)) return ref
+    throw new Error(`Exit ${ref} does not belong to that activity.`)
+  }
+
+  const matches = exits.filter(c => c.name.toLowerCase() === ref.toLowerCase())
+  if (matches.length === 1) return matches[0].sysId
+  if (matches.length > 1) throw new Error(`${matches.length} exits are named '${ref}'; use a sys_id: ${matches.map(c => c.sysId).join(', ')}`)
   throw new Error(`The activity has no exit '${ref}'. Exits: ${exits.map(c => c.name).join(', ') || '(none)'}`)
 }
 

@@ -125,6 +125,13 @@ describe('workflow editing commands - Unit Tests', () => {
       expect(stdout).toContain('Workflow Published')
     })
 
+    it('prints only JSON with --json', async () => {
+      mockWm.publish.mockResolvedValue({ fullSequences: [], versionSysId: 'draft-1', warnings: [] })
+      const { stdout } = await run(Publish, ['--workflow', 'Laptop', '--json'])
+      expect(() => JSON.parse(stdout)).not.toThrow()
+      expect(stdout).not.toContain('Publishing workflow version')
+    })
+
     it('publishes a version id without needing --start-activity', async () => {
       mockWm.publish.mockResolvedValue({ fullSequences: [], versionSysId: 'v-9', warnings: [] })
       await run(Publish, ['--version-id', 'v-9'])
@@ -220,9 +227,10 @@ describe('workflow editing commands - Unit Tests', () => {
       expect(stdout).toContain('never set: groups')
     })
 
-    it('needs a type for --usage', async () => {
+    it('needs a type for --usage, and runs --script and --usage one at a time', async () => {
       const { error } = await run(Definitions, ['--usage'])
       expect(error?.message).toContain('need an activity type')
+      expect((await run(Definitions, ['If', '--usage', '--script'])).error?.message).toContain('separate views')
     })
 
     it('lists workflows and validates', async () => {
@@ -316,6 +324,13 @@ describe('workflow editing commands - Unit Tests', () => {
       const { stdout } = await run(Export, ['Laptop', '--version', 'published'])
       expect(mockWm.exportWorkflow).toHaveBeenCalledWith('Laptop', { version: 'published' })
       expect(JSON.parse(stdout)).toEqual(exported)
+    })
+
+    it('says what it wrote as JSON with --json -o', async () => {
+      mockWm.exportWorkflow.mockResolvedValue(exported)
+      const file = join(mkdtempSync(join(tmpdir(), 'wfexport-')), 'laptop.json')
+      const { stdout } = await run(Export, ['Laptop', '-o', file, '--json'])
+      expect(JSON.parse(stdout)).toEqual({ activities: 1, file, transitions: 0, versionSysId: 'v-1', workflow: 'Laptop' })
     })
 
     it('writes the export to a file and says so', async () => {
