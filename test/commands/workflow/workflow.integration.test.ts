@@ -72,10 +72,18 @@ describe('Workflow Commands - Integration Tests', () => {
         expect(Publish.description).toContain('Publish a workflow version')
       })
 
-      it('should have version-id and start-activity flags as required', async () => {
+      it('should have version-id, workflow, start-activity and allow-warnings flags', async () => {
         const { Publish } = await import('../../../src/commands/workflow/publish.js')
         expect(Publish.flags['version-id']).toBeDefined()
+        expect(Publish.flags['workflow']).toBeDefined()
         expect(Publish.flags['start-activity']).toBeDefined()
+        expect(Publish.flags['allow-warnings']).toBeDefined()
+      })
+
+      it('should make start-activity optional but tied to version-id', async () => {
+        const { Publish } = await import('../../../src/commands/workflow/publish.js')
+        expect(Publish.flags['start-activity'].required).toBe(false)
+        expect(Publish.flags['start-activity'].dependsOn).toEqual(['version-id'])
       })
     })
 
@@ -92,16 +100,9 @@ describe('Workflow Commands - Integration Tests', () => {
     })
 
     describe('validation', () => {
-      it('should require version-id flag', async () => {
+      it('should require version-id with start-activity', async () => {
         const { error } = await runCommand([
           'workflow:publish', '--start-activity', 'act-001', '--auth', 'test',
-        ])
-        expect(error).toBeDefined()
-      })
-
-      it('should require start-activity flag', async () => {
-        const { error } = await runCommand([
-          'workflow:publish', '--version-id', 'wfv-001', '--auth', 'test',
         ])
         expect(error).toBeDefined()
       })
