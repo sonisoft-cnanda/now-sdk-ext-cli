@@ -14,12 +14,9 @@ jest.mock('@sonisoft/now-sdk-ext-core', () => {
   return {
     ApplicationManager: jest.fn().mockImplementation(() => ({
       installBatch: jest.fn<any>().mockResolvedValue('Installation complete'),
-      searchApplications: jest.fn<any>().mockResolvedValue({
-        apps: [
-          { name: 'Test App', scope: 'x_test', version: '1.0.0', vendor: 'Test Vendor', sys_id: 'app-001' },
-        ],
-        total: 1,
-      }),
+      searchApplications: jest.fn<any>().mockResolvedValue([
+        { latest_version: '1.0.0', name: 'Test App', scope: 'x_test', sys_id: 'app-001', vendor: 'Test Vendor' },
+      ]),
       installStoreApplication: jest.fn<any>().mockResolvedValue({
         links: { progress: { id: 'prog-001', url: '/progress' } },
         percent_complete: 0,
@@ -47,9 +44,23 @@ jest.mock('@sonisoft/now-sdk-ext-core', () => {
         success: true,
       }),
       validateBatchDefinition: jest.fn<any>().mockResolvedValue({
-        valid: true,
-        errors: [],
-        warnings: [],
+        alreadyValid: 1,
+        applications: [{
+          id: 'app-001',
+          installed_version: '1.0.0',
+          isInstalled: true,
+          isUpdateAvailable: false,
+          isVersionMatch: true,
+          name: 'Test App',
+          needsAction: false,
+          requested_version: '1.0.0',
+          validationStatus: 'valid',
+        }],
+        errors: 0,
+        isValid: true,
+        needsInstallation: 0,
+        needsUpgrade: 0,
+        totalApplications: 1,
       }),
     })),
     APP_TAB_CONTEXT: {
@@ -112,10 +123,11 @@ describe('Store Commands - Integration Tests', () => {
         expect(Search.description).toContain('Search for applications')
       })
 
-      it('should have term, tab, and limit flags', () => {
+      it('should have term, tab, limit, and offset flags', () => {
         expect(Search.flags.term).toBeDefined()
         expect(Search.flags.tab).toBeDefined()
         expect(Search.flags.limit).toBeDefined()
+        expect(Search.flags.offset).toBeDefined()
       })
     })
 
