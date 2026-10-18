@@ -132,10 +132,11 @@ describe('metadata binary tooling evaluations', () => {
     try {
       for (const query of ['name=Example^active=false', 'order=1', 'name=', 'name=a=b']) {
         const before = fixture.counts().posts
+        const beforeQueries = fixture.queries().length
         const result = await cli.nex([...writeArgs(action), '--initial-query', query])
         expect(result.exitCode).toBe(0)
         expect(fixture.counts().posts).toBe(before + 1)
-        expect(fixture.queries().at(-1)).toBe(query)
+        expect(fixture.queries()[beforeQueries]).toBe(query)
       }
     } finally {
       await cli.close()
