@@ -3,7 +3,7 @@ import {existsSync, readFileSync} from 'node:fs'
 import {join, resolve} from 'node:path'
 import {fileURLToPath} from 'node:url'
 import {invoke, reader} from './cli.mjs'
-import {comparePreferences, hash, ID, load, privateRoot, PROTECTED, requireBaselineDestination, requireCandidate, requireFreshCapture, requireLock, requireOwnedFixture, save, TABLE} from './controls.mjs'
+import {comparePreferences, hash, ID, load, privateRoot, PROTECTED, requireBaselineDestination, requireCandidate, requireClock, requireFreshCapture, requireLock, requireOwnedFixture, save, TABLE} from './controls.mjs'
 
 export async function lifecycle({root, plan, cliBin, receipt, read = reader(cliBin), write = args => invoke(cliBin, args)}) {
   const report = {alias: plan.alias, sourceSha: receipt.sourceSha, packageDigest: receipt.packageDigest, started: new Date().toISOString(),
@@ -144,9 +144,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     assert.ok(endpoint.origin === 'https://dev206299.service-now.com' && endpoint.pathname === '/', 'authorized_endpoint_required')
     const request = new TableAPIRequest(new ServiceNowInstance({alias: 'dev206299', credential}))
     const clock = await request.get('sys_user', {sysparm_limit: 1, sysparm_fields: 'sys_id'})
-    const serverUtc = Date.parse(clock.headers.date)
-    assert.ok(clock.status === 200 && Number.isFinite(serverUtc) && Math.abs(serverUtc - Date.now()) <= 60_000, 'client_server_clock_required')
-    save(join(root, 'clock-safe.json'), {clientUtc: new Date().toISOString(), serverUtc: new Date(serverUtc).toISOString()}, true)
+    assert.equal(clock.status, 200, 'clock_read_failed')
+    save(join(root, 'clock-safe.json'), requireClock(clock.headers.date), true)
     await lifecycle({root, plan, cliBin: receipt.cliBin, receipt})
     process.stderr.write('Bounded metadata lifecycle passed. Private evidence saved.\n')
   } catch {

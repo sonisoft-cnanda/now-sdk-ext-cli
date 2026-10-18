@@ -4,7 +4,7 @@ import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 
 import {audit} from '../../scripts/metadata/audit.mjs'
-import {comparePreferences, hash, load, packageTreeDigest, PROTECTED, requireBaselineDestination, requireCandidate, requireFixture, requireFreshCapture, requireOwnedFixture, save} from '../../scripts/metadata/controls.mjs'
+import {comparePreferences, hash, load, packageTreeDigest, PROTECTED, requireBaselineDestination, requireCandidate, requireClock, requireFixture, requireFreshCapture, requireOwnedFixture, save} from '../../scripts/metadata/controls.mjs'
 import {lifecycle} from '../../scripts/metadata/live-child.mjs'
 import {runLive, runSequence} from '../../scripts/metadata/run-live.mjs'
 
@@ -130,8 +130,21 @@ describe('bounded metadata lifecycle controls', () => {
     expect(() => requireFreshCapture([], [], options)).toThrow()
     expect(() => requireFreshCapture([row, row], [], options)).toThrow()
     expect(() => requireFreshCapture([row], [row], options)).toThrow()
+    const later = {...row, sys_updated_on: new Date(Date.now() + 1000).toISOString().slice(0, 19).replace('T', ' ')}
+    expect(() => requireFreshCapture([later], [row], options)).toThrow('capture_version_unchanged')
+    for (const missing of [{sys_id: undefined}, {sys_mod_count: undefined}, {sys_mod_count: ''}, {sys_mod_count: 'not-a-version'}]) {
+      expect(() => requireFreshCapture([{...row, ...missing}], [], options)).toThrow('capture_version_evidence_missing')
+    }
     for (const override of [{application: ids.set}, {update_set: ids.scope}, {action: 'INSERT_OR_UPDATE'}, {sys_updated_on: '2000-01-01 00:00:00'}]) {
       expect(() => requireFreshCapture([{...row, ...override}], [], options)).toThrow()
+    }
+  })
+
+  it('refuses missing or skewed server clock evidence before writes', () => {
+    const now = Date.parse('2026-10-18T00:00:00Z')
+    expect(requireClock(new Date(now).toUTCString(), now)).toEqual({clientUtc: new Date(now).toISOString(), serverUtc: new Date(now).toISOString()})
+    for (const date of [undefined, 'invalid', new Date(now - 3000).toUTCString(), new Date(now + 3000).toUTCString()]) {
+      expect(() => requireClock(date, now)).toThrow('client_server_clock_required')
     }
   })
 })

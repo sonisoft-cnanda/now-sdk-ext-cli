@@ -130,8 +130,11 @@ NEX_METADATA_LIVE=1 npm run test:metadata:live -- \
 The access helper owns the alias lock for the whole lifecycle.
 Do not wrap the launcher in another helper invocation.
 The runner checks the authorized endpoint, server/client clock, fixture identity, excluded scopes, and preference baseline.
+The server Date header must be within two seconds of client UTC before writes.
 It creates one uniquely named inactive Script Include through the packed CLI.
 It reads exact scope/content and fresh capture after insert and update.
+Capture evidence must include a valid ID and numeric version counter.
+A reused capture ID must have a higher counter. A timestamp change alone is insufficient.
 It checks ownership before confirmed delete, then checks absence, DELETE capture, and deletion evidence.
 It retains capture records and update sets.
 A separate helper invocation performs a read-only audit after the lifecycle lock is released.

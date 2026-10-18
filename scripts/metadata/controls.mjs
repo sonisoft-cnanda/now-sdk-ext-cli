@@ -91,11 +91,19 @@ export function requireFreshCapture(rows, baseline, {plan, sysId, action, starte
   assert.ok(ID.test(sysId) && !PROTECTED.has(sysId), 'capture_target')
   assert.equal(rows.length, 1, 'capture_ambiguous_or_missing')
   const row = rows[0]
+  const complete = item => ID.test(item.sys_id ?? '') && /^\d+$/.test(String(item.sys_mod_count)) && Number.isSafeInteger(Number(item.sys_mod_count))
+  assert.ok(complete(row) && baseline.every(complete), 'capture_version_evidence_missing')
   assert.ok(row.name === `${TABLE}_${sysId}` && row.application === plan.scopeId && row.update_set === plan.updateSetId && row.action === action, 'capture_destination')
   const timestamp = Date.parse(row.sys_updated_on.replace(' ', 'T') + 'Z')
   assert.ok(Number.isFinite(timestamp) && timestamp >= Date.parse(started) - 1000 && timestamp <= Date.now() + 60_000, 'capture_clock_or_freshness')
-  assert.ok(!baseline.some(old => old.sys_id === row.sys_id && old.sys_mod_count === row.sys_mod_count && old.sys_updated_on === row.sys_updated_on), 'capture_version_unchanged')
+  assert.ok(!baseline.some(old => old.sys_id === row.sys_id && Number(row.sys_mod_count) <= Number(old.sys_mod_count)), 'capture_version_unchanged')
   return row
+}
+
+export function requireClock(serverDate, clientNow = Date.now()) {
+  const serverUtc = Date.parse(serverDate)
+  assert.ok(Number.isFinite(serverUtc) && Number.isFinite(clientNow) && Math.abs(serverUtc - clientNow) <= 2000, 'client_server_clock_required')
+  return {clientUtc: new Date(clientNow).toISOString(), serverUtc: new Date(serverUtc).toISOString()}
 }
 
 export function packageTreeDigest(root) {
