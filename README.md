@@ -19,6 +19,10 @@
 
 ### Key Features
 
+#### Verified metadata writes
+Write scoped application files through forms with verified update-set capture.
+Use explicit scope and exact delete confirmation. See [metadata commands](docs/metadata.md).
+
 #### 🧪 ATF Test Automation
 Execute individual ATF tests or entire test suites with detailed results, perfect for CI/CD pipelines.
 
@@ -738,6 +742,9 @@ rather than silently denying nothing.
 * [`nex health check`](#nex-health-check)
 * [`nex help [COMMAND]`](#nex-help-command)
 * [`nex log`](#nex-log)
+* [`nex metadata delete`](#nex-metadata-delete)
+* [`nex metadata insert`](#nex-metadata-insert)
+* [`nex metadata update`](#nex-metadata-update)
 * [`nex plugins`](#nex-plugins)
 * [`nex plugins add PLUGIN`](#nex-plugins-add-plugin)
 * [`nex plugins:inspect PLUGIN...`](#nex-pluginsinspect-plugin)
@@ -3157,6 +3164,153 @@ EXAMPLES
 ```
 
 _See code: [src/commands/log/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/log/index.ts)_
+
+## `nex metadata delete`
+
+Delete one confirmed metadata record and verify absence and deletion capture.
+
+```
+USAGE
+  $ nex metadata delete --table <value> --confirm-sys-id <value> --confirm-table <value> --sys-id <value> [--json]
+    [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>] [--log-file] [--log-level
+    debug|warn|error|info|trace] [--read-only] [--scope <value> | --scope-id <value>] [--update-set <value>] [--view
+    <value>]
+
+FLAGS
+  -a, --auth=<value>            Auth alias to use.
+      --confirm-sys-id=<value>  (required) Repeat the exact target sys_id.
+      --confirm-table=<value>   (required) Repeat the exact target table.
+      --scope=<value>           Explicit application scope name, or literal global.
+      --scope-id=<value>        Explicit application scope sys_id.
+      --sys-id=<value>          (required) Exact metadata record sys_id.
+      --table=<value>           (required) Metadata table name.
+      --update-set=<value>      In progress update set in the requested scope.
+      --view=<value>            Form view name.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Delete one confirmed metadata record and verify absence and deletion capture.
+
+EXAMPLES
+  $ nex metadata delete --table sys_script_include --sys-id 0123456789abcdef0123456789abcdef --scope x_example_app --confirm-table sys_script_include --confirm-sys-id 0123456789abcdef0123456789abcdef --auth dev
+```
+
+_See code: [src/commands/metadata/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.8.0/src/commands/metadata/delete.ts)_
+
+## `nex metadata insert`
+
+Insert application metadata through a form and verify scope and capture.
+
+```
+USAGE
+  $ nex metadata insert --table <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--scope <value> |
+    --scope-id <value>] [--update-set <value>] [--view <value>] [--fields <value> | --fields-file <value>]
+    [--initial-query <value>] [--variable-field <value>] [--variables <value> | --variables-file <value>]
+
+FLAGS
+  -a, --auth=<value>            Auth alias to use.
+      --fields=<value>          Field values as a JSON object. Prefer --fields-file for scripts.
+      --fields-file=<value>     Read field values from a JSON object file.
+      --initial-query=<value>   Literal equality terms separated by ^, with lowercase field identifiers. CLI checks
+                                syntax; core checks allowed fields.
+      --scope=<value>           Explicit application scope name, or literal global.
+      --scope-id=<value>        Explicit application scope sys_id.
+      --table=<value>           (required) Metadata table name.
+      --update-set=<value>      In progress update set in the requested scope.
+      --variable-field=<value>  Variable column name. Requires variables.
+      --variables=<value>       Variable values as a JSON object.
+      --variables-file=<value>  Read variable values from a JSON object file.
+      --view=<value>            Form view name.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Insert application metadata through a form and verify scope and capture.
+
+EXAMPLES
+  $ nex metadata insert --table sys_script_include --scope x_example_app --fields-file ./fields.json --auth dev
+```
+
+_See code: [src/commands/metadata/insert.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.8.0/src/commands/metadata/insert.ts)_
+
+## `nex metadata update`
+
+Update application metadata through a form and verify scope and capture.
+
+```
+USAGE
+  $ nex metadata update --table <value> --sys-id <value> [--json] [-a <value>] [--cred-store] [--deny-execute]
+    [--deny-write] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--scope
+    <value> | --scope-id <value>] [--update-set <value>] [--view <value>] [--fields <value> | --fields-file <value>]
+    [--initial-query <value>] [--variable-field <value>] [--variables <value> | --variables-file <value>]
+
+FLAGS
+  -a, --auth=<value>            Auth alias to use.
+      --fields=<value>          Field values as a JSON object. Prefer --fields-file for scripts.
+      --fields-file=<value>     Read field values from a JSON object file.
+      --initial-query=<value>   Literal equality terms separated by ^, with lowercase field identifiers. CLI checks
+                                syntax; core checks allowed fields.
+      --scope=<value>           Explicit application scope name, or literal global.
+      --scope-id=<value>        Explicit application scope sys_id.
+      --sys-id=<value>          (required) Exact metadata record sys_id.
+      --table=<value>           (required) Metadata table name.
+      --update-set=<value>      In progress update set in the requested scope.
+      --variable-field=<value>  Variable column name. Requires variables.
+      --variables=<value>       Variable values as a JSON object.
+      --variables-file=<value>  Read variable values from a JSON object file.
+      --view=<value>            Form view name.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Update application metadata through a form and verify scope and capture.
+
+EXAMPLES
+  $ nex metadata update --table sys_script_include --sys-id 0123456789abcdef0123456789abcdef --scope x_example_app --fields-file ./fields.json --auth dev
+```
+
+_See code: [src/commands/metadata/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.8.0/src/commands/metadata/update.ts)_
 
 ## `nex plugins`
 

@@ -30,5 +30,14 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Metadata package evaluations
+        run: npm run test:metadata:package
+
       - name: Unit tests
         run: npm run test:unit
