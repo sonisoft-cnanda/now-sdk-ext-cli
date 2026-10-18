@@ -45,7 +45,7 @@ export async function metadataFixture(mode = 'success') {
     if (url.pathname === '/angular.do') {
       authPosts++
       for await (const _ of request) { /* drain fabricated login */ }
-      response.setHeader('Set-Cookie', 'JSESSIONID=fabricated-session-cookie; Path=/')
+      response.setHeader('Set-Cookie', 'JSESSIONID=fabricated-session-cookie; Path=/; HttpOnly; Secure; SameSite=Strict')
       response.setHeader('x-usertoken-response', 'fabricated-session-token')
       return send(url.searchParams.get('sysparm_type') === 'get_user' ? 401 : mode === 'auth_failure' ? 403 : 200, {status: 'success'})
     }
