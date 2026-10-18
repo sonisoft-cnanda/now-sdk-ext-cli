@@ -32,7 +32,12 @@ for (const path of ['oclif.manifest.json', 'dist/commands/metadata/insert.js', '
 }
 const tarball = join(directory, manifest.filename)
 const digest = createHash('sha256').update(await readFile(tarball)).digest('hex')
-await execute('npm', ['install', '--prefix', directory, '--ignore-scripts', '--no-audit', '--no-fund', tarball], {cwd: directory, timeout: 240_000, maxBuffer: 8 * 1024 * 1024})
+// npm run forwards .npmrc's allow-scripts through an env setting that nested
+// project installs reject (npm/cli#9912). Keep file policy intact and disable
+// every install script; remove only that unsupported forwarded setting.
+const installEnvironment = Object.fromEntries(Object.entries(process.env).filter(([key]) => key.toLowerCase() !== 'npm_config_allow_scripts'))
+await execute('npm', ['install', '--prefix', directory, '--ignore-scripts', '--no-audit', '--no-fund', tarball],
+  {cwd: directory, env: installEnvironment, timeout: 240_000, maxBuffer: 8 * 1024 * 1024})
 const packageRoot = join(directory, 'node_modules/@sonisoft/now-sdk-ext-cli')
 const cliBin = join(packageRoot, 'bin/run.js')
 const environment = {...process.env, NEX_METADATA_CLI_BIN: cliBin}
