@@ -138,6 +138,11 @@ A reused capture ID must have a higher counter. A timestamp change alone is insu
 It checks ownership before confirmed delete, then checks absence, DELETE capture, and deletion evidence.
 It retains capture records and update sets.
 A separate helper invocation performs a read-only audit after the lifecycle lock is released.
+The lifecycle and audit use a native read child with the candidate's credential boot, authentication, policy, and public request APIs.
+This child checks raw Stats counts and Table result arrays before conversion.
+Missing, null, nonnumeric, incomplete, or changed evidence fails the read; it cannot prove absence.
+Only an explicit zero count and empty result array, followed by the same count, prove an empty read.
+The ordinary query and count commands keep their existing behavior.
 
 Each private directory permits one attempt. A failed operation stops the mutation sequence.
 The runner reads available exact identity evidence and records retained IDs.

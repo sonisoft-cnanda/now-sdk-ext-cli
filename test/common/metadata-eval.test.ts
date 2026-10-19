@@ -22,6 +22,33 @@ async function scenario(mode: string, action: string, check: (result: any, fixtu
 }
 
 describe('metadata binary tooling evaluations', () => {
+  it.each(['empty', 'rows', 'missing_count', 'null', 'nonnumeric', 'partial', 'boolean', 'whitespace',
+    'fraction', 'negative', 'unsafe', 'missing_records', 'null_records', 'object_records', 'invalid_row',
+    'incomplete', 'changed'])('requires raw read evidence through the candidate CLI boundary: %s', async mode => {
+    const fixture = await metadataFixture(`reader_${mode}`)
+    const cli = await isolatedCli(binary, fixture)
+    try {
+      const result = await cli.probeReader()
+      if (mode === 'empty' || mode === 'rows') {
+        expect(result.exitCode).toBe(0)
+        expect(JSON.parse(result.stdout)).toEqual({records: mode === 'empty' ? [] : [{sys_id: ids.record, name: 'Fixture'}]})
+        expect(fixture.requests.filter(item => item.startsWith('GET /api/now/'))).toEqual([
+          'GET /api/now/stats/sys_script_include', 'GET /api/now/table/sys_script_include', 'GET /api/now/stats/sys_script_include',
+        ])
+      } else {
+        expect(result.exitCode).not.toBe(0)
+        expect(result.stdout).toBe('')
+        expect(result.stderr).toContain('Read evidence refused.')
+      }
+      expect(fixture.counts().posts).toBe(0)
+      expect(fixture.requests.every(item => item.startsWith('GET /api/now/') || item === 'POST /angular.do')).toBe(true)
+      expect(result.stdout + result.stderr + await cli.logs()).not.toContain(SECRET)
+    } finally {
+      await cli.close()
+      await fixture.close()
+    }
+  })
+
   it.each(['insert', 'update', 'delete'])('verifies %s through the released core with one form POST', async action => {
     await scenario('success', action, async (result, fixture, cli) => {
       expect(result.exitCode).toBe(0)

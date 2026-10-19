@@ -70,6 +70,23 @@ export async function metadataFixture(mode = 'success') {
       response.setHeader('Content-Type', 'text/html')
       return response.end(html(mode === 'form_scope' ? ids.other : ids.scope, mode, url.searchParams.get('sys_id') === '-1'))
     }
+    if (mode.startsWith('reader_')) {
+      if (url.pathname.startsWith('/api/now/stats/')) {
+        const raw: Record<string, unknown> = {reader_empty: '0', reader_rows: '1', reader_missing_count: undefined,
+          reader_null: null, reader_nonnumeric: 'not-a-count', reader_partial: '0junk', reader_boolean: false,
+          reader_whitespace: ' ', reader_fraction: 0.5, reader_negative: -1, reader_unsafe: '9007199254740992',
+          reader_missing_records: '0', reader_null_records: '0', reader_object_records: '0', reader_invalid_row: '1',
+          reader_incomplete: '1', reader_changed: requests.filter(item => item.includes('/api/now/stats/')).length === 1 ? '0' : '1'}
+        return send(200, {result: {stats: {count: raw[mode]}}})
+      }
+
+      if (url.pathname.startsWith('/api/now/table/')) {
+        if (mode === 'reader_missing_records') return send(200, {unrelated: 'no table result evidence'})
+        const records = mode === 'reader_null_records' ? null : mode === 'reader_object_records' ? {} :
+          mode === 'reader_invalid_row' ? [null] : mode === 'reader_rows' ? [{sys_id: ids.record, name: {value: 'Fixture'}}] : []
+        return send(200, {result: records})
+      }
+    }
     const table = url.pathname.split('/').at(-1)
     const query = url.searchParams.get('sysparm_query') || ''
     let rows: Array<Record<string, string>> = []
@@ -134,6 +151,19 @@ export async function isolatedCli(cliBin: string, fixture: Awaited<ReturnType<ty
     await rm(directory, {force: true, recursive: true})
     throw error
   }
+  // Exercise the native adapter in a child while this process serves loopback.
+  // Its children inherit explicit network and filesystem confinement.
+  const probeReader = async () => {
+    try {
+      const result = await execute(process.execPath, ['--permission', '--allow-fs-read=*', `--allow-fs-write=${directory}`, '--allow-addons',
+        '--allow-child-process', `--allow-net=${new URL(fixture.url).host}`, resolve('test/test_utils/metadata-reader-probe.mjs'), resolve(cliBin)],
+      {cwd: process.cwd(), env, timeout: 60_000})
+      return {...result, exitCode: 0}
+    } catch (error) {
+      const result = error as {code?: number; stdout?: string; stderr?: string}
+      return {exitCode: result.code || 1, stdout: result.stdout || '', stderr: result.stderr || ''}
+    }
+  }
   const logs = async (root = directory): Promise<string> => {
     let text = ''
     for (const entry of await readdir(root, {withFileTypes: true})) {
@@ -143,7 +173,7 @@ export async function isolatedCli(cliBin: string, fixture: Awaited<ReturnType<ty
     }
     return text
   }
-  return {directory, nex, logs, close: () => rm(directory, {force: true, recursive: true})}
+  return {directory, nex, probeReader, logs, close: () => rm(directory, {force: true, recursive: true})}
 }
 
 export function writeArgs(action = 'insert'): string[] {
