@@ -1,11 +1,12 @@
  
 import { Flags } from '@oclif/core'
-import { UpdateSetManager, WorkingSetManager } from '@sonisoft/now-sdk-ext-core'
+import { UpdateSetManager, WorkingSetError, WorkingSetManager } from '@sonisoft/now-sdk-ext-core'
 
-import { AuthenticatedCommand } from '../../common/authenticated-command.js'
+import { WorkingSetCommand } from '../../common/working-set-command.js'
 import { UpdateSetDisplayService } from '../../services/update-set-display.service.js'
+import { WorkingSetDisplayService } from '../../services/working-set-display.service.js'
 
-export class Current extends AuthenticatedCommand<typeof Current> {
+export class Current extends WorkingSetCommand<typeof Current> {
 
   static args = {
   }
@@ -35,6 +36,7 @@ static flags = {
       required: false,
     }),
   }
+protected workingSetAction = 'current --set'
 
   async run(): Promise<void> {
     const { flags } = await this.parse(Current)
@@ -51,8 +53,7 @@ static flags = {
         if (jsonOutput) {
           console.log(JSON.stringify({ current: result.current, previous: result.previous }, null, 2))
         } else {
-          this.log(`Current update set: ${result.updateSet.name} (${result.updateSet.sysId}), application ${result.updateSet.application}`)
-          this.log(`Previous: application ${result.previous.application}, update set ${result.previous.updateSet}`)
+          for (const line of new WorkingSetDisplayService().used({ ...result, updateSet: new WorkingSetDisplayService().summary(result.updateSet) })) this.log(line)
         }
       } else {
         if (!jsonOutput) this.log('Fetching current update set...')
@@ -64,6 +65,8 @@ static flags = {
         }
       }
     } catch (error) {
+      // A refused or unverified switch renders its code, detail and restore pair.
+      if (error instanceof WorkingSetError) throw error
       this._logger.error("Error occurred when getting/setting current update set.", error as Error)
       this.error(error as Error)
     }

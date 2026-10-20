@@ -44,7 +44,11 @@ export function projectWorkingSetError(error: WorkingSetError, action: string): 
 const clean = (text: string): string => text.replaceAll(/\p{Cc}/gu, ' ')
 const setLine = (set: UpdateSetSummary): string =>
   `${clean(set.name)} (${set.sysId}); state: ${set.state}; application: ${set.application}${set.isDefault ? '; Default' : ''}`
-const pair = (set: WorkingSet): string => `application ${set.application}, update set ${set.updateSet}`
+const pair = (set: WorkingSet): string => `application ${clean(set.application)}, update set ${clean(set.updateSet)}`
+// Preference values are printed as a command to copy: only identifiers are safe to print that way.
+const restoreCommand = (set: WorkingSet): string => /^(global|[a-f\d]{32}|)$/i.test(set.application) && /^([a-f\d]{32}|)$/i.test(set.updateSet)
+  ? `nex update-set restore --application ${set.application || 'global'} --update-set ${set.updateSet || '""'}`
+  : `nex update-set restore (previous working set: ${pair(set)})`
 
 export class WorkingSetDisplayService {
   completed(set: UpdateSetSummary): string[] {
@@ -53,7 +57,9 @@ export class WorkingSetDisplayService {
   }
 
   failure(failure: WorkingSetFailure): string[] {
-    return [failure.message, ...(failure.detail === undefined ? [] : [`Detail: ${JSON.stringify(failure.detail)}`]), ...failure.remediation]
+    const previous = failure.detail?.previous
+    return [failure.message, ...(failure.detail === undefined ? [] : [`Detail: ${JSON.stringify(failure.detail)}`]), ...failure.remediation,
+      ...(previous === undefined ? [] : [`Your preferences may have changed. Put them back with: ${restoreCommand(previous)}`])]
   }
 
   moved(result: MoveCaptureResult): string[] {
@@ -72,6 +78,6 @@ export class WorkingSetDisplayService {
 
   used(result: UseUpdateSetResult): string[] {
     return [`Working set: ${setLine(result.updateSet)}`, `Previous:    ${pair(result.previous)}`,
-      `Restore with: nex update-set restore --application ${result.previous.application} --update-set ${result.previous.updateSet}`]
+      `Restore with: ${restoreCommand(result.previous)}`]
   }
 }

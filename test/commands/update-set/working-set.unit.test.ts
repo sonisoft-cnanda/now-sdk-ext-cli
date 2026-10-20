@@ -1,5 +1,5 @@
 import {afterEach, describe, expect, it, jest} from '@jest/globals'
-import {ServiceNowInstance, WorkingSetError, WorkingSetManager} from '@sonisoft/now-sdk-ext-core'
+import {MetadataScopeError, ServiceNowInstance, WorkingSetError, WorkingSetManager} from '@sonisoft/now-sdk-ext-core'
 
 import UpdateSetComplete from '../../../src/commands/update-set/complete.js'
 import UpdateSetMoveCapture from '../../../src/commands/update-set/move-capture.js'
@@ -43,8 +43,25 @@ describe('update set working-set commands', () => {
     const target = command(UpdateSetComplete, {workingSetAction: 'complete'})
     await target.catch(new WorkingSetError('mixed_scope_capture', {captures: [XML]}))
     expect((parent.mock.calls[0][0] as any).updateSet).toMatchObject({code: 'mixed_scope_capture', detail: {captures: [XML]}})
+    await target.catch(new MetadataScopeError('evidence_unavailable'))
+    expect((parent.mock.calls[1][0] as any).updateSet).toMatchObject({code: 'evidence_unavailable', message: 'Update set complete refused: evidence_unavailable.'})
     const other = new Error('Missing required flag expected-captures')
     await target.catch(other)
-    expect(parent.mock.calls[1][0]).toBe(other)
+    expect(parent.mock.calls[2][0]).toBe(other)
+  })
+})
+
+describe('working set output after a failed switch', () => {
+  it('prints the restore pair from the error detail', async () => {
+    const {projectWorkingSetError, WorkingSetDisplayService} = await import('../../../src/services/working-set-display.service.js')
+    const failure = projectWorkingSetError(new WorkingSetError('working_set_not_applied', {previous: {application: 'global', updateSet: OTHER}}), 'use')
+    expect(new WorkingSetDisplayService().failure(failure).join('\n')).toContain(`nex update-set restore --application global --update-set ${OTHER}`)
+  })
+
+  it('never prints a non-identifier preference value as a command', async () => {
+    const {WorkingSetDisplayService} = await import('../../../src/services/working-set-display.service.js')
+    const lines = new WorkingSetDisplayService().used({previous: {application: 'x; rm -rf ~', updateSet: 'a\nForged line'}, current: {application: APP, updateSet: SET}, updateSet: summary}).join('\n')
+    expect(lines).not.toContain('--application x;')
+    expect(lines).not.toMatch(/\nForged line/)
   })
 })

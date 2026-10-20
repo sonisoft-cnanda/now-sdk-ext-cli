@@ -1,5 +1,5 @@
 import {Command, Errors} from '@oclif/core'
-import {flushLogs, WorkingSetError} from '@sonisoft/now-sdk-ext-core'
+import {flushLogs, MetadataScopeError, WorkingSetError} from '@sonisoft/now-sdk-ext-core'
 
 import {projectWorkingSetError, WorkingSetDisplayService} from '../services/working-set-display.service.js'
 import {AuthenticatedCommand} from './authenticated-command.js'
@@ -9,8 +9,10 @@ export abstract class WorkingSetCommand<T extends typeof Command> extends Authen
   protected abstract workingSetAction: string
 
   protected async catch(error: Error & {exitCode?: number}): Promise<void> {
-    if (!(error instanceof WorkingSetError)) return super.catch(error)
-    const failure = projectWorkingSetError(error, this.workingSetAction)
+    // The lifecycle's reads raise MetadataScopeError('evidence_unavailable'): not a metadata write refusal.
+    const refusal = error instanceof MetadataScopeError ? new WorkingSetError('evidence_unavailable') : error
+    if (!(refusal instanceof WorkingSetError)) return super.catch(error)
+    const failure = projectWorkingSetError(refusal, this.workingSetAction)
     await flushLogs()
     const message = this.jsonEnabled() ? failure.message : new WorkingSetDisplayService().failure(failure).join('\n')
     const safe = new Errors.CLIError(message, {code: failure.code, exit: 1, suggestions: failure.remediation})

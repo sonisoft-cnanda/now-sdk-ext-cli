@@ -95,5 +95,8 @@ describe('metadata output for applications we do not own', () => {
       elements: ['name', 'url'], previousElements: ['name', 'type'], capture})).join('\n')
     expect(lines).toContain('added: url; removed: type')
     expect(lines).toContain('Previous layout (to put it back): name,type')
+    const repeated = display.layoutSuccess(display.layoutResult({section: ID, table: 'sn_test', view: '', scope: {sysId: ID, scope: 'sn_test'},
+      elements: ['name', '.split', 'type', 'url'], previousElements: ['name', '.split', 'type', '.split', 'url'], capture})).join('\n')
+    expect(repeated).toContain('added: (none); removed: .split')
   })
 })

@@ -43,6 +43,17 @@ const REFUSAL_REMEDIATION: Record<string, string> = {
   update_set_required: 'Pass --update-set with an In progress set of the application: nex update-set create --application <app>, then nex update-set use <set>.',
 }
 
+// Items of `from` not matched in `to`, counted as multisets: a section can repeat .split, and removing one is a change.
+function difference(from: string[], to: string[]): string[] {
+  const left = new Map<string, number>()
+  for (const item of to) left.set(item, (left.get(item) ?? 0) + 1)
+  return from.filter(item => {
+    const count = left.get(item) ?? 0
+    if (count > 0) left.set(item, count - 1)
+    return count === 0
+  })
+}
+
 // Copy only public capture fields. Errors can also hold requests, HTML and causes.
 function captureProjection(capture: MetadataVerificationError['capture']): MetadataVerificationError['capture'] {
   if (capture === undefined) return undefined
@@ -133,8 +144,8 @@ export class MetadataDisplayService {
   }
 
   layoutSuccess(result: FormLayoutWriteResult): string[] {
-    const added = result.elements.filter(item => !result.previousElements.includes(item))
-    const removed = result.previousElements.filter(item => !result.elements.includes(item))
+    const added = difference(result.elements, result.previousElements)
+    const removed = difference(result.previousElements, result.elements)
     return [`Verified form layout: ${result.table} section ${result.section} (${result.view || 'Default view'})`,
       `Elements: ${result.previousElements.length} -> ${result.elements.length}; added: ${added.join(', ') || '(none)'}; removed: ${removed.join(', ') || '(none)'}`,
       ...this.captureLines(result.capture),
