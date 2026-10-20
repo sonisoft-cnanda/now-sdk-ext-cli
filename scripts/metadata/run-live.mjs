@@ -6,12 +6,12 @@ import {fileURLToPath} from 'node:url'
 import {parseArgs} from 'node:util'
 import {load, privateRoot, requireCandidate, requireFixture} from './controls.mjs'
 
-export function runHelper(helper, command, env) {
+export function runHelper(helper, command, env, alias) {
   return new Promise(resolveResult => {
     // Preserve helper sync/lock warnings and recovery paths in restricted evidence.
     const phase = command.at(-1).endsWith('/audit.mjs') ? 'audit' : 'lifecycle'
     const log = openSync(join(env.NEX_METADATA_PRIVATE_DIR, `access-helper-${phase}.log`), 'wx', 0o600)
-    const child = spawn(process.execPath, [helper, 'run', '--alias', 'dev206299', '--', ...command], {env, stdio: ['ignore', log, log]})
+    const child = spawn(process.execPath, [helper, 'run', '--alias', alias, '--', ...command], {env, stdio: ['ignore', log, log]})
     closeSync(log)
     let interrupted
     const forward = signal => {
@@ -64,7 +64,7 @@ export async function runLive({accessHelper, privateDir, cliBin}) {
   requireFixture(plan)
   const env = {...process.env, NEX_METADATA_CLI_BIN: receipt.cliBin, NEX_METADATA_SOURCE_SHA: receipt.sourceSha,
     NEX_METADATA_PRIVATE_DIR: root, NEX_METADATA_ACCESS_HELPER: helper}
-  return runSequence({run: command => runHelper(helper, command, env),
+  return runSequence({run: command => runHelper(helper, command, env, plan.alias),
     lifecycleCommand: [process.execPath, join(import.meta.dirname, 'live-child.mjs')],
     auditCommand: [process.execPath, join(import.meta.dirname, 'audit.mjs')],
     hasReport: () => existsSync(join(root, 'lifecycle-safe.json')),

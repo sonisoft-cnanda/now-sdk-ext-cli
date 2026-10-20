@@ -2,12 +2,11 @@ import assert from 'node:assert/strict'
 import {join, resolve} from 'node:path'
 import {fileURLToPath} from 'node:url'
 import {reader} from './cli.mjs'
-import {comparePreferences, hash, load, privateRoot, requireBaselineDestination, requireFreshCapture, requireLock, save, TABLE} from './controls.mjs'
+import {comparePreferences, hash, load, privateRoot, requireBaselineDestination, requireFixture, requireFreshCapture, requireLock, save, TABLE} from './controls.mjs'
 import {readFileSync} from 'node:fs'
 
-export function audit({root, cliBin, read = reader(cliBin)}) {
+export function audit({root, cliBin, plan = load(join(root, 'fixture.json')), read = reader(cliBin, {alias: plan.alias})}) {
   const report = load(join(root, 'lifecycle-safe.json'))
-  const plan = load(join(root, 'fixture.json'))
   assert.equal(report.ledger.length, 1, 'audit_ledger_missing')
   assert.equal(report.status, 'PASS', 'lifecycle_incomplete')
   assert.deepEqual(report.attempts.map(item => item.action), ['insert', 'update', 'delete'], 'audit_attempts')
@@ -41,8 +40,10 @@ export function audit({root, cliBin, read = reader(cliBin)}) {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const root = privateRoot(process.env.NEX_METADATA_PRIVATE_DIR, resolve(import.meta.dirname, '../..'))
-    requireLock(process.env.NEX_METADATA_ACCESS_HELPER)
-    audit({root, cliBin: process.env.NEX_METADATA_CLI_BIN})
+    const plan = load(join(root, 'fixture.json'))
+    requireFixture(plan)
+    requireLock(process.env.NEX_METADATA_ACCESS_HELPER, plan.alias)
+    audit({root, cliBin: process.env.NEX_METADATA_CLI_BIN, plan})
     process.stderr.write('Separate read-only metadata audit passed.\n')
   } catch {
     process.stderr.write('Metadata audit failed. Preserve the private evidence for review.\n')

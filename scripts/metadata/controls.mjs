@@ -1,4 +1,4 @@
-// Adapted from core v6.8.0 metadata controls. No picker setup or restoration.
+// Adapted from core's metadata controls (v6.8.0). No picker setup or restoration.
 import assert from 'node:assert/strict'
 import {createHash} from 'node:crypto'
 import {existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync} from 'node:fs'
@@ -29,12 +29,29 @@ export function privateRoot(directory, repository) {
   return root
 }
 
-export function requireLock(helper) {
+// The reviewed fixture names the alias; its endpoint is that PDI unless the fixture says otherwise.
+export function fixtureOrigin(plan) {
+  return plan.origin ?? `https://${plan.alias}.service-now.com`
+}
+
+/** Whether a version satisfies a caret range (^x.y.z), as npm resolves it into a fresh prefix with no lockfile. */
+export function satisfiesCaret(version, range) {
+  const parse = text => /^(\d+)\.(\d+)\.(\d+)$/.exec(text ?? '')?.slice(1).map(Number)
+  const have = parse(version), want = typeof range === 'string' && range.startsWith('^') ? parse(range.slice(1)) : undefined
+  if (!have || !want) return false
+  // The leftmost non-zero part is fixed; the parts after it may only rise.
+  const fixed = want.findIndex(part => part !== 0) + 1 || 3
+  if (have.slice(0, fixed).some((part, index) => part !== want[index])) return false
+  for (let index = 0; index < 3; index++) if (have[index] !== want[index]) return have[index] > want[index]
+  return true
+}
+
+export function requireLock(helper, alias) {
   let pid = process.ppid
   let owner
   for (let depth = 0; depth < 12 && pid > 1; depth++) {
     const args = readFileSync(`/proc/${pid}/cmdline`, 'utf8').split('\0')
-    if (args.includes(helper) && args.some((arg, index) => arg === '--alias' && args[index + 1] === 'dev206299')) {
+    if (args.includes(helper) && args.some((arg, index) => arg === '--alias' && args[index + 1] === alias)) {
       owner = pid
       break
     }
@@ -48,7 +65,8 @@ export function requireLock(helper) {
 }
 
 export function requireFixture(plan) {
-  assert.equal(plan.alias, 'dev206299', 'authorized_alias_required')
+  assert.ok(typeof plan.alias === 'string' && /^[a-z0-9][a-z0-9-]{0,62}$/.test(plan.alias), 'fixture_alias_required')
+  assert.ok(plan.origin === undefined || /^https:\/\/[a-z0-9-]+\.service-now\.com$/.test(plan.origin), 'fixture_origin_required')
   assert.ok(ID.test(plan.scopeId) && ID.test(plan.updateSetId), 'fixture_ids_required')
   assert.ok(/^[a-z][a-z0-9_]*$/.test(plan.scopeName) && plan.scopeName !== 'global', 'scoped_fixture_required')
   assert.ok(!/^(x_g|sn_apm)/i.test(plan.scopeName), 'excluded_scope')
@@ -130,7 +148,7 @@ export function requireCandidate(cliBin, sourceSha) {
   assert.equal(realpathSync(receipt.cliBin), binary, 'candidate_binary_mismatch')
   assert.equal(receipt.sourceSha, sourceSha, 'candidate_source_mismatch')
   assert.equal(receipt.sourceDirty, false, 'clean_candidate_required')
-  assert.equal(receipt.core, '6.8.0', 'candidate_core_version')
+  assert.ok(satisfiesCaret(receipt.core, load(join(packageRoot, 'package.json')).dependencies?.['@sonisoft/now-sdk-ext-core']), 'candidate_core_version')
   assert.equal(hash(readFileSync(receipt.tarball)), receipt.packageDigest, 'candidate_package_digest')
   assert.equal(packageTreeDigest(packageRoot), receipt.packageTreeDigest, 'candidate_tree_changed')
   assert.ok(load(join(packageRoot, 'oclif.manifest.json')).commands['metadata:insert'], 'candidate_manifest')

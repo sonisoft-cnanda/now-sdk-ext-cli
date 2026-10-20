@@ -3,9 +3,9 @@ import {existsSync, readFileSync} from 'node:fs'
 import {join, resolve} from 'node:path'
 import {fileURLToPath} from 'node:url'
 import {invoke, reader} from './cli.mjs'
-import {comparePreferences, hash, ID, load, privateRoot, PROTECTED, requireBaselineDestination, requireCandidate, requireClock, requireFreshCapture, requireLock, requireOwnedFixture, save, TABLE} from './controls.mjs'
+import {comparePreferences, fixtureOrigin, hash, ID, load, privateRoot, PROTECTED, requireBaselineDestination, requireCandidate, requireClock, requireFixture, requireFreshCapture, requireLock, requireOwnedFixture, save, TABLE} from './controls.mjs'
 
-export async function lifecycle({root, plan, cliBin, receipt, read = reader(cliBin), write = args => invoke(cliBin, args)}) {
+export async function lifecycle({root, plan, cliBin, receipt, read = reader(cliBin, {alias: plan.alias}), write = args => invoke(cliBin, args, {alias: plan.alias})}) {
   const report = {alias: plan.alias, sourceSha: receipt.sourceSha, packageDigest: receipt.packageDigest, started: new Date().toISOString(),
     status: 'INCOMPLETE', stages: [], ledger: [], snapshots: [], attempts: []}
   const persist = () => save(join(root, 'lifecycle-safe.json'), report)
@@ -131,18 +131,19 @@ export async function lifecycle({root, plan, cliBin, receipt, read = reader(cliB
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const root = privateRoot(process.env.NEX_METADATA_PRIVATE_DIR, resolve(import.meta.dirname, '../..'))
-    requireLock(process.env.NEX_METADATA_ACCESS_HELPER)
     const plan = load(join(root, 'fixture.json'))
+    requireFixture(plan)
+    requireLock(process.env.NEX_METADATA_ACCESS_HELPER, plan.alias)
     const receipt = requireCandidate(process.env.NEX_METADATA_CLI_BIN, process.env.NEX_METADATA_SOURCE_SHA)
     assert.ok(!existsSync(join(root, 'lifecycle-attempt.json')), 'lifecycle_already_attempted')
     // Verify the selected alias endpoint without printing credentials.
     await import('../../bin/credstore-boot.js')
     const {configureLogging, resolveSessionCredentials, ServiceNowInstance, TableAPIRequest} = await import('@sonisoft/now-sdk-ext-core')
     configureLogging({file: false, console: false})
-    const credential = await resolveSessionCredentials('dev206299')
+    const credential = await resolveSessionCredentials(plan.alias)
     const endpoint = new URL(credential.instanceUrl)
-    assert.ok(endpoint.origin === 'https://dev206299.service-now.com' && endpoint.pathname === '/', 'authorized_endpoint_required')
-    const request = new TableAPIRequest(new ServiceNowInstance({alias: 'dev206299', credential}))
+    assert.ok(endpoint.origin === fixtureOrigin(plan) && endpoint.pathname === '/', 'authorized_endpoint_required')
+    const request = new TableAPIRequest(new ServiceNowInstance({alias: plan.alias, credential}))
     const clock = await request.get('sys_user', {sysparm_limit: 1, sysparm_fields: 'sys_id'})
     assert.equal(clock.status, 200, 'clock_read_failed')
     save(join(root, 'clock-safe.json'), requireClock(clock.headers.date), true)

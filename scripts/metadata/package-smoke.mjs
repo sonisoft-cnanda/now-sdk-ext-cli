@@ -7,7 +7,7 @@ import {tmpdir} from 'node:os'
 import {join, resolve} from 'node:path'
 import {promisify} from 'node:util'
 import {createRequire} from 'node:module'
-import {packageTreeDigest} from './controls.mjs'
+import {packageTreeDigest, satisfiesCaret} from './controls.mjs'
 
 const execute = promisify(execFile)
 const root = resolve(import.meta.dirname, '../..')
@@ -51,7 +51,9 @@ for (const command of [['metadata', 'insert'], ['metadata', 'update'], ['metadat
   for (const flag of ['--auth', '--cred-store', '--read-only', '--deny-write', '--log-dir', '--json']) assert.ok(help.stdout.includes(flag), `Missing inherited flag ${flag}`)
 }
 const core = JSON.parse(await readFile(createRequire(cliBin).resolve('@sonisoft/now-sdk-ext-core/package.json'), 'utf8')).version
-assert.equal(core, '6.8.0', 'Candidate must resolve the reviewed core version.')
+const declared = JSON.parse(await readFile(join(packageRoot, 'package.json'), 'utf8')).dependencies['@sonisoft/now-sdk-ext-core']
+// npm installs the newest core in the declared range; a pinned version would fail on every core release.
+assert.ok(satisfiesCaret(core, declared), `Candidate core ${core} must satisfy the declared range ${declared}.`)
 const receipt = {sourceSha, sourceDirty: dirty, packageDigest: digest, packageTreeDigest: packageTreeDigest(packageRoot), tarball, cliBin, packageRoot, node: process.version, core}
 const receiptPath = join(directory, 'candidate.json')
 await writeFile(receiptPath, JSON.stringify(receipt, null, 2) + '\n', {mode: 0o600})

@@ -4,7 +4,10 @@ import {join, resolve} from 'node:path'
 
 import {ids, isolatedCli, metadataFixture, SCRIPT, SECRET, writeArgs} from '../test_utils/metadata-http-fixture.js'
 
-const binary = resolve(process.env.NEX_METADATA_CLI_BIN || 'bin/run.js')
+// Runs only against a packed candidate (npm run test:metadata:package sets this). Under test:unit it is
+// skipped: it would otherwise run twice in CI, the second time against whatever dist/ holds.
+const candidate = process.env.NEX_METADATA_CLI_BIN
+const binary = resolve(candidate ?? 'bin/run.js')
 
 async function scenario(mode: string, action: string, check: (result: any, fixture: Awaited<ReturnType<typeof metadataFixture>>, cli: Awaited<ReturnType<typeof isolatedCli>>) => Promise<void> | void) {
   const fixture = await metadataFixture(mode)
@@ -21,7 +24,7 @@ async function scenario(mode: string, action: string, check: (result: any, fixtu
   }
 }
 
-describe('metadata binary tooling evaluations', () => {
+;(candidate ? describe : describe.skip)('metadata binary tooling evaluations (needs NEX_METADATA_CLI_BIN)', () => {
   it.each(['empty', 'rows', 'missing_count', 'null', 'nonnumeric', 'partial', 'boolean', 'whitespace',
     'fraction', 'negative', 'unsafe', 'missing_records', 'null_records', 'object_records', 'invalid_row',
     'incomplete', 'changed'])('requires raw read evidence through the candidate CLI boundary: %s', async mode => {

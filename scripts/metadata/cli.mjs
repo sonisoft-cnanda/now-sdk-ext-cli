@@ -4,7 +4,8 @@ import {join} from 'node:path'
 
 // Native Node keeps credential initialization outside Jest's ESM registry.
 // Never print raw child stdout, stderr or exceptions: they can contain private data.
-export function invoke(cliBin, args, {read = false, alias = 'dev206299'} = {}) {
+export function invoke(cliBin, args, {read = false, alias} = {}) {
+  assert.ok(alias, 'fixture_alias_required')
   const entry = read ? [join(import.meta.dirname, 'read-evidence.mjs'), cliBin] : [cliBin]
   const result = spawnSync(process.execPath, [...process.execArgv, ...entry, ...args, '--auth', alias, '--cred-store', '--json', ...(read ? ['--read-only'] : [])],
     {encoding: 'utf8', timeout: 120_000, maxBuffer: 8 * 1024 * 1024})
@@ -17,7 +18,7 @@ export function invoke(cliBin, args, {read = false, alias = 'dev206299'} = {}) {
     status: result.status, signal: result.signal, payload}
 }
 
-export function reader(cliBin, {alias = 'dev206299'} = {}) {
+export function reader(cliBin, {alias} = {}) {
   const call = args => {
     const result = invoke(cliBin, args, {read: true, alias})
     assert.ok(result.ok, 'read_command_failed')

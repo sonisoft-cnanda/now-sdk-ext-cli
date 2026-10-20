@@ -97,7 +97,7 @@ describe('bounded metadata lifecycle controls', () => {
   it('refuses unsafe baselines, shared scopes and unreviewed fixture contracts', () => {
     const state = fixture()
     for (const override of [{scopeName: 'global'}, {scopeName: 'x_g_enterprise'}, {scopeName: 'sn_apm_test'},
-      {alias: 'production'}, {scopeId: 'bad'}, {reviewReference: ''}, {coordinatedWindow: ''}]) {
+      {alias: undefined}, {alias: 'dev206299 --alias prod'}, {origin: 'http://dev206299.service-now.com'}, {origin: 'https://evil.example'}, {scopeId: 'bad'}, {reviewReference: ''}, {coordinatedWindow: ''}]) {
       expect(() => requireFixture({...plan, ...override})).toThrow()
     }
     requireBaselineDestination({...state, plan})
@@ -158,7 +158,7 @@ describe('candidate and native runner gates', () => {
     mkdirSync(join(packageRoot, 'dist'))
     const cliBin = join(packageRoot, 'bin/run.js')
     writeFileSync(cliBin, '// candidate')
-    save(join(packageRoot, 'package.json'), {})
+    save(join(packageRoot, 'package.json'), {dependencies: {'@sonisoft/now-sdk-ext-core': '^6.8.0'}})
     save(join(packageRoot, 'oclif.manifest.json'), {commands: {'metadata:insert': {}}})
     const tarball = join(root, 'candidate.tgz')
     writeFileSync(tarball, 'candidate')
@@ -167,6 +167,11 @@ describe('candidate and native runner gates', () => {
     expect(requireCandidate(cliBin, receipt.sourceSha).sourceDirty).toBe(false)
     save(join(root, 'candidate.json'), {...candidate, sourceDirty: true})
     expect(() => requireCandidate(cliBin, receipt.sourceSha)).toThrow('clean_candidate')
+    // Any core in the declared range is accepted; one outside it is not.
+    save(join(root, 'candidate.json'), {...candidate, core: '6.9.1'})
+    expect(requireCandidate(cliBin, receipt.sourceSha).core).toBe('6.9.1')
+    save(join(root, 'candidate.json'), {...candidate, core: '6.7.0'})
+    expect(() => requireCandidate(cliBin, receipt.sourceSha)).toThrow('candidate_core_version')
     save(join(root, 'candidate.json'), candidate)
     writeFileSync(cliBin, '// changed')
     expect(() => requireCandidate(cliBin, receipt.sourceSha)).toThrow('candidate_tree_changed')
