@@ -45,6 +45,7 @@ npm run lint         # eslint src/  (NOTE: src only — see AGENTS.md)
 ```bash
 npm run test:unit         # services + common + any *.unit.test.ts
 npm run test:integration  # commands/ — hits a real instance
+npm run test:live         # builds, then the NSE-15 Store-app/Global lifecycle through the nex binary (writes to the instance)
 ```
 
 The split is by **path pattern**, not by directory convention:

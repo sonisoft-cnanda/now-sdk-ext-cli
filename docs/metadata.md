@@ -129,6 +129,27 @@ is working in. Each command reads its result back, and a refusal carries a code,
 `error.updateSet.detail`, and a remedy. Seen on dev206299 (Australia patch 3) on 2026-10-20 against GRC
 (`sn_compliance`) and Global. The procedure, governance and upgrade review are in the
 `update-sets` skill (`reference/other-applications.md`).
+
+### Live integration test
+
+`npm run test:live` builds the CLI, then runs `test/commands/update-set/working-set.live.test.ts`
+against `SN_INSTANCE_ALIAS` (default `dev206299`) through the built `nex` binary:
+
+1. Create a GRC (`sn_compliance`) set and check that the layout change is refused until the set
+   is current.
+2. Run `update-set use` and confirm it with `update-set current`.
+3. Check that `store_scope` is refused without `--acknowledge-upgrade-skip`.
+4. Add a field to the Policy form and put it back, then check that the set holds one Form Layout
+   capture.
+5. Check the `scope_mismatch` and `capture_count_mismatch` refusals, then complete the set.
+6. Run the Global Script Include lifecycle, then `update-set restore`.
+
+`npm run test:integration` skips it unless `NEX_LIVE=1`, and `test:unit` does not select it. It
+also skips when the instance has no active `sn_compliance` application.
+
+Each run leaves two Complete sets named `nex-it NSE-15 CLI … (test only, do not promote)`, and the
+Policy section stays customized. A set left In progress by a failure is set to Ignore, and
+nothing is deleted. Core's `WorkingSetLifecycle_IT` covers the same use case through the API.
 The governing platform evidence covers Australia patch 3 on dev206299.
 It does not establish support for every platform family or metadata table.
 See the [core contract](https://github.com/sonisoft-cnanda/now-sdk-ext-core/blob/main/docs/MetadataFormWriter.md).
