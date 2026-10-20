@@ -186,23 +186,33 @@ describe('nex auth open', () => {
   })
 
   it('surfaces desktop and session remediations without cookie values', async () => {
-    injectBrowserSessionCdp.mockRejectedValueOnce({
-      code: 'NEX_BROWSER_UNAVAILABLE',
-      remediation: 'Confirm the debug port is reachable and retry.',
-    })
-    const desktop = await captureOutput(async () => {
-      await AuthOpen.run(['-a', 'fixture', '--cdp', 'http://127.0.0.1:9222', '--json'], process.cwd())
-    })
-    expect(desktop.error?.message ?? desktop.stdout).toMatch(/debug port/)
-    expect(JSON.stringify(desktop)).not.toContain(cookieValue)
-    createBrowserSession.mockRejectedValueOnce({
-      code: 'NEX_AUTH_INVALID',
-      remediation: 'Check the selected alias and credential backend.',
-    })
-    const auth = await captureOutput(async () => {
-      await AuthOpen.run(['-a', 'fixture', '--cdp', 'http://127.0.0.1:9222', '--json'], process.cwd())
-    })
-    expect(auth.error?.message ?? auth.stdout).toMatch(/selected alias/)
-    expect(JSON.stringify(auth)).not.toContain(cookieValue)
+    // oclif consumes JSON errors in Command.catch. Observe its output boundary;
+    // Jest captures ux's console output outside captureOutput's stream hooks.
+    const envelopes: unknown[] = []
+    const output = jest.spyOn(AuthOpen.prototype, 'logJson').mockImplementation(value => { envelopes.push(value) })
+    try {
+      injectBrowserSessionCdp.mockRejectedValueOnce({
+        code: 'NEX_BROWSER_UNAVAILABLE',
+        remediation: 'Confirm the debug port is reachable and retry.',
+      })
+      const desktop = await captureOutput(async () => {
+        await AuthOpen.run(['-a', 'fixture', '--cdp', 'http://127.0.0.1:9222', '--json'], process.cwd())
+      })
+      expect(envelopes).toHaveLength(1)
+      expect(envelopes[0]).toMatchObject({error: {message: 'Confirm the debug port is reachable and retry.'}})
+      expect(JSON.stringify({desktop, envelopes})).not.toContain(cookieValue)
+      createBrowserSession.mockRejectedValueOnce({
+        code: 'NEX_AUTH_INVALID',
+        remediation: 'Check the selected alias and credential backend.',
+      })
+      const auth = await captureOutput(async () => {
+        await AuthOpen.run(['-a', 'fixture', '--cdp', 'http://127.0.0.1:9222', '--json'], process.cwd())
+      })
+      expect(envelopes).toHaveLength(2)
+      expect(envelopes[1]).toMatchObject({error: {message: 'Check the selected alias and credential backend.'}})
+      expect(JSON.stringify({auth, envelopes})).not.toContain(cookieValue)
+    } finally {
+      output.mockRestore()
+    }
   })
 })

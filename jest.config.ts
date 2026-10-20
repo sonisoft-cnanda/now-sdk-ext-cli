@@ -1,6 +1,7 @@
 import type { JestConfigWithTsJest } from "ts-jest";
 
 const config: JestConfigWithTsJest = {
+  roots: ['<rootDir>/test'],
   collectCoverageFrom: [
     "src/**/*.ts",
     "!src/index.ts",

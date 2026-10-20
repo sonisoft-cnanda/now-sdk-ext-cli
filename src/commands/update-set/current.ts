@@ -1,15 +1,20 @@
  
 import { Flags } from '@oclif/core'
-import { UpdateSetManager } from '@sonisoft/now-sdk-ext-core'
+import { UpdateSetManager, WorkingSetError, WorkingSetManager } from '@sonisoft/now-sdk-ext-core'
 
-import { AuthenticatedCommand } from '../../common/authenticated-command.js'
+import { WorkingSetCommand } from '../../common/working-set-command.js'
 import { UpdateSetDisplayService } from '../../services/update-set-display.service.js'
+import { WorkingSetDisplayService } from '../../services/working-set-display.service.js'
 
-export class Current extends AuthenticatedCommand<typeof Current> {
+export class Current extends WorkingSetCommand<typeof Current> {
 
   static args = {
   }
-static description = 'Get or set the current update set.'
+static description = `Get or set the current update set.
+
+--set makes the set your working set for every later session: it also makes the set's application current
+(apps.current_app), which a set of another application needs to stick. The previous working set is printed;
+put it back with nex update-set restore.`
 static examples = [
     {
       command: '<%= config.bin %> <%= command.id %> --auth dev-instance',
@@ -27,10 +32,11 @@ static examples = [
 static flags = {
     'set': Flags.string({
       char: 's',
-      description: 'sys_id of update set to make current',
+      description: 'sys_id of an In progress update set to make the working set',
       required: false,
     }),
   }
+protected workingSetAction = 'current --set'
 
   async run(): Promise<void> {
     const { flags } = await this.parse(Current)
@@ -42,11 +48,15 @@ static flags = {
       const jsonOutput = flags.json ?? false
 
       if (flags.set) {
-        this.log(`Setting current update set to: ${flags.set}`)
-        await updateSetMgr.setCurrentUpdateSet({ name: flags.set, sysId: flags.set })
-        this.log('Current update set updated successfully.')
+        // The picker call alone is undone by the next session for a set of another application.
+        const result = await new WorkingSetManager(this.instance).useUpdateSet(flags.set, { allowDefault: true })
+        if (jsonOutput) {
+          console.log(JSON.stringify({ current: result.current, previous: result.previous }, null, 2))
+        } else {
+          for (const line of new WorkingSetDisplayService().used({ ...result, updateSet: new WorkingSetDisplayService().summary(result.updateSet) })) this.log(line)
+        }
       } else {
-        this.log('Fetching current update set...')
+        if (!jsonOutput) this.log('Fetching current update set...')
         const result: any = await updateSetMgr.getCurrentUpdateSet()
 
         const lines = displayService.formatCurrentUpdateSet(result, jsonOutput)
@@ -55,6 +65,8 @@ static flags = {
         }
       }
     } catch (error) {
+      // A refused or unverified switch renders its code, detail and restore pair.
+      if (error instanceof WorkingSetError) throw error
       this._logger.error("Error occurred when getting/setting current update set.", error as Error)
       this.error(error as Error)
     }

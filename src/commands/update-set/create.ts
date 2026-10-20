@@ -23,10 +23,14 @@ static examples = [
       command: '<%= config.bin %> <%= command.id %> --name "My Feature Set" --application x_my_app --auth dev-instance',
       description: 'Create within a specific application scope',
     },
+    {
+      command: '<%= config.bin %> <%= command.id %> --name "STORY-123 Policy form" --application sn_compliance --auth dev-instance',
+      description: 'Create a set for an installed Store application, then make it current with nex update-set use',
+    },
   ]
 static flags = {
     'application': Flags.string({
-      description: 'Application scope for the new update set',
+      description: 'Application of the new set: global, a sys_scope sys_id, or a scope name matching one active application. The set\'s application is verified after creation.',
       required: false,
     }),
     'description': Flags.string({
@@ -48,7 +52,7 @@ static flags = {
     try {
       const updateSetMgr = new UpdateSetManager(this.instance)
 
-      this.log(`Creating update set: ${flags.name}`)
+      if (!(flags.json ?? false)) this.log(`Creating update set: ${flags.name}`)
       const result: any = await updateSetMgr.createUpdateSet({
         application: flags.application,
         description: flags.description,
