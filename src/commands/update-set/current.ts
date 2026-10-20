@@ -1,6 +1,6 @@
  
 import { Flags } from '@oclif/core'
-import { UpdateSetManager } from '@sonisoft/now-sdk-ext-core'
+import { UpdateSetManager, WorkingSetManager } from '@sonisoft/now-sdk-ext-core'
 
 import { AuthenticatedCommand } from '../../common/authenticated-command.js'
 import { UpdateSetDisplayService } from '../../services/update-set-display.service.js'
@@ -9,7 +9,11 @@ export class Current extends AuthenticatedCommand<typeof Current> {
 
   static args = {
   }
-static description = 'Get or set the current update set.'
+static description = `Get or set the current update set.
+
+--set makes the set your working set for every later session: it also makes the set's application current
+(apps.current_app), which a set of another application needs to stick. The previous working set is printed;
+put it back with nex update-set restore.`
 static examples = [
     {
       command: '<%= config.bin %> <%= command.id %> --auth dev-instance',
@@ -27,7 +31,7 @@ static examples = [
 static flags = {
     'set': Flags.string({
       char: 's',
-      description: 'sys_id of update set to make current',
+      description: 'sys_id of an In progress update set to make the working set',
       required: false,
     }),
   }
@@ -42,11 +46,16 @@ static flags = {
       const jsonOutput = flags.json ?? false
 
       if (flags.set) {
-        this.log(`Setting current update set to: ${flags.set}`)
-        await updateSetMgr.setCurrentUpdateSet({ name: flags.set, sysId: flags.set })
-        this.log('Current update set updated successfully.')
+        // The picker call alone is undone by the next session for a set of another application.
+        const result = await new WorkingSetManager(this.instance).useUpdateSet(flags.set, { allowDefault: true })
+        if (jsonOutput) {
+          console.log(JSON.stringify({ current: result.current, previous: result.previous }, null, 2))
+        } else {
+          this.log(`Current update set: ${result.updateSet.name} (${result.updateSet.sysId}), application ${result.updateSet.application}`)
+          this.log(`Previous: application ${result.previous.application}, update set ${result.previous.updateSet}`)
+        }
       } else {
-        this.log('Fetching current update set...')
+        if (!jsonOutput) this.log('Fetching current update set...')
         const result: any = await updateSetMgr.getCurrentUpdateSet()
 
         const lines = displayService.formatCurrentUpdateSet(result, jsonOutput)

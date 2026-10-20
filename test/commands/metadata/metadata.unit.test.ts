@@ -1,5 +1,6 @@
 import {afterEach, describe, expect, it, jest} from '@jest/globals'
-import {MetadataFormWriter} from '@sonisoft/now-sdk-ext-core'
+import {Command} from '@oclif/core'
+import {FormLayoutWriter, MetadataFormWriter, MetadataScopeError, policyRefusal} from '@sonisoft/now-sdk-ext-core'
 import {mkdtemp, rm, writeFile} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
@@ -8,6 +9,9 @@ import {metadataOptions} from '../../../src/common/metadata-command.js'
 import MetadataInsert from '../../../src/commands/metadata/insert.js'
 import MetadataUpdate from '../../../src/commands/metadata/update.js'
 import MetadataDelete from '../../../src/commands/metadata/delete.js'
+import MetadataLayoutGet from '../../../src/commands/metadata/layout/get.js'
+import MetadataLayoutSet, {layoutElements} from '../../../src/commands/metadata/layout/set.js'
+import {AuthenticatedCommand} from '../../../src/common/authenticated-command.js'
 
 const ID = 'a'.repeat(32)
 const flags = {table: 'sys_script_include', scope: 'x_test', fields: '{"active":false}', 'sys-id': ID}
@@ -29,6 +33,8 @@ describe('metadata CLI inputs', () => {
     [{fields: '{"constructor":"value"}'}, 'prohibited key'],
     [{fields: '{"name":{"unexpected":1}}'}, 'unsupported value'],
     [{fields: '{"duration":{"seconds":"3"}}'}, 'unsupported value'],
+    [{fields: '{"duration":{}}'}, 'unsupported value'],
+    [{fields: '{"duration":{"seconds":-1}}'}, 'unsupported value'],
     [{fields: '{"number":1e1000}'}, 'unsupported value'],
     [{fields: '{"list":[1]}'}, 'unsupported value'],
     [{fields: '{}'}, 'Supply fields'],
@@ -109,5 +115,69 @@ describe('metadata writer dispatch', () => {
     for (const other of ['insert', 'update', 'delete'].filter(name => name !== action)) expect(methods[other]).not.toHaveBeenCalled()
     const options = methods[action].mock.calls[0].at(-1)
     expect(options).not.toHaveProperty('allowMixedScopeCapture')
+  })
+})
+
+describe('metadata writes in applications we do not own', () => {
+  it('maps --acknowledge-upgrade-skip to the Store opt-in and leaves it off otherwise', async () => {
+    expect(await metadataOptions({...flags, 'acknowledge-upgrade-skip': true, 'update-set': ID}, 'update'))
+      .toMatchObject({storeCustomization: {acknowledgeUpgradeSkip: true}, updateSet: ID})
+    expect(await metadataOptions({...flags, 'acknowledge-upgrade-skip': false}, 'update')).not.toHaveProperty('storeCustomization')
+  })
+
+  it('takes a whole layout from the flag or a JSON file', async () => {
+    expect(await layoutElements({elements: 'name, .begin_split ,url,.formatter.' + ID})).toEqual(['name', '.begin_split', 'url', `.formatter.${ID}`])
+    for (const elements of ['', 'name,,url', 'name;drop', 'a b']) await expect(layoutElements({elements})).rejects.toThrow('whole layout')
+    await expect(layoutElements({'elements-file': 'missing.json'})).rejects.toThrow('JSON array')
+  })
+
+  it('reads and writes a layout through FormLayoutWriter', async () => {
+    const layout = {section: ID, table: 'sn_test', view: '', caption: '', scope: ID, elements: ['name']}
+    const get = jest.spyOn(FormLayoutWriter.prototype, 'getFormLayout').mockResolvedValue(layout)
+    const reader = Object.assign(Object.create(MetadataLayoutGet.prototype), {flags: {section: ID}, instance: {}, jsonEnabled: () => true})
+    await expect(reader.run()).resolves.toEqual(layout)
+    expect(get).toHaveBeenCalledWith(ID)
+    const result = {section: ID, table: 'sn_test', view: '', scope: {sysId: ID, scope: 'sn_test'}, elements: ['name', 'url'], previousElements: ['name'],
+      capture: {action: 'INSERT_OR_UPDATE', updateSetSysId: ID, updateSetName: 'S', updateSetScope: ID, recordScope: ID, preferencesUnchanged: true,
+        preferenceRowsReplaced: [], currentUpdateSet: {switched: false}}}
+    const set = jest.spyOn(FormLayoutWriter.prototype, 'setFormLayout').mockResolvedValue(result)
+    const writer = Object.assign(Object.create(MetadataLayoutSet.prototype), {instance: {}, jsonEnabled: () => true,
+      flags: {section: ID, elements: 'name,url', 'scope-id': ID, 'update-set': ID, 'acknowledge-upgrade-skip': true}})
+    await expect(writer.run()).resolves.toMatchObject({elements: ['name', 'url']})
+    expect(set).toHaveBeenCalledWith(ID, {elements: ['name', 'url'], scope: {sysId: ID}, updateSet: ID, storeCustomization: {acknowledgeUpgradeSkip: true}})
+  })
+})
+
+describe('metadata failure routing', () => {
+  const command = (executing: boolean) => Object.assign(Object.create(MetadataInsert.prototype), {metadataAction: 'insert', executing,
+    flags: {table: flags.table}, jsonEnabled: () => true, _logger: {debug: jest.fn()}})
+
+  it('leaves usage and credential errors raised before execution to oclif and failAuth', async () => {
+    const parent = jest.spyOn(AuthenticatedCommand.prototype as any, 'catch').mockResolvedValue(undefined)
+    const usage = Object.assign(new Error('Missing required flag table'), {oclif: {exit: 2}})
+    await command(false).catch(usage)
+    expect(parent).toHaveBeenCalledWith(usage)
+  })
+
+  it('logs a policy refusal at warn and keeps its public code', async () => {
+    const parent = jest.spyOn(AuthenticatedCommand.prototype as any, 'catch').mockResolvedValue(undefined)
+    const base = jest.spyOn(Command.prototype as any, 'catch').mockResolvedValue(undefined)
+    const target = Object.assign(command(true), {authLogger: {warn: jest.fn()}})
+    await target.catch(policyRefusal({allowed: false, verbs: ['write'], decidingLayer: 'flag'} as any))
+    expect(target.authLogger.warn).toHaveBeenCalledWith('Refused by policy.', expect.anything())
+    expect(parent).not.toHaveBeenCalled()
+    expect((base.mock.calls[0][0] as any).metadata).toMatchObject({code: 'policy_refused'})
+  })
+
+  it('projects execution errors and logs the redacted original at debug', async () => {
+    const parent = jest.spyOn(AuthenticatedCommand.prototype as any, 'catch').mockResolvedValue(undefined)
+    const target = command(true)
+    await target.catch(new MetadataScopeError('store_scope'))
+    const safe = parent.mock.calls[0][0] as any
+    expect(safe.metadata).toMatchObject({code: 'store_scope', writeAttempted: false})
+    await target.catch(new Error('connect ECONNREFUSED 10.0.0.1:443 password=hunter2'))
+    expect(target._logger.debug).toHaveBeenCalledWith('Metadata command error before projection.', expect.objectContaining({name: 'Error'}))
+    expect(JSON.stringify(target._logger.debug.mock.calls.at(-1))).not.toContain('hunter2')
+    expect((parent.mock.calls[1][0] as any).metadata.message).toBe('Metadata command failed.')
   })
 })

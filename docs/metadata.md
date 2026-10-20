@@ -1,7 +1,7 @@
 # Verified metadata writes
 
 Use `nex metadata` for application files that need form submission and verified update-set capture.
-These commands use `MetadataFormWriter` from core 6.8.0.
+These commands use `MetadataFormWriter`, `FormLayoutWriter` and `WorkingSetManager` from core 6.9 (NSE-15).
 Ordinary record commands keep their existing behavior.
 
 ```bash
@@ -48,7 +48,8 @@ Duration objects use numeric `days`, `hours`, `minutes`, and `seconds` members.
 Prototype-sensitive keys, other nested objects, root arrays, and invalid JSON are refused.
 File errors do not print file contents. Prefer files for scripts and other private input.
 Core checks form fields, variables, table inheritance, forbidden system fields, and initial-query restrictions.
-Caller `sys_*` fields, Store applications, unsupported tables, and unsupported delete actions are refused.
+Caller `sys_*` fields, unsupported tables, and unsupported delete actions are refused.
+Store applications are refused unless the write is acknowledged (see below).
 
 An explicit `--update-set <sys_id>` must identify an In progress set in the requested scope.
 Without this flag, core predicts the capture destination from the user's per-scope preference.
@@ -72,19 +73,75 @@ A successful result verifies record scope and capture; it does not prove that ev
 Read exact content separately when the task needs that proof.
 
 The CLI does not expose mixed-scope capture, force, automatic scope selection, preference repair, or alternate write transports.
-These commands do not publish an application, complete an update set, or promote a change.
+These commands do not publish an application or promote a change.
+
+## Applications you do not own: Store applications and Global
+
+Changing a file of an installed Store application (`sys_store_app`) marks it as customized:
+upgrades of that application then skip the file until someone reviews it. That is sometimes the
+right call, so it is allowed, but never by accident:
+
+- `--acknowledge-upgrade-skip` is required on every write to a Store application's file.
+  Without it the write is refused with `store_scope` before anything is sent.
+- `--update-set` is required for a Store application (`update_set_required`), and the set must
+  be your working set (`update_set_not_current`): make it current with `nex update-set use`.
+- Files the vendor locked (`sys_policy` read or protected) are refused with `protected_record`.
+- The result's `capture.customization` reports the consequence: `replaceOnUpgrade: false`
+  means upgrades skip the file, and `baselineVersion: true` means a vendor version exists.
+  Record it in the update set description. Reverting the content later does not undo it.
+- `capture.updateName` is the captured file's name. For labels and choices it is the platform's
+  coalescing name (`sys_documentation_<table>_<element>_<language>`, `sys_choice_<table>_<element>`).
+
+Global files need no acknowledgement, but the same explicit scope and update set.
+
+### Form layouts
+
+A form section's layout is captured as one Form Layout file, `sys_ui_section_<section sys_id>`.
+Change it through the Form Layout page with `metadata layout set`, which takes the whole
+section in order and verifies both the order and the capture:
+
+```bash
+nex metadata layout get --section <sys_ui_section sys_id> --auth dev --read-only --json
+nex metadata layout set --section <id> --elements 'name,.begin_split,type,.split,url,.end_split' \
+  --scope-id <application sys_id> --update-set <set> --acknowledge-upgrade-skip --auth dev --json
+```
+
+Elements are field names, `.begin_split`, `.split`, `.end_split` and
+`.formatter.<sys_ui_formatter sys_id>`, or a JSON array in `--elements-file`. The result's
+`previousElements` puts the layout back.
+
+### The working set lifecycle
+
+```bash
+nex update-set create -n 'STORY-1 Policy form' -d '<story; customizes <app>; upgrades skip it>' \
+  --application <app sys_id, scope name or global> --auth dev --json
+nex update-set use <set> --auth dev --json            # keep "previous"
+# ... nex metadata writes ...
+nex update-set complete <set> --expected-captures <n> --auth dev --json
+nex update-set restore --application <previous.application> --update-set <previous.updateSet> --auth dev
+```
+
+`use` saves `apps.current_app`, `sys_update_set` and `updateSetForScope<app>`, and reads them
+back, so the next session captures into the set. `move-capture` moves one capture between two
+In progress sets of its own application. `complete` refuses a count other than
+`--expected-captures`, another application's captures, duplicate captures and a set another user
+is working in. Each command reads its result back, and a refusal carries a code, identifiers in
+`error.updateSet.detail`, and a remedy. Seen on dev206299 (Australia patch 3) on 2026-10-20 against GRC
+(`sn_compliance`) and Global. The procedure, governance and upgrade review are in the
+`update-sets` skill (`reference/other-applications.md`).
 The governing platform evidence covers Australia patch 3 on dev206299.
 It does not establish support for every platform family or metadata table.
-See the [core contract](https://github.com/sonisoft-cnanda/now-sdk-ext-core/blob/v6.8.0/docs/MetadataFormWriter.md).
+See the [core contract](https://github.com/sonisoft-cnanda/now-sdk-ext-core/blob/main/docs/MetadataFormWriter.md).
 
 Run local evaluations after building:
 
 ```bash
 npm run build
 node --experimental-vm-modules node_modules/.bin/jest --runInBand --runTestsByPath \
-  test/commands/metadata/metadata.unit.test.ts test/services/metadata-display.service.test.ts \
-  test/common/metadata-eval.test.ts
-npm run test:metadata:package
+  test/commands/metadata/metadata.unit.test.ts test/services/metadata-display.service.test.ts
+NEX_METADATA_CLI_BIN="$PWD/bin/run.js" node --experimental-vm-modules node_modules/.bin/jest \
+  --runInBand --runTestsByPath test/common/metadata-eval.test.ts   # about 5 minutes
+npm run test:metadata:package                                      # runs the evaluations on the packed CLI
 ```
 
 Package evaluations pack and install the candidate into a run-owned prefix.
@@ -98,7 +155,8 @@ Do not run unrestricted integration tests against an instance.
 
 The live runner needs Architect review of the exact runner and fixture contract before execution.
 A review reference in a file does not grant approval.
-Use only alias `dev206299`. Coordinate the test window with all session users.
+Use only the alias named in the reviewed fixture. Its endpoint is `https://<alias>.service-now.com` unless the fixture
+sets `origin`. Coordinate the test window with all session users.
 The existing application, current update set, and per-scope preference must already match.
 The runner refuses setup that needs picker changes or preference repair.
 
@@ -118,7 +176,7 @@ Set its mode to `0700`. Store the approved fixture as `fixture.json` with mode `
 
 Build and commit the source before the package evaluation.
 Use the `cliBin` path from its clean `candidate.json` receipt as `PACKED_NEX`.
-The receipt must match the current source SHA, installed package tree, tarball digest, and core 6.8.0.
+The receipt must match the current source SHA, installed package tree and tarball digest, and its core must satisfy the declared range.
 Do not use a global CLI or a development binary for this check.
 
 ```bash
@@ -159,5 +217,5 @@ NEX_METADATA_LIVE=1 SN_ACCESS="$SN_ACCESS" PRIVATE_DIR="$PRIVATE_DIR" PACKED_NEX
   test/commands/metadata/metadata.integration.test.ts
 ```
 
-The bridge fails without explicit live opt-in. A missing report, signal, failed cleanup, or failed audit fails the check.
-No skipped integration check counts as live evidence.
+Without the live opt-in the bridge is skipped, so `npm run test:integration` still runs. A skip is not live evidence.
+With the opt-in, a missing report, signal, failed cleanup, or failed audit fails the check.

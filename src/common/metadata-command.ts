@@ -1,15 +1,22 @@
 import {Command, Errors, Flags} from '@oclif/core'
-import {flushLogs, type MetadataDeleteOptions, MetadataFormWriter, type MetadataWriteOptions, type MetadataWriteResult} from '@sonisoft/now-sdk-ext-core'
+import {flushLogs, isPolicyRefusal, type MetadataDeleteOptions, MetadataFormWriter, type MetadataScopeRef, type MetadataWriteOptions,
+  type MetadataWriteResult, redactMessage} from '@sonisoft/now-sdk-ext-core'
 import {readFile} from 'node:fs/promises'
 
-import {MetadataDisplayService, MetadataInputError, projectMetadataError} from '../services/metadata-display.service.js'
+import {ID, MetadataDisplayService, MetadataInputError, NAME, projectMetadataError} from '../services/metadata-display.service.js'
 import {AuthenticatedCommand} from './authenticated-command.js'
 
-export const metadataFlags = {
+export const scopeFlags = {
+  'acknowledge-upgrade-skip': Flags.boolean({description: 'Required to change a file of an installed Store application. '
+    + 'Upgrades of that application then skip the file until the customization is reviewed. Use only after review; requires --update-set.'}),
   scope: Flags.string({description: 'Explicit application scope name, or literal global.', exclusive: ['scope-id']}),
   'scope-id': Flags.string({description: 'Explicit application scope sys_id.', exclusive: ['scope']}),
+  'update-set': Flags.string({description: 'In progress update set in the requested scope. Required for a Store application.'}),
+}
+
+export const metadataFlags = {
+  ...scopeFlags,
   table: Flags.string({description: 'Metadata table name.', required: true}),
-  'update-set': Flags.string({description: 'In progress update set in the requested scope.'}),
   view: Flags.string({description: 'Form view name.'}),
 }
 
@@ -24,8 +31,6 @@ export const metadataWriteFlags = {
 
 export type MetadataAction = MetadataWriteResult['action']
 export type MetadataFlags = Record<string, unknown>
-const ID = /^[a-f\d]{32}$/i
-const NAME = /^[a-z\d_]+$/i
 const UNSAFE = new Set(['__proto__', 'constructor', 'prototype'])
 
 function reject(message: string): never {
@@ -47,7 +52,7 @@ export function validateInitialQuery(value: unknown): asserts value is string | 
   }
 }
 
-function identifier(flags: MetadataFlags, name: string, pattern: RegExp, required = false): string | undefined {
+export function identifier(flags: MetadataFlags, name: string, pattern: RegExp, required = false): string | undefined {
   const value = flags[name]
   if (value === undefined && !required) return undefined
   if (typeof value !== 'string' || !pattern.test(value)) reject(`--${name} has an invalid identifier.`)
@@ -79,25 +84,31 @@ async function objectInput(flags: MetadataFlags, name: string): Promise<Metadata
     if (field === null || typeof field === 'string' || typeof field === 'boolean') continue
     if (typeof field === 'number' && Number.isFinite(field)) continue
     if (Array.isArray(field) && field.every(item => typeof item === 'string')) continue
-    if (field && typeof field === 'object' && !Array.isArray(field) &&
+    // A duration with no parts would post 0 00:00:00 and silently zero the field.
+    if (field && typeof field === 'object' && !Array.isArray(field) && Object.keys(field).length > 0 &&
       Object.entries(field).every(([part, amount]) =>
-        ['days', 'hours', 'minutes', 'seconds'].includes(part) && typeof amount === 'number' && Number.isFinite(amount))) continue
+        ['days', 'hours', 'minutes', 'seconds'].includes(part) && typeof amount === 'number' && Number.isFinite(amount) && amount >= 0)) continue
     reject(`The ${name} input contains an unsupported value.`)
   }
 
   return value as MetadataWriteOptions['fields']
 }
 
-export async function metadataOptions(flags: MetadataFlags, action: MetadataAction): Promise<MetadataDeleteOptions | MetadataWriteOptions> {
-  identifier(flags, 'table', NAME, true)
-  if (action !== 'insert') identifier(flags, 'sys-id', ID, true)
+/** The explicit scope, update set and Store acknowledgement shared by every write. */
+export function scopeOptions(flags: MetadataFlags): Pick<MetadataWriteOptions, 'scope' | 'storeCustomization' | 'updateSet'> {
   const updateSet = identifier(flags, 'update-set', ID)
   const scopeName = identifier(flags, 'scope', NAME)
   const scopeId = identifier(flags, 'scope-id', ID)
   if (Boolean(scopeName) === Boolean(scopeId)) reject('Supply exactly one of --scope and --scope-id.')
-  const scope = scopeId ? {sysId: scopeId} : scopeName === 'global' ? 'global' : {scope: scopeName!}
-  const common: MetadataWriteOptions = {scope, ...(updateSet === undefined ? {} : {updateSet}),
-    ...(flags.view === undefined ? {} : {view: flags.view as string})}
+  const scope: MetadataScopeRef = scopeId ? {sysId: scopeId} : scopeName === 'global' ? 'global' : {scope: scopeName!}
+  return {scope, ...(updateSet === undefined ? {} : {updateSet}),
+    ...(flags['acknowledge-upgrade-skip'] === true ? {storeCustomization: {acknowledgeUpgradeSkip: true}} : {})}
+}
+
+export async function metadataOptions(flags: MetadataFlags, action: MetadataAction): Promise<MetadataDeleteOptions | MetadataWriteOptions> {
+  identifier(flags, 'table', NAME, true)
+  if (action !== 'insert') identifier(flags, 'sys-id', ID, true)
+  const common: MetadataWriteOptions = {...scopeOptions(flags), ...(flags.view === undefined ? {} : {view: flags.view as string})}
   if (action === 'delete') {
     if (flags['confirm-table'] !== flags.table || flags['confirm-sys-id'] !== flags['sys-id']) {
       reject('Delete confirmation must match --table and --sys-id exactly.')
@@ -120,20 +131,42 @@ export async function metadataOptions(flags: MetadataFlags, action: MetadataActi
     ...(flags['initial-query'] === undefined ? {} : {initialQuery: flags['initial-query'] as string})}
 }
 
-export abstract class MetadataCommand<T extends typeof Command> extends AuthenticatedCommand<T> {
-  protected abstract metadataAction: MetadataAction
+/** Projects failures during execution into public codes; usage, credential and policy errors keep their own handling. */
+export abstract class MetadataBaseCommand<T extends typeof Command> extends AuthenticatedCommand<T> {
+  protected abstract metadataAction: string
+  protected metadataTable?: string
+  private executing = false
 
   protected async catch(error: Error & {exitCode?: number}): Promise<void> {
+    // Parse errors, missing flags and failAuth are raised in init(): oclif and failAuth already say what is wrong.
+    if (!this.executing) return super.catch(error)
+    const refused = isPolicyRefusal(error)
+    // A refusal is a decision, not a crash: log it at warn, as every other command does.
+    if (refused) this.authLogger?.warn('Refused by policy.', {message: error.message})
     const flags = this.flags as MetadataFlags | undefined
     const failure = projectMetadataError(error, {action: this.metadataAction,
-      sysId: flags?.['sys-id'], table: flags?.table})
-    // Only the projected error can reach the shared catch handler and logger.
+      sysId: flags?.['sys-id'] ?? flags?.section, table: flags?.table ?? this.metadataTable})
+    // The original is logged redacted, at debug: thrown network, TLS and core errors are otherwise undiagnosable.
+    this._logger?.debug('Metadata command error before projection.', {code: (error as {code?: unknown}).code,
+      message: redactMessage(String(error?.message ?? '')), name: error?.name})
+    // Only the projected error can reach the shared catch handler and its error-level logger.
     await flushLogs()
     const message = this.jsonEnabled() ? failure.message : new MetadataDisplayService().failure(failure).join('\n')
     const safe = new Errors.CLIError(message, {code: failure.code, exit: 1, suggestions: failure.remediation})
     Object.assign(safe, {metadata: failure})
+    // Past AuthenticatedCommand's error-level log for a refusal; its --json shape (error.metadata) stays the same.
+    if (refused) return (Command.prototype as unknown as {catch(error: Error): Promise<void>}).catch.call(this, safe)
     return super.catch(safe)
   }
+
+  public async init(): Promise<void> {
+    await super.init()
+    this.executing = true
+  }
+}
+
+export abstract class MetadataCommand<T extends typeof Command> extends MetadataBaseCommand<T> {
+  protected abstract metadataAction: MetadataAction
 
   public async run(): Promise<MetadataWriteResult> {
     const flags = this.flags as MetadataFlags

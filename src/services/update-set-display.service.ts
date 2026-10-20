@@ -32,6 +32,7 @@ export class UpdateSetDisplayService {
   formatCreateResult(result: any, jsonOutput: boolean): string[] {
     if (jsonOutput) {
       return [JSON.stringify({
+        ...(result.application === undefined ? {} : {application: result.application}),
         name: result.name,
         state: result.state,
         sys_id: result.sys_id,
@@ -44,6 +45,7 @@ export class UpdateSetDisplayService {
     lines.push(`  Name:    ${result.name}`)
     lines.push(`  Sys ID:  ${result.sys_id}`)
     lines.push(`  State:   ${result.state}`)
+    if (result.application !== undefined) lines.push(`  Application: ${result.application}`)
 
     return lines
   }
@@ -55,6 +57,7 @@ export class UpdateSetDisplayService {
     if (jsonOutput) {
       return [JSON.stringify({
         currentUpdateSet: {
+          ...(set.application === undefined ? {} : {application: set.application}),
           name: set.name,
           state: set.state,
           sys_id: set.sys_id,
@@ -68,6 +71,7 @@ export class UpdateSetDisplayService {
     lines.push(`  Name:    ${set.name}`)
     lines.push(`  Sys ID:  ${set.sys_id}`)
     lines.push(`  State:   ${set.state}`)
+    if (set.application !== undefined) lines.push(`  Application: ${set.application}`)
 
     return lines
   }
