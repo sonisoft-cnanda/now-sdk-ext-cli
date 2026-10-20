@@ -1,4 +1,4 @@
-import {afterAll, describe, expect, it} from '@jest/globals'
+import {afterAll, beforeAll, describe, expect, it} from '@jest/globals'
 import {spawnSync} from 'node:child_process'
 import {resolve} from 'node:path'
 
@@ -17,7 +17,7 @@ import {SN_INSTANCE_ALIAS} from '../../test_utils/test_config.js'
 const live = process.env.NEX_LIVE === '1' || process.env.npm_lifecycle_event === 'test:live'
 const MINUTE = 60_000
 const BIN = resolve('bin/run.js')
-const STAMP = new Date().toISOString().slice(0, 16).replaceAll(/[-:T]/g, '')
+const STAMP = new Date().toISOString().slice(0, 19).replaceAll(/[-:T]/g, '')
 const FIELD = 'url'
 const NOTE = 'NSE-15 CLI integration test (test only, do not promote).'
 
@@ -62,29 +62,74 @@ if (live && !section) console.warn(`[working-set.live] ${SN_INSTANCE_ALIAS} has 
   let changed: string[] = []
   let storeSet = ''
   let globalSet = ''
-  const layoutSet = (elements: string[], extra: string[] = ['--acknowledge-upgrade-skip']) =>
-    nex(['metadata', 'layout', 'set', '--section', sectionId, '--elements', elements.join(','), '--scope-id', app, '--update-set', storeSet, ...extra])
+  let scriptInclude: string | undefined
+  const layoutSet = (elements: string[], extra: string[] = ['--acknowledge-upgrade-skip'], set = storeSet) =>
+    nex(['metadata', 'layout', 'set', '--section', sectionId, '--elements', elements.join(','), '--scope-id', app, '--update-set', set, ...extra])
+  const state = (id: string): string => records('sys_update_set', `sys_id=${id}`, 'sys_id,state')[0]?.state
+  const layout = (): string[] => ok(nex(['metadata', 'layout', 'get', '--section', sectionId], {read: true})).elements
+
+  beforeAll(async () => {
+    // The working set as the platform persists it (apps.current_app + sys_update_set), before any change.
+    const {resolveSessionCredentials, ServiceNowInstance, WorkingSetManager} = await import('@sonisoft/now-sdk-ext-core')
+    const credential = await resolveSessionCredentials(SN_INSTANCE_ALIAS)
+    previous = await new WorkingSetManager(new ServiceNowInstance({alias: SN_INSTANCE_ALIAS, credential})).getWorkingSet()
+    original = layout()
+    changed = original.includes(FIELD) ? original.filter(item => item !== FIELD) : [...original, FIELD]
+  }, 3 * MINUTE)
 
   afterAll(async () => {
-    try {
-      const now = nex(['metadata', 'layout', 'get', '--section', sectionId], {read: true}).json?.elements
-      if (original.length && storeSet && JSON.stringify(now) !== JSON.stringify(original)) {
-        nex(['update-set', 'use', storeSet])
-        layoutSet(original)
-      }
-    } finally {
-      if (previous) nex(['update-set', 'restore', '--application', previous.application || 'global', '--update-set', previous.updateSet])
-      const left = created.length ? records('sys_update_set', `sys_idIN${created.join(',')}^state=in progress`, 'sys_id') : []
-      if (left.length) {
-        // Only this run's own sets, and never their captures: an In progress test set must not be promotable.
-        const {resolveSessionCredentials, ServiceNowInstance, TableAPIRequest} = await import('@sonisoft/now-sdk-ext-core')
-        const credential = await resolveSessionCredentials(SN_INSTANCE_ALIAS)
-        const table = new TableAPIRequest(new ServiceNowInstance({alias: SN_INSTANCE_ALIAS, credential}))
-        // eslint-disable-next-line no-await-in-loop
-        for (const {sys_id: id} of left) await table.put('sys_update_set', id, {state: 'ignore'})
+    // Each step is independent and the first error is rethrown at the end. A cleanup change goes into a set of its own,
+    // set to Ignore below, whenever the test's own set has closed.
+    const errors: unknown[] = []
+    const step = async (work: () => Promise<void> | void) => {
+      try {
+        await work()
+      } catch (error) {
+        errors.push(error)
       }
     }
-  }, 5 * MINUTE)
+
+    const openSet = (own: string, application: string): string => {
+      if (own && state(own) === 'in progress') return own
+      const set = ok(nex(['update-set', 'create', '-n', `nex-it NSE-15 CLI cleanup ${STAMP}`, '-d', `${NOTE} Puts back what a failed run left behind.`,
+        '--application', application])).sys_id
+      created.push(set)
+      return set
+    }
+
+    await step(() => {
+      if (!original.length || JSON.stringify(layout()) === JSON.stringify(original)) return
+      const set = openSet(storeSet, app)
+      ok(nex(['update-set', 'use', set]))
+      ok(layoutSet(original, ['--acknowledge-upgrade-skip'], set))
+    })
+    await step(() => {
+      if (!scriptInclude || records('sys_script_include', `sys_id=${scriptInclude}`, 'sys_id').length === 0) return
+      const set = openSet(globalSet, 'global')
+      ok(nex(['update-set', 'use', set]))
+      ok(nex(['metadata', 'delete', '--table', 'sys_script_include', '--sys-id', scriptInclude, '--scope', 'global', '--update-set', set,
+        '--confirm-table', 'sys_script_include', '--confirm-sys-id', scriptInclude]))
+    })
+    await step(async () => {
+      const left = created.length ? records('sys_update_set', `sys_idIN${created.join(',')}^state=in progress`, 'sys_id') : []
+      if (left.length === 0) return
+      // Only this run's own sets, never their captures. Over the Table API a scoped set is editable only with its app current.
+      const {resolveSessionCredentials, ServiceNowInstance, TableAPIRequest} = await import('@sonisoft/now-sdk-ext-core')
+      const credential = await resolveSessionCredentials(SN_INSTANCE_ALIAS)
+      const table = new TableAPIRequest(new ServiceNowInstance({alias: SN_INSTANCE_ALIAS, credential}))
+      for (const {sys_id: id} of left) {
+        ok(nex(['update-set', 'use', id]))
+        // eslint-disable-next-line no-await-in-loop
+        await table.put('sys_update_set', id, {state: 'ignore'})
+        if (state(id) !== 'ignore') throw new Error(`could not set ${id} to Ignore`)
+      }
+    })
+    // Last, so no cleanup step above can leave the user in a test set.
+    await step(() => {
+      if (previous) ok(nex(['update-set', 'restore', '--application', previous.application || 'global', '--update-set', previous.updateSet]))
+    })
+    if (errors.length > 0) throw errors[0]
+  }, 20 * MINUTE)
 
   it('creates an update set in the Store application and makes it current', () => {
     const set = ok(nex(['update-set', 'create', '-n', `nex-it NSE-15 CLI sn_compliance ${STAMP}`, '-d',
@@ -92,11 +137,9 @@ if (live && !section) console.warn(`[working-set.live] ${SN_INSTANCE_ALIAS} has 
     storeSet = set.sys_id
     created.push(storeSet)
     expect(set).toMatchObject({application: app, state: 'in progress'})
-    original = ok(nex(['metadata', 'layout', 'get', '--section', sectionId], {read: true})).elements
-    changed = original.includes(FIELD) ? original.filter(item => item !== FIELD) : [...original, FIELD]
     expect(code(layoutSet(changed))).toBe('update_set_not_current')
     const used = ok(nex(['update-set', 'use', storeSet]))
-    previous = used.previous
+    expect(used.previous).toEqual(previous)
     expect(used.current).toEqual({application: app, updateSet: storeSet})
     expect(ok(nex(['update-set', 'current'], {read: true})).currentUpdateSet).toMatchObject({application: app, sys_id: storeSet})
   }, 5 * MINUTE)
@@ -123,7 +166,11 @@ if (live && !section) console.warn(`[working-set.live] ${SN_INSTANCE_ALIAS} has 
       '--application', 'global']))
     globalSet = global.sys_id
     created.push(globalSet)
-    const [capture] = records('sys_update_xml', `update_set=${storeSet}`, 'sys_id')
+    // Never complete a set over a layout that was not put back, and never let the refusal call itself complete it.
+    expect(layout()).toEqual(original)
+    const captured = records('sys_update_xml', `update_set=${storeSet}`, 'sys_id')
+    expect(captured).toHaveLength(1)
+    const [capture] = captured
     const move = nex(['update-set', 'move-capture', '--capture', capture.sys_id, '--source', storeSet, '--target', globalSet, '--reason', 'NSE-15 CLI negative test'])
     expect(code(move)).toBe('scope_mismatch')
     const wrong = nex(['update-set', 'complete', storeSet, '--expected-captures', '2'])
@@ -134,18 +181,24 @@ if (live && !section) console.warn(`[working-set.live] ${SN_INSTANCE_ALIAS} has 
 
   it('runs the same lifecycle in Global', () => {
     expect(ok(nex(['update-set', 'use', globalSet])).current).toEqual({application: 'global', updateSet: globalSet})
-    const inserted = ok(nex(['metadata', 'insert', '--table', 'sys_script_include', '--scope', 'global', '--update-set', globalSet, '--fields',
-      JSON.stringify({active: false, description: NOTE, name: `NexItNse15Cli${STAMP}`, script: '// NSE-15 CLI integration test'})]))
+    const insert = nex(['metadata', 'insert', '--table', 'sys_script_include', '--scope', 'global', '--update-set', globalSet, '--fields',
+      JSON.stringify({active: false, description: NOTE, name: `NexItNse15Cli${STAMP}`, script: '// NSE-15 CLI integration test'})])
+    // A failed verification can still leave the record: keep its id for cleanup either way.
+    scriptInclude = insert.json?.sysId ?? insert.json?.error?.metadata?.sysId
+    const inserted = ok(insert)
     expect(inserted.capture).toMatchObject({recordScope: 'global', updateName: `sys_script_include_${inserted.sysId}`, updateSetSysId: globalSet})
     const removed = ok(nex(['metadata', 'delete', '--table', 'sys_script_include', '--sys-id', inserted.sysId, '--scope', 'global',
       '--update-set', globalSet, '--confirm-table', 'sys_script_include', '--confirm-sys-id', inserted.sysId]))
     expect(removed.capture).toMatchObject({action: 'DELETE', updateSetSysId: globalSet})
+    scriptInclude = undefined
     expect(ok(nex(['update-set', 'complete', globalSet, '--expected-captures', '1']))).toMatchObject({state: 'complete'})
   }, 5 * MINUTE)
 
   it('restores the working set it found', () => {
     const restored = ok(nex(['update-set', 'restore', '--application', previous!.application || 'global', '--update-set', previous!.updateSet]))
-    expect(ok(nex(['update-set', 'current'], {read: true})).currentUpdateSet.sys_id).toBe(restored.restored.updateSet)
-    previous = undefined
+    // The set it found is still In progress, so it comes back exactly, with no fallback to a Default.
+    expect(restored).toEqual({restored: {application: previous!.application || 'global', updateSet: previous!.updateSet}})
+    expect(ok(nex(['update-set', 'current'], {read: true})).currentUpdateSet.sys_id).toBe(previous!.updateSet)
+    // previous stays set: afterAll restores again after any cleanup change.
   }, 3 * MINUTE)
 })
