@@ -25,7 +25,19 @@ const NOTE = 'NSE-15 CLI integration test (test only, do not promote).'
 const ENV = Object.fromEntries(Object.entries(process.env).filter(([key]) => key !== 'NODE_ENV' && !key.startsWith('JEST_')))
 
 interface Result {json: any; status: null | number; stderr: string}
-function nex(args: string[], {read = false} = {}): Result {
+// A credential lookup that fails at startup sends nothing to the instance: failAuth runs in init(), before the
+// instance exists, and marks its error oclif.exit 2 (under --json the process itself exits 1). A renewal failure
+// during a run carries no oclif exit and is never retried. One retry is therefore safe even for a write.
+const startupAuthFailure = (result: Result): boolean => result.status !== 0 && result.json?.error?.oclif?.exit === 2 &&
+  /Credential lookup or renewal failed for alias/.test(String(result.json?.error?.message))
+function nex(args: string[], options: {read?: boolean} = {}): Result {
+  const first = run(args, options)
+  if (!startupAuthFailure(first)) return first
+  spawnSync('sleep', ['3'])
+  return run(args, options)
+}
+
+function run(args: string[], {read = false} = {}): Result {
   const run = spawnSync(process.execPath, [BIN, ...args, '-a', SN_INSTANCE_ALIAS, '--json', ...(read ? ['--read-only'] : [])],
     {encoding: 'utf8', env: ENV, maxBuffer: 32 * 1024 * 1024, timeout: 5 * MINUTE})
   let json: unknown
