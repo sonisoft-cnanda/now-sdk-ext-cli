@@ -1,5 +1,5 @@
-import {type FormLayout, type FormLayoutWriteResult, isPolicyRefusal, type MetadataErrorDetail, MetadataScopeError, MetadataVerificationError,
-  type MetadataWriteResult, redactMessage} from '@sonisoft/now-sdk-ext-core'
+import {type FormLayout, type FormLayoutWriteResult, isPolicyRefusal, type ListLayout, type ListLayoutWriteResult, type MetadataErrorDetail,
+  MetadataScopeError, MetadataVerificationError, type MetadataWriteResult, redactMessage} from '@sonisoft/now-sdk-ext-core'
 
 /** A ServiceNow sys_id. */
 export const ID = /^[a-f\d]{32}$/i
@@ -35,7 +35,8 @@ const cleanMessage = (text: string): string => redactMessage(text).replaceAll(/<
 const cleanName = (text: string): string => text.replaceAll(/\p{Cc}/gu, ' ')
 
 const REFUSAL_REMEDIATION: Record<string, string> = {
-  field_not_supported: 'The field named in detail.field is not on the form for this table and view, or cannot be written there.',
+  domain_not_supported: 'The list or your user is outside the global domain. A save would create a new list in your session\'s domain and leave this one unchanged: change it in the List Layout UI from the right domain.',
+  field_not_supported: 'The field named in detail.field is not on the form (or not offered by the List Layout page) for this table and view, or cannot be written there.',
   form_redirected: 'The form redirected to detail.redirectPath instead of loading: the table may not support form writes, or the session lacks access.',
   protected_record: 'The vendor protected this file (sys_policy read or protected). It cannot be changed; create a new record instead.',
   section_not_supported: 'The section holds an annotation, chart or embedded list (detail.field), which this save cannot write back. Change it in the Form Layout UI; never drop those elements from the list.',
@@ -104,7 +105,9 @@ export function projectMetadataError(error: unknown, context: {action: string; s
       verification: 'failed', writeAttempted: error.writeAttempted})
   } else if (error instanceof MetadataScopeError) {
     // detail holds identifiers, states and paths only; core sanitises it.
-    Object.assign(failure, {code: error.code, message: `Metadata write refused before submission: ${error.code}.`,
+    // A read (layout get, list-layout get) refuses too, for example an unknown view: do not call it a write.
+    const read = context.action.endsWith(' get')
+    Object.assign(failure, {code: error.code, message: read ? `Metadata read refused: ${error.code}.` : `Metadata write refused before submission: ${error.code}.`,
       remediation: [REFUSAL_REMEDIATION[error.code] ?? 'Check the scope, table, form permissions, and In progress update set.'],
       type: error.name, writeAttempted: false, ...(error.detail === undefined ? {} : {detail: error.detail})})
   } else if (error instanceof MetadataInputError) {
@@ -165,6 +168,42 @@ export class MetadataDisplayService {
       `Elements: ${result.previousElements.length} -> ${result.elements.length}; added: ${added.join(', ') || '(none)'}; removed: ${removed.join(', ') || '(none)'}${reordered ? '; order changed' : ''}`,
       ...this.captureLines(result.capture),
       `Previous layout (to put it back): ${result.previousElements.join(',')}`]
+  }
+
+  listLayout(layout: ListLayout): ListLayout {
+    return {columns: layout.columns.map(item => cleanName(item)), exists: layout.exists, table: layout.table, view: cleanName(layout.view),
+      ...(layout.sysId === undefined ? {} : {sysId: layout.sysId}), ...(layout.scope === undefined ? {} : {scope: layout.scope}),
+      ...(layout.updateName === undefined ? {} : {updateName: cleanName(layout.updateName)})}
+  }
+
+  listLayoutLines(layout: ListLayout): string[] {
+    if (!layout.exists) {
+      return [`List layout: ${layout.table} (${layout.view || 'Default view'})`,
+        'The table has no list of its own for this view and shows its parent\'s. metadata list-layout set creates one.']
+    }
+
+    return [`List layout: ${layout.table} (${layout.view || 'Default view'})`, `List: ${layout.sysId}; scope: ${layout.scope}; update name: ${layout.updateName}`,
+      ...layout.columns.map((column, index) => `  ${String(index).padStart(3)}  ${column}`)]
+  }
+
+  listLayoutResult(result: ListLayoutWriteResult): ListLayoutWriteResult {
+    return {capture: captureProjection(result.capture) as ListLayoutWriteResult['capture'], columns: result.columns.map(item => cleanName(item)),
+      created: result.created, previousColumns: result.previousColumns.map(item => cleanName(item)),
+      ...(result.previousSysId === undefined ? {} : {previousSysId: result.previousSysId}), scope: result.scope, sysId: result.sysId, table: result.table,
+      view: cleanName(result.view)}
+  }
+
+  listLayoutSuccess(result: ListLayoutWriteResult): string[] {
+    const added = difference(result.columns, result.previousColumns)
+    const removed = difference(result.previousColumns, result.columns)
+    const reordered = commonInOrder(result.previousColumns, result.columns) < result.previousColumns.length - removed.length
+    return [`Verified list layout: ${result.table} (${result.view || 'Default view'})${result.created ? ', created: the table had no list of its own' : ''}`,
+      `List: ${result.sysId}${result.previousSysId ? ` (replaced ${result.previousSysId})` : ''}`,
+      `Columns: ${result.previousColumns.length} -> ${result.columns.length}; added: ${added.join(', ') || '(none)'}; removed: ${removed.join(', ') || '(none)'}${reordered ? '; order changed' : ''}`,
+      ...this.captureLines(result.capture),
+      result.created
+        ? `To put it back, delete the new sys_ui_list row ${result.sysId} (saving columns keeps a list of its own), then move its DELETE capture to the application's Default: shipped, it would delete this list on the target.`
+        : `Previous columns (to put them back): ${result.previousColumns.join(',')}`]
   }
 
   result(result: MetadataWriteResult): MetadataWriteResult {

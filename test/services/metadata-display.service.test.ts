@@ -76,16 +76,41 @@ describe('metadata output for applications we do not own', () => {
     ['update_set_not_current', 'nex update-set use'],
     ['protected_record', 'sys_policy'],
     ['section_not_supported', 'Form Layout UI'],
+    ['domain_not_supported', 'global domain'],
   ] as const)('tells the caller what to do about %s', (code, hint) => {
     const failure = projectMetadataError(new MetadataScopeError(code), context)
     expect(failure.remediation.join(' ')).toContain(hint)
     expect(new MetadataDisplayService().failure(failure).join('\n')).toContain(hint)
   })
 
+  it('calls a refused read a read, not a write', () => {
+    expect(projectMetadataError(new MetadataScopeError('invalid_input'), {action: 'list-layout get'}).message).toBe('Metadata read refused: invalid_input.')
+    expect(projectMetadataError(new MetadataScopeError('invalid_input'), {action: 'list-layout set'}).message)
+      .toBe('Metadata write refused before submission: invalid_input.')
+  })
+
   it('carries the sanitised refusal detail', () => {
     const failure = projectMetadataError(new MetadataScopeError('field_not_supported', {field: 'u_missing', table: 'incident'}), context)
     expect(failure.detail).toEqual({field: 'u_missing', table: 'incident'})
     expect(new MetadataDisplayService().failure(failure).join('\n')).toContain('Detail: {"field":"u_missing","table":"incident"}')
+  })
+
+  it('renders a list layout and a verified list change', () => {
+    const display = new MetadataDisplayService()
+    expect(display.listLayoutLines(display.listLayout({table: 'cmn_cost_center', view: '', exists: true, scope: 'global',
+      sysId: ID, updateName: 'sys_ui_list_cmn_cost_center_null', columns: ['name', 'code']})).join('\n')).toMatch(/Default view[\s\S]*List: a+;[\s\S]*0 {2}name[\s\S]*1 {2}code/)
+    expect(display.listLayoutLines({table: 't', view: 'ess', exists: false, columns: []}).join('\n')).toContain('no list of its own')
+    const result = (previousColumns: string[], columns: string[], created = false) => display.listLayoutSuccess(display.listLayoutResult({table: 't',
+      view: '', scope: {sysId: 'global', scope: 'global'}, sysId: ID, created, columns, previousColumns, capture})).join('\n')
+    expect(result(['name', 'code'], ['name', 'manager'])).toContain('added: manager; removed: code')
+    expect(result(['name', 'code'], ['code', 'name'])).toContain('order changed')
+    expect(result(['name', 'code'], ['name', 'code', 'manager'])).not.toContain('order changed')
+    expect(result(['name', 'code'], ['name'])).toContain('Previous columns (to put them back): name,code')
+    const created = result([], ['name'], true)
+    expect(created).toContain('created: the table had no list of its own')
+    expect(created).toContain(`delete the new sys_ui_list row ${ID}`)
+    expect(created).toContain('move its DELETE capture')
+    expect(result(['name'], ['name', 'code'])).toContain(`List: ${ID}`)
   })
 
   it('renders a layout and a verified layout change', () => {
