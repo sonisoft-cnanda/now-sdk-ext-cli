@@ -13,7 +13,8 @@ prefix is added for you; the result names the column as saved. On Global tables 
 platform also appends the field to the end of the Default view's main section (move it with nex metadata layout set),
 unless a field of that name is already on the form, as after re-adding a deleted column. Every capture (Dictionary,
 Field Label, and Form Layout when the field was placed) is checked to be in --update-set, which must be the working set.
-A column in an installed Store application needs --acknowledge-upgrade-skip: upgrades then skip the section it lands on.
+A column in an installed Store application needs --acknowledge-upgrade-skip: its files are customizations of that
+application, and so is the form section when the field is placed on it; upgrades skip customized files.
 
 Removing a column deletes its data and is not part of this command.`
   static examples = [

@@ -155,7 +155,9 @@ column, whose form element was left behind): `formSections` is then empty. Every
 `captures` (Dictionary, Field Label, and Form Layout when placed) is checked to be in
 `--update-set`, which must be the working set. A name the table or a parent already has is refused
 before saving (`column_exists`). A column in an installed Store application needs
-`--acknowledge-upgrade-skip`, and the section the field lands on is then customized.
+`--acknowledge-upgrade-skip`: its Dictionary and Field Label files are customizations of that
+application (`capture.customization` reports the Dictionary file), and so is the form section when
+the field is placed on it. Upgrades skip customized files.
 
 The command does not remove columns. Deleting a column deletes its data wherever its capture is
 committed, turns its Dictionary and Field Label captures into DELETEs, and leaves its form element
