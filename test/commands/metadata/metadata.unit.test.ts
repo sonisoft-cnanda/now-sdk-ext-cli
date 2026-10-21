@@ -1,6 +1,6 @@
 import {afterEach, describe, expect, it, jest} from '@jest/globals'
 import {Command} from '@oclif/core'
-import {FormLayoutWriter, ListLayoutWriter, MetadataFormWriter, MetadataScopeError, policyRefusal} from '@sonisoft/now-sdk-ext-core'
+import {ColumnWriter, FormLayoutWriter, ListLayoutWriter, MetadataFormWriter, MetadataScopeError, policyRefusal} from '@sonisoft/now-sdk-ext-core'
 import {mkdtemp, rm, writeFile} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
@@ -13,6 +13,7 @@ import MetadataLayoutGet from '../../../src/commands/metadata/layout/get.js'
 import MetadataLayoutSet, {layoutElements} from '../../../src/commands/metadata/layout/set.js'
 import MetadataListLayoutGet from '../../../src/commands/metadata/list-layout/get.js'
 import MetadataListLayoutSet, {listColumns} from '../../../src/commands/metadata/list-layout/set.js'
+import MetadataColumnAdd from '../../../src/commands/metadata/column/add.js'
 import {AuthenticatedCommand} from '../../../src/common/authenticated-command.js'
 
 const ID = 'a'.repeat(32)
@@ -202,6 +203,44 @@ describe('metadata list-layout', () => {
       flags: {table: 'cmn_cost_center', columns: 'name', scope: 'global', 'update-set': ID, ...extra}})
     await expect(writer.run()).rejects.toThrow(message)
     expect(set).not.toHaveBeenCalled()
+  })
+})
+
+describe('metadata column add', () => {
+  const result = {table: 'x_acme_ticket', column: 'triage_note', sysId: ID, label: 'Triage note', type: 'string', scope: {sysId: ID, scope: 'x_acme'},
+    formSections: [ID], captures: ['sys_dictionary_x_acme_ticket_triage_note', 'sys_documentation_x_acme_ticket_triage_note_en', `sys_ui_section_${ID}`], messages: [],
+    capture: {action: 'INSERT_OR_UPDATE', updateSetSysId: ID, updateSetName: 'S', updateSetScope: ID, recordScope: ID, preferencesUnchanged: true,
+      preferenceRowsReplaced: [], currentUpdateSet: {switched: false}}}
+  const command = (extra: object) => Object.assign(Object.create(MetadataColumnAdd.prototype), {instance: {}, jsonEnabled: () => true,
+    flags: {table: 'x_acme_ticket', column: 'triage_note', label: 'Triage note', type: 'string', scope: 'x_acme', 'update-set': ID, ...extra}})
+
+  it('adds a column through ColumnWriter with the scope, set and options given', async () => {
+    const add = jest.spyOn(ColumnWriter.prototype, 'addColumn').mockResolvedValue(result)
+    await expect(command({'max-length': 100}).run()).resolves.toMatchObject({column: 'triage_note', formSections: [ID]})
+    expect(add).toHaveBeenCalledWith('x_acme_ticket', {column: 'triage_note', label: 'Triage note', type: 'string', maxLength: 100, scope: {scope: 'x_acme'}, updateSet: ID})
+    await command({type: 'glide_list', reference: 'sys_user', scope: undefined, 'scope-id': ID, 'acknowledge-upgrade-skip': true}).run()
+    expect(add).toHaveBeenLastCalledWith('x_acme_ticket', {column: 'triage_note', label: 'Triage note', type: 'glide_list', reference: 'sys_user',
+      scope: {sysId: ID}, updateSet: ID, storeCustomization: {acknowledgeUpgradeSkip: true}})
+  })
+
+  it.each([
+    [{table: 'bad^table'}, 'invalid identifier'],
+    [{column: 'Triage'}, 'invalid identifier'],
+    [{column: 'triage note'}, 'invalid identifier'],
+    [{type: 'string;'}, 'invalid identifier'],
+    [{reference: 'a b'}, 'invalid identifier'],
+    [{label: ' '}, 'non-empty text'],
+    [{label: 'a\nb'}, 'non-empty text'],
+    [{label: 'a<b'}, 'without < or >'],
+    [{label: 'x'.repeat(81)}, 'at most 80'],
+    [{reference: 'sys_user'}, 'only for --type reference'],
+    [{type: 'reference'}, 'needs --reference'],
+    [{'update-set': 'abc'}, 'invalid identifier'],
+    [{scope: undefined}, 'exactly one'],
+  ])('refuses %o before any request', async (extra, message) => {
+    const add = jest.spyOn(ColumnWriter.prototype, 'addColumn')
+    await expect(command(extra).run()).rejects.toThrow(message)
+    expect(add).not.toHaveBeenCalled()
   })
 })
 

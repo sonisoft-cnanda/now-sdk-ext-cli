@@ -77,10 +77,19 @@ describe('metadata output for applications we do not own', () => {
     ['protected_record', 'sys_policy'],
     ['section_not_supported', 'Form Layout UI'],
     ['domain_not_supported', 'global domain'],
+    ['column_exists', 'Choose another name'],
+    ['table_not_supported', 'schema tables'],
   ] as const)('tells the caller what to do about %s', (code, hint) => {
     const failure = projectMetadataError(new MetadataScopeError(code), context)
     expect(failure.remediation.join(' ')).toContain(hint)
     expect(new MetadataDisplayService().failure(failure).join('\n')).toContain(hint)
+  })
+
+  it('points an invalid option value at the option, and keeps the update set remedy otherwise', () => {
+    expect(projectMetadataError(new MetadataScopeError('invalid_input', {field: 'label'}), {action: 'column add'}).remediation)
+      .toEqual(['The value for label is not valid: check its format and limits in the command help.'])
+    expect(projectMetadataError(new MetadataScopeError('invalid_input', {updateSetState: 'complete'}), {action: 'column add'}).remediation[0])
+      .toContain('In progress update set')
   })
 
   it('calls a refused read a read, not a write', () => {
@@ -111,6 +120,24 @@ describe('metadata output for applications we do not own', () => {
     expect(created).toContain(`delete the new sys_ui_list row ${ID}`)
     expect(created).toContain('move its DELETE capture')
     expect(result(['name'], ['name', 'code'])).toContain(`List: ${ID}`)
+  })
+
+  it('renders a verified column, placed or not, without server markup', () => {
+    const display = new MetadataDisplayService()
+    const column = (formSections: string[]) => display.columnSuccess(display.columnResult({table: 'x_acme_ticket', column: 'triage_note', sysId: ID,
+      label: 'Triage\u0007 note', type: 'string', scope: {sysId: ID, scope: 'x_acme'}, formSections, messages: ['<b>saved</b>'],
+      captures: ['sys_dictionary_x_acme_ticket_triage_note', 'sys_documentation_x_acme_ticket_triage_note_en'], capture})).join('\n')
+    const placed = column([ID])
+    expect(placed).toContain('Verified column: x_acme_ticket.triage_note (string) labelled "Triage  note"')
+    expect(placed).toContain(`appended to the end of section ${ID}`)
+    expect(placed).toContain('nex metadata layout set')
+    expect(placed).toContain('Captures: sys_dictionary_x_acme_ticket_triage_note, sys_documentation_x_acme_ticket_triage_note_en')
+    expect(placed).toContain('[omitted]saved[omitted]')
+    expect(placed).toContain('does not remove columns')
+    const unplaced = column([])
+    expect(unplaced).toContain('Form: not placed by this save')
+    expect(unplaced).toContain('another application\'s table')
+    expect(unplaced).toContain('already on the form')
   })
 
   it('renders a layout and a verified layout change', () => {
