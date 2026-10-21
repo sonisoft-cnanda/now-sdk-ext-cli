@@ -218,8 +218,8 @@ describe('metadata column add', () => {
     const add = jest.spyOn(ColumnWriter.prototype, 'addColumn').mockResolvedValue(result)
     await expect(command({'max-length': 100}).run()).resolves.toMatchObject({column: 'triage_note', formSections: [ID]})
     expect(add).toHaveBeenCalledWith('x_acme_ticket', {column: 'triage_note', label: 'Triage note', type: 'string', maxLength: 100, scope: {scope: 'x_acme'}, updateSet: ID})
-    await command({type: 'reference', reference: 'sys_user', scope: undefined, 'scope-id': ID, 'acknowledge-upgrade-skip': true}).run()
-    expect(add).toHaveBeenLastCalledWith('x_acme_ticket', {column: 'triage_note', label: 'Triage note', type: 'reference', reference: 'sys_user',
+    await command({type: 'glide_list', reference: 'sys_user', scope: undefined, 'scope-id': ID, 'acknowledge-upgrade-skip': true}).run()
+    expect(add).toHaveBeenLastCalledWith('x_acme_ticket', {column: 'triage_note', label: 'Triage note', type: 'glide_list', reference: 'sys_user',
       scope: {sysId: ID}, updateSet: ID, storeCustomization: {acknowledgeUpgradeSkip: true}})
   })
 
@@ -231,6 +231,10 @@ describe('metadata column add', () => {
     [{reference: 'a b'}, 'invalid identifier'],
     [{label: ' '}, 'non-empty text'],
     [{label: 'a\nb'}, 'non-empty text'],
+    [{label: 'a<b'}, 'without < or >'],
+    [{label: 'x'.repeat(81)}, 'at most 80'],
+    [{reference: 'sys_user'}, 'only for --type reference'],
+    [{type: 'reference'}, 'needs --reference'],
     [{'update-set': 'abc'}, 'invalid identifier'],
     [{scope: undefined}, 'exactly one'],
   ])('refuses %o before any request', async (extra, message) => {

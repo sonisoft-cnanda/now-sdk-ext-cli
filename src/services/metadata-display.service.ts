@@ -42,6 +42,7 @@ const REFUSAL_REMEDIATION: Record<string, string> = {
   protected_record: 'The vendor protected this file (sys_policy read or protected). It cannot be changed; create a new record instead.',
   section_not_supported: 'The section holds an annotation, chart or embedded list (detail.field), which this save cannot write back. Change it in the Form Layout UI; never drop those elements from the list.',
   store_scope: 'This is an installed Store application. Changing its files makes upgrades skip them. After review, re-run with --acknowledge-upgrade-skip and --update-set, and record the customization in the update set description.',
+  table_not_supported: 'The table (or the referenced table, detail.table) does not exist, or is one of the platform\'s own schema tables, or extends one.',
   update_set_not_current: 'Make the update set the working set first: nex update-set use <set sys_id>.',
   update_set_required: 'Pass --update-set with an In progress set of the application: nex update-set create --application <app>, then nex update-set use <set>.',
 }
@@ -94,6 +95,15 @@ function captureProjection(capture: MetadataVerificationError['capture']): Metad
   return result
 }
 
+function remedy(error: MetadataScopeError): string {
+  // invalid_input naming an option is a bad value, not a scope or update set problem.
+  if (error.code === 'invalid_input' && error.detail?.field && !error.detail.updateSetState) {
+    return `The value for ${error.detail.field} is not valid: check its format and limits in the command help.`
+  }
+
+  return REFUSAL_REMEDIATION[error.code] ?? 'Check the scope, table, form permissions, and In progress update set.'
+}
+
 export function projectMetadataError(error: unknown, context: {action: string; sysId?: unknown; table?: unknown}): MetadataFailure {
   const failure: MetadataFailure = {action: context.action, code: 'metadata_failed', message: 'Metadata command failed.',
     messages: [], remediation: ['Check command help, authentication, and instance access.'], type: 'MetadataError'}
@@ -109,7 +119,7 @@ export function projectMetadataError(error: unknown, context: {action: string; s
     // A read (layout get, list-layout get) refuses too, for example an unknown view: do not call it a write.
     const read = context.action.endsWith(' get')
     Object.assign(failure, {code: error.code, message: read ? `Metadata read refused: ${error.code}.` : `Metadata write refused before submission: ${error.code}.`,
-      remediation: [REFUSAL_REMEDIATION[error.code] ?? 'Check the scope, table, form permissions, and In progress update set.'],
+      remediation: [remedy(error)],
       type: error.name, writeAttempted: false, ...(error.detail === undefined ? {} : {detail: error.detail})})
   } else if (error instanceof MetadataInputError) {
     Object.assign(failure, {code: 'invalid_input', message: error.message, type: error.name, writeAttempted: false})
@@ -142,7 +152,8 @@ export class MetadataDisplayService {
     return [`Verified column: ${result.table}.${result.column} (${result.type}) labelled ${JSON.stringify(result.label)}`,
       `Dictionary: ${result.sysId}; scope: ${result.scope.scope} (${result.scope.sysId})`,
       result.formSections.length === 0
-        ? 'Form: not placed (a column added to another application\'s table is not put on its form)'
+        ? 'Form: not placed by this save (the platform places nothing for a column on another application\'s table, '
+          + 'or when a field of that name is already on the form, as after re-adding a deleted column)'
         : `Form: appended to the end of section ${result.formSections.join(', ')} (Default view main section); move it with nex metadata layout set`,
       `Captures: ${result.captures.join(', ')}`,
       ...this.captureLines(result.capture),

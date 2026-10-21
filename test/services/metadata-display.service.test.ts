@@ -78,10 +78,18 @@ describe('metadata output for applications we do not own', () => {
     ['section_not_supported', 'Form Layout UI'],
     ['domain_not_supported', 'global domain'],
     ['column_exists', 'Choose another name'],
+    ['table_not_supported', 'schema tables'],
   ] as const)('tells the caller what to do about %s', (code, hint) => {
     const failure = projectMetadataError(new MetadataScopeError(code), context)
     expect(failure.remediation.join(' ')).toContain(hint)
     expect(new MetadataDisplayService().failure(failure).join('\n')).toContain(hint)
+  })
+
+  it('points an invalid option value at the option, and keeps the update set remedy otherwise', () => {
+    expect(projectMetadataError(new MetadataScopeError('invalid_input', {field: 'label'}), {action: 'column add'}).remediation)
+      .toEqual(['The value for label is not valid: check its format and limits in the command help.'])
+    expect(projectMetadataError(new MetadataScopeError('invalid_input', {updateSetState: 'complete'}), {action: 'column add'}).remediation[0])
+      .toContain('In progress update set')
   })
 
   it('calls a refused read a read, not a write', () => {
@@ -126,7 +134,10 @@ describe('metadata output for applications we do not own', () => {
     expect(placed).toContain('Captures: sys_dictionary_x_acme_ticket_triage_note, sys_documentation_x_acme_ticket_triage_note_en')
     expect(placed).toContain('[omitted]saved[omitted]')
     expect(placed).toContain('does not remove columns')
-    expect(column([])).toContain('Form: not placed')
+    const unplaced = column([])
+    expect(unplaced).toContain('Form: not placed by this save')
+    expect(unplaced).toContain('another application\'s table')
+    expect(unplaced).toContain('already on the form')
   })
 
   it('renders a layout and a verified layout change', () => {

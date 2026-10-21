@@ -149,10 +149,13 @@ in an installed Store application (even on its own table), `<scope>_<name>` when
 adds it to another application's table, and `<name>` unchanged on a scoped application's own
 table. `column` in the result is the name as saved. On Global tables and an application's own
 tables the platform also appends the field to the end of the Default view's main section
-(`formSections`); move it with `metadata layout set`. A column added to another application's
-table is not placed. Every capture in `captures` (Dictionary, Field Label, Form Layout) is checked
-to be in `--update-set`, which must be the working set. A name the table or a parent already has is
-refused before saving (`column_exists`).
+(`formSections`); move it with `metadata layout set`. Nothing is placed for a column on another
+application's table, or when a field of that name is already on the form (re-adding a deleted
+column, whose form element was left behind): `formSections` is then empty. Every capture in
+`captures` (Dictionary, Field Label, and Form Layout when placed) is checked to be in
+`--update-set`, which must be the working set. A name the table or a parent already has is refused
+before saving (`column_exists`). A column in an installed Store application needs
+`--acknowledge-upgrade-skip`, and the section the field lands on is then customized.
 
 The command does not remove columns. Deleting a column deletes its data wherever its capture is
 committed, turns its Dictionary and Field Label captures into DELETEs, and leaves its form element

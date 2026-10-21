@@ -10,8 +10,10 @@ export default class MetadataColumnAdd extends MetadataBaseCommand<typeof Metada
 The platform names the column: u_<name> in Global and in an installed Store application, <scope>_<name> when an
 application adds it to another application's table, and <name> unchanged on a scoped application's own table. The
 prefix is added for you; the result names the column as saved. On Global tables and an application's own tables the
-platform also appends the field to the end of the Default view's main section (move it with nex metadata layout set).
-Every capture (Dictionary, Field Label, Form Layout) is checked to be in --update-set, which must be the working set.
+platform also appends the field to the end of the Default view's main section (move it with nex metadata layout set),
+unless a field of that name is already on the form, as after re-adding a deleted column. Every capture (Dictionary,
+Field Label, and Form Layout when the field was placed) is checked to be in --update-set, which must be the working set.
+A column in an installed Store application needs --acknowledge-upgrade-skip: upgrades then skip the section it lands on.
 
 Removing a column deletes its data and is not part of this command.`
   static examples = [
@@ -22,7 +24,7 @@ Removing a column deletes its data and is not part of this command.`
     ...scopeFlags,
     column: Flags.string({description: 'Column name, lower case. The platform\'s prefix is added when missing.', required: true}),
     label: Flags.string({description: 'Column label.', required: true}),
-    'max-length': Flags.integer({description: 'Maximum length, for string types. The type\'s default applies when omitted.', min: 1}),
+    'max-length': Flags.integer({description: 'Maximum length, for string types. The type\'s default applies when omitted.', max: 65_000, min: 1}),
     reference: Flags.string({description: 'Referenced table: required for --type reference, optional for glide_list.'}),
     table: Flags.string({description: 'Table name.', required: true}),
     type: Flags.string({default: 'string', description: 'Column type: a sys_glide_object name such as string, integer, boolean, glide_date_time or reference.'}),
@@ -38,7 +40,12 @@ Removing a column deletes its data and is not part of this command.`
     const type = identifier(flags, 'type', NAME, true)!
     const reference = identifier(flags, 'reference', NAME)
     const {label} = flags
-    if (typeof label !== 'string' || label.trim() === '' || /\p{Cc}/u.test(label)) throw new MetadataInputError('--label must be non-empty text.')
+    if (typeof label !== 'string' || label.trim() === '' || label.length > 80 || /[\p{Cc}<>]/u.test(label)) {
+      throw new MetadataInputError('--label must be non-empty text of at most 80 characters, without < or >.')
+    }
+
+    if (reference !== undefined && type !== 'reference' && type !== 'glide_list') throw new MetadataInputError('--reference is only for --type reference or glide_list.')
+    if (reference === undefined && type === 'reference') throw new MetadataInputError('--type reference needs --reference <table>.')
     const maxLength = flags['max-length'] as number | undefined
     const options = scopeOptions(flags)
     const result = await new ColumnWriter(this.instance).addColumn(table, {...options, column, label, type, updateSet: options.updateSet!,
