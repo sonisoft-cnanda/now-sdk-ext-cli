@@ -1,4 +1,4 @@
-import {type FormLayout, type FormLayoutWriteResult, isPolicyRefusal, type ListLayout, type ListLayoutWriteResult, type MetadataErrorDetail,
+import {type ColumnWriteResult, type FormLayout, type FormLayoutWriteResult, isPolicyRefusal, type ListLayout, type ListLayoutWriteResult, type MetadataErrorDetail,
   MetadataScopeError, MetadataVerificationError, type MetadataWriteResult, redactMessage} from '@sonisoft/now-sdk-ext-core'
 
 /** A ServiceNow sys_id. */
@@ -35,6 +35,7 @@ const cleanMessage = (text: string): string => redactMessage(text).replaceAll(/<
 const cleanName = (text: string): string => text.replaceAll(/\p{Cc}/gu, ' ')
 
 const REFUSAL_REMEDIATION: Record<string, string> = {
+  column_exists: 'The table, or a table it extends, already has a column of that name (detail.table, detail.field). Choose another name; the name includes the platform\'s prefix.',
   domain_not_supported: 'The list or your user is outside the global domain. A save would create a new list in your session\'s domain and leave this one unchanged: change it in the List Layout UI from the right domain.',
   field_not_supported: 'The field named in detail.field is not on the form (or not offered by the List Layout page) for this table and view, or cannot be written there.',
   form_redirected: 'The form redirected to detail.redirectPath instead of loading: the table may not support form writes, or the session lacks access.',
@@ -131,6 +132,24 @@ export function projectMetadataError(error: unknown, context: {action: string; s
 }
 
 export class MetadataDisplayService {
+  columnResult(result: ColumnWriteResult): ColumnWriteResult {
+    return {capture: captureProjection(result.capture) as ColumnWriteResult['capture'], captures: result.captures.map(item => cleanName(item)),
+      column: result.column, formSections: result.formSections, label: cleanName(result.label), messages: result.messages.map(item => cleanMessage(item)),
+      scope: {scope: result.scope.scope, sysId: result.scope.sysId}, sysId: result.sysId, table: result.table, type: result.type}
+  }
+
+  columnSuccess(result: ColumnWriteResult): string[] {
+    return [`Verified column: ${result.table}.${result.column} (${result.type}) labelled ${JSON.stringify(result.label)}`,
+      `Dictionary: ${result.sysId}; scope: ${result.scope.scope} (${result.scope.sysId})`,
+      result.formSections.length === 0
+        ? 'Form: not placed (a column added to another application\'s table is not put on its form)'
+        : `Form: appended to the end of section ${result.formSections.join(', ')} (Default view main section); move it with nex metadata layout set`,
+      `Captures: ${result.captures.join(', ')}`,
+      ...this.captureLines(result.capture),
+      ...result.messages,
+      'This command does not remove columns: deleting one deletes its data wherever its capture is committed.']
+  }
+
   failure(failure: MetadataFailure): string[] {
     return [failure.message,
       `Action: ${failure.action}; target: ${failure.table ?? '(not available)'}/${failure.sysId ?? '(not available)'}`,
