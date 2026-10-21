@@ -110,6 +110,25 @@ Elements are field names, `.begin_split`, `.split`, `.end_split` and
 `.formatter.<sys_ui_formatter sys_id>`, or a JSON array in `--elements-file`. The result's
 `previousElements` puts the layout back.
 
+### List layouts
+
+A table's list for one view is captured as one List Layout file, `sys_ui_list_<table>_<view>`
+(`null` for the Default view). Change it through the List Layout page with
+`metadata list-layout set`, which takes every column in order and verifies the columns, the
+list's application and the capture:
+
+```bash
+nex metadata list-layout get --table cmn_cost_center [--view <name>] --auth dev --read-only --json
+nex metadata list-layout set --table cmn_cost_center --columns 'name,code,manager,valid_from' \
+  --scope global --update-set <set> --auth dev --json
+```
+
+Columns are field names, dot-walked as `field.field`, or a JSON array in `--columns-file`. Only
+the table's own list is changed, never a related list or a user's personalized list. Each save
+replaces the `sys_ui_list` record (a new sys_id, the same update name). A table with no list of
+its own (`"exists": false`) gets one: `created` is true, and undoing that means deleting the new
+row. Otherwise `previousColumns` puts the list back.
+
 ### The working set lifecycle
 
 ```bash

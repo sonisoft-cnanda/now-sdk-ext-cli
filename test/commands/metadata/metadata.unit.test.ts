@@ -1,6 +1,6 @@
 import {afterEach, describe, expect, it, jest} from '@jest/globals'
 import {Command} from '@oclif/core'
-import {FormLayoutWriter, MetadataFormWriter, MetadataScopeError, policyRefusal} from '@sonisoft/now-sdk-ext-core'
+import {FormLayoutWriter, ListLayoutWriter, MetadataFormWriter, MetadataScopeError, policyRefusal} from '@sonisoft/now-sdk-ext-core'
 import {mkdtemp, rm, writeFile} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
@@ -11,6 +11,8 @@ import MetadataUpdate from '../../../src/commands/metadata/update.js'
 import MetadataDelete from '../../../src/commands/metadata/delete.js'
 import MetadataLayoutGet from '../../../src/commands/metadata/layout/get.js'
 import MetadataLayoutSet, {layoutElements} from '../../../src/commands/metadata/layout/set.js'
+import MetadataListLayoutGet from '../../../src/commands/metadata/list-layout/get.js'
+import MetadataListLayoutSet, {listColumns} from '../../../src/commands/metadata/list-layout/set.js'
 import {AuthenticatedCommand} from '../../../src/common/authenticated-command.js'
 
 const ID = 'a'.repeat(32)
@@ -145,6 +147,53 @@ describe('metadata writes in applications we do not own', () => {
       flags: {section: ID, elements: 'name,url', 'scope-id': ID, 'update-set': ID, 'acknowledge-upgrade-skip': true}})
     await expect(writer.run()).resolves.toMatchObject({elements: ['name', 'url']})
     expect(set).toHaveBeenCalledWith(ID, {elements: ['name', 'url'], scope: {sysId: ID}, updateSet: ID, storeCustomization: {acknowledgeUpgradeSkip: true}})
+  })
+})
+
+describe('metadata list-layout', () => {
+  it('takes a whole column list from the flag or a JSON file', async () => {
+    expect(await listColumns({columns: 'name, caller_id.email ,state'})).toEqual(['name', 'caller_id.email', 'state'])
+    for (const columns of ['', 'name,,state', 'name;drop', 'a b', '.split', 'name.']) await expect(listColumns({columns})).rejects.toThrow('whole column list')
+    await expect(listColumns({'columns-file': 'missing.json'})).rejects.toThrow('JSON array')
+    const dir = await mkdtemp(join(tmpdir(), 'nex-list-'))
+    try {
+      await writeFile(join(dir, 'c.json'), '["name","code"]')
+      expect(await listColumns({'columns-file': join(dir, 'c.json')})).toEqual(['name', 'code'])
+      await writeFile(join(dir, 'bad.json'), '{"name":1}')
+      await expect(listColumns({'columns-file': join(dir, 'bad.json')})).rejects.toThrow('whole column list')
+    } finally {
+      await rm(dir, {force: true, recursive: true})
+    }
+  })
+
+  it('reads and writes a list through ListLayoutWriter', async () => {
+    const layout = {table: 'cmn_cost_center', view: '', exists: true, scope: 'global', updateName: 'sys_ui_list_cmn_cost_center_null', columns: ['name']}
+    const get = jest.spyOn(ListLayoutWriter.prototype, 'getListLayout').mockResolvedValue(layout)
+    const reader = Object.assign(Object.create(MetadataListLayoutGet.prototype), {flags: {table: 'cmn_cost_center', view: 'ess'}, instance: {}, jsonEnabled: () => true})
+    await expect(reader.run()).resolves.toEqual(layout)
+    expect(get).toHaveBeenCalledWith('cmn_cost_center', 'ess')
+    const result = {table: 'cmn_cost_center', view: '', scope: {sysId: 'global', scope: 'global'}, sysId: ID, previousSysId: ID, created: false,
+      columns: ['name', 'code'], previousColumns: ['name'],
+      capture: {action: 'INSERT_OR_UPDATE', updateSetSysId: ID, updateSetName: 'S', updateSetScope: 'global', recordScope: 'global', preferencesUnchanged: true,
+        preferenceRowsReplaced: [], currentUpdateSet: {switched: false}}}
+    const set = jest.spyOn(ListLayoutWriter.prototype, 'setListLayout').mockResolvedValue(result)
+    const writer = Object.assign(Object.create(MetadataListLayoutSet.prototype), {instance: {}, jsonEnabled: () => true,
+      flags: {table: 'cmn_cost_center', columns: 'name,code', scope: 'global', 'update-set': ID}})
+    await expect(writer.run()).resolves.toMatchObject({columns: ['name', 'code'], created: false})
+    expect(set).toHaveBeenCalledWith('cmn_cost_center', {columns: ['name', 'code'], scope: 'global', updateSet: ID, view: ''})
+  })
+
+  it.each([
+    [{table: 'bad^table'}, 'invalid identifier'],
+    [{view: 'a^b'}, 'invalid identifier'],
+    [{'update-set': 'abc'}, 'invalid identifier'],
+    [{scope: undefined}, 'exactly one'],
+  ])('refuses %o before any request', async (extra, message) => {
+    const set = jest.spyOn(ListLayoutWriter.prototype, 'setListLayout')
+    const writer = Object.assign(Object.create(MetadataListLayoutSet.prototype), {instance: {}, jsonEnabled: () => true,
+      flags: {table: 'cmn_cost_center', columns: 'name', scope: 'global', 'update-set': ID, ...extra}})
+    await expect(writer.run()).rejects.toThrow(message)
+    expect(set).not.toHaveBeenCalled()
   })
 })
 
