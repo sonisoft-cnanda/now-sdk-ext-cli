@@ -75,6 +75,7 @@ describe('metadata output for applications we do not own', () => {
     ['update_set_required', '--update-set'],
     ['update_set_not_current', 'nex update-set use'],
     ['protected_record', 'sys_policy'],
+    ['section_not_supported', 'Form Layout UI'],
   ] as const)('tells the caller what to do about %s', (code, hint) => {
     const failure = projectMetadataError(new MetadataScopeError(code), context)
     expect(failure.remediation.join(' ')).toContain(hint)
@@ -98,5 +99,21 @@ describe('metadata output for applications we do not own', () => {
     const repeated = display.layoutSuccess(display.layoutResult({section: ID, table: 'sn_test', view: '', scope: {sysId: ID, scope: 'sn_test'},
       elements: ['name', '.split', 'type', 'url'], previousElements: ['name', '.split', 'type', '.split', 'url'], capture})).join('\n')
     expect(repeated).toContain('added: (none); removed: .split')
+    const moved = display.layoutSuccess(display.layoutResult({section: ID, table: 'sn_test', view: '', scope: {sysId: ID, scope: 'sn_test'},
+      elements: ['name', 'description', 'owner'], previousElements: ['name', 'owner', 'description'], capture})).join('\n')
+    expect(moved).toContain('added: (none); removed: (none); order changed')
+    expect(lines).not.toContain('order changed')
+    expect(repeated).not.toContain('order changed')
+    const summary = (previousElements: string[], elements: string[]) => display.layoutSuccess(display.layoutResult({section: ID, table: 'sn_test',
+      view: '', scope: {sysId: ID, scope: 'sn_test'}, elements, previousElements, capture})).join('\n')
+    // Only a real move reports a reorder, whatever is added or removed alongside it, repeated splits included.
+    for (const [before, after, changed] of [
+      [['name', '.split', 'type'], ['name', '.split', 'type', '.split'], false],
+      [['.split', 'a', '.split', 'b'], ['.split', 'a', 'b'], false],
+      [['name', 'type'], ['name', 'url'], false],
+      [['name', 'owner'], ['owner', 'priority', 'name'], true],
+      [['name', 'owner', 'priority'], ['priority', 'name'], true],
+      [['a', '.split', 'b', '.split', 'c'], ['a', '.split', 'c', '.split', 'b'], true],
+    ] as const) expect(summary([...before], [...after]).includes('order changed')).toBe(changed)
   })
 })
