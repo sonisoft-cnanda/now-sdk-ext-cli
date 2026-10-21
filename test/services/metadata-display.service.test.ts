@@ -76,10 +76,17 @@ describe('metadata output for applications we do not own', () => {
     ['update_set_not_current', 'nex update-set use'],
     ['protected_record', 'sys_policy'],
     ['section_not_supported', 'Form Layout UI'],
+    ['domain_not_supported', 'global domain'],
   ] as const)('tells the caller what to do about %s', (code, hint) => {
     const failure = projectMetadataError(new MetadataScopeError(code), context)
     expect(failure.remediation.join(' ')).toContain(hint)
     expect(new MetadataDisplayService().failure(failure).join('\n')).toContain(hint)
+  })
+
+  it('calls a refused read a read, not a write', () => {
+    expect(projectMetadataError(new MetadataScopeError('invalid_input'), {action: 'list-layout get'}).message).toBe('Metadata read refused: invalid_input.')
+    expect(projectMetadataError(new MetadataScopeError('invalid_input'), {action: 'list-layout set'}).message)
+      .toBe('Metadata write refused before submission: invalid_input.')
   })
 
   it('carries the sanitised refusal detail', () => {
@@ -102,6 +109,8 @@ describe('metadata output for applications we do not own', () => {
     const created = result([], ['name'], true)
     expect(created).toContain('created: the table had no list of its own')
     expect(created).toContain(`delete the new sys_ui_list row ${ID}`)
+    expect(created).toContain('move its DELETE capture')
+    expect(result(['name'], ['name', 'code'])).toContain(`List: ${ID}`)
   })
 
   it('renders a layout and a verified layout change', () => {

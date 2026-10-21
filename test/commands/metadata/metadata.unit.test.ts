@@ -181,6 +181,14 @@ describe('metadata list-layout', () => {
       flags: {table: 'cmn_cost_center', columns: 'name,code', scope: 'global', 'update-set': ID}})
     await expect(writer.run()).resolves.toMatchObject({columns: ['name', 'code'], created: false})
     expect(set).toHaveBeenCalledWith('cmn_cost_center', {columns: ['name', 'code'], scope: 'global', updateSet: ID, view: ''})
+    const store = Object.assign(Object.create(MetadataListLayoutSet.prototype), {instance: {}, jsonEnabled: () => true,
+      flags: {table: 'sn_grc_indicator', columns: 'name', 'scope-id': ID, 'update-set': ID, view: 'sow', 'acknowledge-upgrade-skip': true}})
+    await store.run()
+    expect(set).toHaveBeenLastCalledWith('sn_grc_indicator', {columns: ['name'], scope: {sysId: ID}, updateSet: ID, view: 'sow',
+      storeCustomization: {acknowledgeUpgradeSkip: true}})
+    const plain = Object.assign(Object.create(MetadataListLayoutGet.prototype), {flags: {table: 'cmn_cost_center'}, instance: {}, jsonEnabled: () => true})
+    await plain.run()
+    expect(get).toHaveBeenLastCalledWith('cmn_cost_center', '')
   })
 
   it.each([

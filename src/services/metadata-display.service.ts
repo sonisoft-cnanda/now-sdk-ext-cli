@@ -36,7 +36,7 @@ const cleanName = (text: string): string => text.replaceAll(/\p{Cc}/gu, ' ')
 
 const REFUSAL_REMEDIATION: Record<string, string> = {
   domain_not_supported: 'The list or your user is outside the global domain. A save would create a new list in your session\'s domain and leave this one unchanged: change it in the List Layout UI from the right domain.',
-  field_not_supported: 'The field named in detail.field is not on the form for this table and view, or cannot be written there.',
+  field_not_supported: 'The field named in detail.field is not on the form (or not offered by the List Layout page) for this table and view, or cannot be written there.',
   form_redirected: 'The form redirected to detail.redirectPath instead of loading: the table may not support form writes, or the session lacks access.',
   protected_record: 'The vendor protected this file (sys_policy read or protected). It cannot be changed; create a new record instead.',
   section_not_supported: 'The section holds an annotation, chart or embedded list (detail.field), which this save cannot write back. Change it in the Form Layout UI; never drop those elements from the list.',
@@ -105,7 +105,9 @@ export function projectMetadataError(error: unknown, context: {action: string; s
       verification: 'failed', writeAttempted: error.writeAttempted})
   } else if (error instanceof MetadataScopeError) {
     // detail holds identifiers, states and paths only; core sanitises it.
-    Object.assign(failure, {code: error.code, message: `Metadata write refused before submission: ${error.code}.`,
+    // A read (layout get, list-layout get) refuses too, for example an unknown view: do not call it a write.
+    const read = context.action.endsWith(' get')
+    Object.assign(failure, {code: error.code, message: read ? `Metadata read refused: ${error.code}.` : `Metadata write refused before submission: ${error.code}.`,
       remediation: [REFUSAL_REMEDIATION[error.code] ?? 'Check the scope, table, form permissions, and In progress update set.'],
       type: error.name, writeAttempted: false, ...(error.detail === undefined ? {} : {detail: error.detail})})
   } else if (error instanceof MetadataInputError) {
@@ -196,10 +198,11 @@ export class MetadataDisplayService {
     const removed = difference(result.previousColumns, result.columns)
     const reordered = commonInOrder(result.previousColumns, result.columns) < result.previousColumns.length - removed.length
     return [`Verified list layout: ${result.table} (${result.view || 'Default view'})${result.created ? ', created: the table had no list of its own' : ''}`,
+      `List: ${result.sysId}${result.previousSysId ? ` (replaced ${result.previousSysId})` : ''}`,
       `Columns: ${result.previousColumns.length} -> ${result.columns.length}; added: ${added.join(', ') || '(none)'}; removed: ${removed.join(', ') || '(none)'}${reordered ? '; order changed' : ''}`,
       ...this.captureLines(result.capture),
       result.created
-        ? `To put it back, delete the new sys_ui_list row ${result.sysId} (saving columns keeps a list of its own).`
+        ? `To put it back, delete the new sys_ui_list row ${result.sysId} (saving columns keeps a list of its own), then move its DELETE capture to the application's Default: shipped, it would delete this list on the target.`
         : `Previous columns (to put them back): ${result.previousColumns.join(',')}`]
   }
 

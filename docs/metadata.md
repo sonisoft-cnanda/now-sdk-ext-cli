@@ -1,7 +1,8 @@
 # Verified metadata writes
 
 Use `nex metadata` for application files that need form submission and verified update-set capture.
-These commands use `MetadataFormWriter`, `FormLayoutWriter` and `WorkingSetManager` from core 6.9 (NSE-15).
+These commands use `MetadataFormWriter`, `FormLayoutWriter` and `WorkingSetManager` from core 6.9 (NSE-15), and
+`ListLayoutWriter` from core 6.11 (SK-5).
 Ordinary record commands keep their existing behavior.
 
 ```bash
@@ -127,7 +128,10 @@ Columns are field names, dot-walked as `field.field`, or a JSON array in `--colu
 the table's own list is changed, never a related list or a user's personalized list. Each save
 replaces the `sys_ui_list` record (a new sys_id, the same update name). A table with no list of
 its own (`"exists": false`) gets one: `created` is true, and undoing that means deleting the new
-row. Otherwise `previousColumns` puts the list back.
+row (`sysId`) and moving its DELETE capture to the application's Default, because shipped it
+would delete that list on the target. Otherwise `previousColumns` puts the list back. Only the
+global domain is handled: a list or user in another domain is refused before saving
+(`domain_not_supported`).
 
 ### The working set lifecycle
 
