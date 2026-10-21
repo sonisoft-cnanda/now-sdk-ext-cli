@@ -38,6 +38,7 @@ const REFUSAL_REMEDIATION: Record<string, string> = {
   field_not_supported: 'The field named in detail.field is not on the form for this table and view, or cannot be written there.',
   form_redirected: 'The form redirected to detail.redirectPath instead of loading: the table may not support form writes, or the session lacks access.',
   protected_record: 'The vendor protected this file (sys_policy read or protected). It cannot be changed; create a new record instead.',
+  section_not_supported: 'The section holds an annotation, chart or embedded list (detail.field), which this save cannot write back. Change it in the Form Layout UI; never drop those elements from the list.',
   store_scope: 'This is an installed Store application. Changing its files makes upgrades skip them. After review, re-run with --acknowledge-upgrade-skip and --update-set, and record the customization in the update set description.',
   update_set_not_current: 'Make the update set the working set first: nex update-set use <set sys_id>.',
   update_set_required: 'Pass --update-set with an In progress set of the application: nex update-set create --application <app>, then nex update-set use <set>.',
@@ -52,6 +53,18 @@ function difference(from: string[], to: string[]): string[] {
     if (count > 0) left.set(item, count - 1)
     return count === 0
   })
+}
+
+// Length of the longest common subsequence: how many elements both lists keep in the same relative order.
+function commonInOrder(from: string[], to: string[]): number {
+  let previous = Array.from({length: to.length + 1}, () => 0)
+  for (const item of from) {
+    const row = [0]
+    for (const [index, other] of to.entries()) row.push(item === other ? previous[index] + 1 : Math.max(previous[index + 1], row[index]))
+    previous = row
+  }
+
+  return previous[to.length]
 }
 
 // Copy only public capture fields. Errors can also hold requests, HTML and causes.
@@ -146,8 +159,10 @@ export class MetadataDisplayService {
   layoutSuccess(result: FormLayoutWriteResult): string[] {
     const added = difference(result.elements, result.previousElements)
     const removed = difference(result.previousElements, result.elements)
+    // Without a move, everything both lists keep (counted as multisets) stays in the same relative order.
+    const reordered = commonInOrder(result.previousElements, result.elements) < result.previousElements.length - removed.length
     return [`Verified form layout: ${result.table} section ${result.section} (${result.view || 'Default view'})`,
-      `Elements: ${result.previousElements.length} -> ${result.elements.length}; added: ${added.join(', ') || '(none)'}; removed: ${removed.join(', ') || '(none)'}`,
+      `Elements: ${result.previousElements.length} -> ${result.elements.length}; added: ${added.join(', ') || '(none)'}; removed: ${removed.join(', ') || '(none)'}${reordered ? '; order changed' : ''}`,
       ...this.captureLines(result.capture),
       `Previous layout (to put it back): ${result.previousElements.join(',')}`]
   }
