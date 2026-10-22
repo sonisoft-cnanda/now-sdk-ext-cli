@@ -11,7 +11,9 @@ nex update-set export 0123456789abcdef0123456789abcdef --output STORY-123.xml --
 
 - **Output:** `update-set-<sys_id>.xml` in the current directory, or in the directory `--output` names, or the
   file `--output` names. An existing file is refused before the instance is asked for anything, unless
-  `--force` is passed. The file is written beside the target and moved into place, owner-only (0600).
+  `--force` is passed. The file is written beside the target, flushed, and moved into place,
+  owner-only (0600); without `--force` the name is created exclusively, so a file that appears
+  during the export is never replaced.
 - **`--json`** returns `file`, `bytes`, `sha256`, `source`, `kind`, `updateSet`, `sets` (each with its record
   count), `excluded`, `recordCount`, `cleanup` and `messages`. The XML is never printed: it holds every
   record's full payload. Take a file from a customer instance only with the owner's say-so.
@@ -56,4 +58,6 @@ scripts (admin); the processors accept `admin`, `delegated_developer` or `update
 | `export_failed` | The download failed (`detail.status`); the copy was removed. |
 | `export_mismatch` | The file did not match the instance's counts; nothing was written. |
 | `cleanup_unverified` | Delete `detail.temporary` from Retrieved Update Sets. |
-| `output_exists` / `output_invalid` | Choose another `--output`, or pass `--force`. |
+| `output_exists` | Pass `--force` to replace the file, or choose another `--output`. |
+| `output_invalid` | The directory is missing or not writable, or the path is a directory: choose another `--output`. Checked before the instance is asked for anything. |
+| `output_write_failed` | The export succeeded but the file could not be written (permissions, disk space, filesystem). Nothing was left on the instance; fix the location and run it again. |

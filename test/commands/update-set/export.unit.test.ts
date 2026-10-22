@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, describe, expect, it, jest} from '@jest/globals'
 import {ServiceNowInstance, UpdateSetExporter, UpdateSetExportError, type UpdateSetExportResult} from '@sonisoft/now-sdk-ext-core'
 import {createHash} from 'node:crypto'
-import {mkdtemp, readdir, readFile, rm, stat, writeFile} from 'node:fs/promises'
+import {chmod, mkdtemp, readdir, readFile, rm, stat, writeFile} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 
@@ -41,6 +41,42 @@ describe('nex update-set export', () => {
     expect(await readdir(dir)).toEqual([`update-set-${SET}.xml`])
   })
 
+  it('prints a summary without the XML in text mode', async () => {
+    jest.spyOn(UpdateSetExporter.prototype, 'exportUpdateSet').mockResolvedValue(result)
+    const lines: string[] = []
+    const target = Object.assign(command({set: SET}, {output: dir}), {jsonEnabled: () => false, log: (line: string) => lines.push(line)})
+    await target.run()
+    expect(lines[0]).toBe(`Exported update set STORY-1 (${SET}); state: complete`)
+    expect(lines.join('\n')).not.toContain('<unload')
+  })
+
+  it('writes update-set-<sys_id>.xml in the current directory by default', async () => {
+    jest.spyOn(UpdateSetExporter.prototype, 'exportUpdateSet').mockResolvedValue(result)
+    const cwd = process.cwd()
+    process.chdir(dir)
+    try {
+      const output = await command({set: SET}, {}).run()
+      expect(output.file).toBe(join(await import('node:fs/promises').then(fs => fs.realpath(dir)), `update-set-${SET}.xml`))
+    } finally {
+      process.chdir(cwd)
+    }
+
+    expect(await readdir(dir)).toEqual([`update-set-${SET}.xml`])
+  })
+
+  it('refuses an unwritable directory before asking the instance', async () => {
+    if (process.getuid?.() === 0) return
+    const exporter = jest.spyOn(UpdateSetExporter.prototype, 'exportUpdateSet').mockResolvedValue(result)
+    await chmod(dir, 0o500)
+    try {
+      await expect(refusal(command({set: SET}, {output: dir}).run())).resolves.toBe('output_invalid')
+    } finally {
+      await chmod(dir, 0o700)
+    }
+
+    expect(exporter).not.toHaveBeenCalled()
+  })
+
   it('passes --include-incomplete through', async () => {
     const exporter = jest.spyOn(UpdateSetExporter.prototype, 'exportUpdateSet').mockResolvedValue(result)
     await command({set: SET}, {'include-incomplete': true, output: join(dir, 'x.xml')}).run()
@@ -54,8 +90,10 @@ describe('nex update-set export', () => {
     await expect(refusal(command({set: SET}, {output: file}).run())).resolves.toBe('output_exists')
     expect(exporter).not.toHaveBeenCalled()
     await expect(readFile(file, 'utf8')).resolves.toBe('old')
+    await chmod(file, 0o644)
     await command({set: SET}, {force: true, output: file}).run()
     await expect(readFile(file, 'utf8')).resolves.toBe(XML)
+    expect((await stat(file)).mode & 0o777).toBe(0o600)
     expect(await readdir(dir)).toEqual(['STORY-1.xml'])
   })
 
@@ -94,6 +132,9 @@ describe('nex update-set export', () => {
     const other = new Error('boom')
     await target.catch(other)
     expect(parent.mock.calls[1][0]).toBe(other)
+    const text = Object.assign(command({set: SET}, {}), {jsonEnabled: () => false})
+    await text.catch(new UpdateSetExportError('cleanup_unverified', {temporary: [TEMP]}))
+    expect((parent.mock.calls[2][0] as Error).message).toContain(`Detail: {"temporary":["${TEMP}"]}`)
   })
 })
 
@@ -117,6 +158,7 @@ describe('update set export display', () => {
     const output = display.output({...result, cleanup: undefined, kind: 'batch', source: 'retrieved',
       updateSet: {...result.updateSet, name: 'bad\u001B[2Jname'}}, '/tmp/x.xml', 1, 'f'.repeat(64))
     expect(output.updateSet.name).toBe('bad [2Jname')
+    expect(display.output({...result, updateSet: {...result.updateSet, state: 'x\nFile: forged'}}, '/f', 1, 'f').updateSet.state).toBe('x File: forged')
     const text = display.success(output).join('\n')
     expect(text).toContain('Exported Retrieved Update Set bad [2Jname')
     expect(text).toContain('Batch of 1 sets')
@@ -125,7 +167,7 @@ describe('update set export display', () => {
 
   it('gives every core code a remediation, and offers the base command only for a hex sys_id', () => {
     for (const code of ['invalid_input', 'update_set_not_found', 'update_set_incomplete', 'batch_member', 'retrieved_state', 'evidence_unavailable',
-      'script_result_unavailable', 'export_failed', 'export_mismatch', 'cleanup_unverified', 'output_exists', 'output_invalid']) {
+      'script_result_unavailable', 'export_failed', 'export_mismatch', 'cleanup_unverified', 'output_exists', 'output_invalid', 'output_write_failed']) {
       expect(projectExportError({code: code as any, detail: undefined}).remediation[0]).not.toContain('Read the update set back')
     }
     expect(projectExportError({code: 'batch_member', detail: {base: '$(rm -rf /)'}}).remediation).toHaveLength(1)

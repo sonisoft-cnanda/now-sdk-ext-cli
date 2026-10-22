@@ -1,7 +1,8 @@
 import {Args, Errors, Flags} from '@oclif/core'
 import {flushLogs, UpdateSetExporter, UpdateSetExportError} from '@sonisoft/now-sdk-ext-core'
 import {createHash} from 'node:crypto'
-import {link, rename, rm, stat, writeFile} from 'node:fs/promises'
+import {constants} from 'node:fs'
+import {access, copyFile, link, open, rename, rm, stat} from 'node:fs/promises'
 import {dirname, join, resolve} from 'node:path'
 
 import {AuthenticatedCommand} from '../../common/authenticated-command.js'
@@ -11,7 +12,7 @@ const ID = /^[a-f\d]{32}$/i
 
 /** A refusal about the local file, reported like the exporter's own. */
 class ExportOutputError extends Error {
-  constructor(public readonly code: 'invalid_input' | 'output_exists' | 'output_invalid') {
+  constructor(public readonly code: 'invalid_input' | 'output_exists' | 'output_invalid' | 'output_write_failed') {
     super(`Update set export refused: ${code}`)
   }
 }
@@ -83,29 +84,52 @@ async function target(output: string | undefined, set: string, force: boolean): 
 async function checkFile(path: string, force: boolean): Promise<string> {
   const parent = await stat(dirname(path)).catch(() => {})
   if (!parent?.isDirectory()) throw new ExportOutputError('output_invalid')
+  // The export runs on the instance before anything is written: find an unwritable directory first.
+  if (!(await access(dirname(path), constants.W_OK).then(() => true, () => false))) throw new ExportOutputError('output_invalid')
   const existing = await stat(path).catch(() => {})
   if (existing?.isDirectory()) throw new ExportOutputError('output_invalid')
   if (existing && !force) throw new ExportOutputError('output_exists')
   return path
 }
 
-/** Write beside the target and move it into place, so a partial file never appears; owner-only, as it holds payloads. */
+/**
+ * Write beside the target, flush it, then move it into place, so a partial file never appears under the
+ * name; owner-only, as it holds payloads. Without --force the name is created exclusively: by link(), or
+ * where links are not supported, by an exclusive copy.
+ */
 async function write(path: string, xml: string, force: boolean): Promise<void> {
   const temporary = `${path}.${process.pid}.${Date.now()}.partial`
-  await writeFile(temporary, xml, {encoding: 'utf8', flag: 'wx', mode: 0o600})
   try {
-    if (force) {
-      await rename(temporary, path)
-    } else {
-      // link() refuses an existing target, so a file created since the check is never replaced.
-      try {
-        await link(temporary, path)
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'EEXIST') throw new ExportOutputError('output_exists')
-        throw error
-      }
+    const handle = await open(temporary, 'wx', 0o600)
+    try {
+      await handle.writeFile(xml, 'utf8')
+      await handle.sync()
+    } finally {
+      await handle.close()
     }
+
+    await (force ? rename(temporary, path) : publish(temporary, path));
+  } catch (error) {
+    if (error instanceof ExportOutputError) throw error
+    throw new ExportOutputError('output_write_failed')
   } finally {
     await rm(temporary, {force: true})
+  }
+}
+
+/** Create `path` from `temporary` without ever replacing a file that appeared since the check. */
+async function publish(temporary: string, path: string): Promise<void> {
+  try {
+    await link(temporary, path)
+  } catch (error) {
+    const {code} = error as NodeJS.ErrnoException
+    if (code === 'EEXIST') throw new ExportOutputError('output_exists')
+    if (code !== 'EPERM' && code !== 'ENOTSUP' && code !== 'EOPNOTSUPP' && code !== 'ENOSYS') throw error
+    try {
+      await copyFile(temporary, path, constants.COPYFILE_EXCL)
+    } catch (copyError) {
+      if ((copyError as NodeJS.ErrnoException).code === 'EEXIST') throw new ExportOutputError('output_exists')
+      throw copyError
+    }
   }
 }
