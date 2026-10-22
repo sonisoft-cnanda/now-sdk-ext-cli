@@ -37,9 +37,10 @@ whatever remains, and reads back until neither the copy nor its rows are left. `
 it. If it cannot prove that, the command fails with `cleanup_unverified` and the copy's sys_ids. Delete them
 from Retrieved Update Sets and never preview or commit them.
 
-Because of that script and delete, `--read-only`, `--deny-execute` and `NEX_POLICY_DENY` refuse a local
-export before anything is copied. A Retrieved Update Set export is a read and works under all of them.
-The processors need `admin`, `delegated_developer` or `update_set_admin`.
+Because of that script and delete, a local export needs both execute and write: `--read-only`,
+`--deny-write`, `--deny-execute` and `NEX_POLICY_DENY` refuse it before anything is copied. A Retrieved
+Update Set export is a read and works under all of them. A local export needs a role that can run background
+scripts (admin); the processors accept `admin`, `delegated_developer` or `update_set_admin`.
 
 ## Refusals
 
