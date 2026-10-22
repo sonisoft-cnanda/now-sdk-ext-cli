@@ -51,7 +51,8 @@ const REFUSAL_REMEDIATION: Record<string, string> = {
   form_redirected: 'The form redirected to detail.redirectPath instead of loading: the table may not support form writes, or the session lacks access.',
   protected_record: 'The vendor protected this file (sys_policy read or protected). It cannot be changed; create a new record instead.',
   scope_mismatch: 'The record belongs to another application (for a choice: the list, or the column when the table has no list yet). '
-    + 'Use that application for --scope, with an update set of it; nex metadata choice get shows the list\'s scope.',
+    + 'Use that application (--scope <name> or --scope-id <sys_id>) with an update set of it. For a choice, nex metadata choice get shows '
+    + 'the list\'s application sys_id: pass it as --scope-id, or --scope global when it is global.',
   section_not_supported: 'The section holds an annotation, chart or embedded list (detail.field), which this save cannot write back. Change it in the Form Layout UI; never drop those elements from the list.',
   store_scope: 'This is an installed Store application. Changing its files makes upgrades skip them. After review, re-run with --acknowledge-upgrade-skip and --update-set, and record the customization in the update set description.',
   table_not_supported: 'The table (or the referenced table, detail.table) does not exist, or is one of the platform\'s own schema tables, or extends one.',
@@ -158,6 +159,15 @@ function choiceProjection(choice: Choice): Choice {
     language: choice.language, ...(choice.sequence === undefined ? {} : {sequence: choice.sequence}), sysId: choice.sysId, value: cleanName(choice.value)}
 }
 
+function choiceColumnProjection(column: ChoiceList['column']): ChoiceList['column'] {
+  return {choice: cleanName(column.choice), scope: cleanName(column.scope), table: cleanName(column.table), type: cleanName(column.type)}
+}
+
+/** The flag that takes an application as core reports it: a sys_id, or the literal global. */
+function scopeFlag(scope: string): string {
+  return scope === 'global' ? '--scope global' : `--scope-id ${cleanName(scope)}`
+}
+
 function choiceLine(choice: Choice): string {
   return `  ${String(choice.sequence ?? '-').padStart(5)}  ${JSON.stringify(choice.value)} ${JSON.stringify(choice.label)}${choice.inactive ? ' (inactive)' : ''}`
     + `${choice.dependentValue ? ` [depends on ${JSON.stringify(choice.dependentValue)}]` : ''}`
@@ -174,7 +184,7 @@ function choiceColumnLine(column: ChoiceList['column'], element: string): string
 
 export class MetadataDisplayService {
   choiceList(list: ChoiceList): ChoiceList {
-    return {choices: list.choices.map(choice => choiceProjection(choice)), column: {...list.column}, element: list.element, language: list.language,
+    return {choices: list.choices.map(choice => choiceProjection(choice)), column: choiceColumnProjection(list.column), element: list.element, language: list.language,
       table: list.table, ...(list.choiceSet === undefined ? {} : {choiceSet: {...list.choiceSet, updateName: cleanName(list.choiceSet.updateName)}})}
   }
 
@@ -182,16 +192,16 @@ export class MetadataDisplayService {
     return [`Choice list: ${list.table}.${list.element} (${list.language}), ${list.choices.length} choice(s)`,
       choiceColumnLine(list.column, list.element),
       list.choiceSet
-        ? `Choice set: ${list.choiceSet.sysId}; scope: ${list.choiceSet.scope}; update name: ${list.choiceSet.updateName}`
+        ? `Choice set: ${list.choiceSet.sysId}; scope: ${list.choiceSet.scope} (change it with ${scopeFlag(list.choiceSet.scope)}); update name: ${list.choiceSet.updateName}`
         : list.column.table === list.table
-          ? 'Choice set: none; the first choice creates one in the column\'s application.'
+          ? `Choice set: none; the first choice creates one in the column's application (${scopeFlag(list.column.scope)}).`
           : `Choice set: none; the table shows ${list.column.table}'s list for this column.`,
       ...list.choices.map(choice => choiceLine(choice))]
   }
 
   choiceResult(result: ChoiceWriteResult): ChoiceWriteResult {
     return {action: result.action, capture: captureProjection(result.capture) as ChoiceWriteResult['capture'],
-      choices: result.choices.map(choice => choiceProjection(choice)), column: {...result.column}, element: result.element, language: result.language,
+      choices: result.choices.map(choice => choiceProjection(choice)), column: choiceColumnProjection(result.column), element: result.element, language: result.language,
       messages: result.messages.map(item => cleanMessage(item)), scope: {scope: result.scope.scope, sysId: result.scope.sysId}, sysId: result.sysId,
       table: result.table, value: cleanName(result.value),
       ...(result.choice === undefined ? {} : {choice: choiceProjection(result.choice)}),
@@ -207,7 +217,7 @@ export class MetadataDisplayService {
       ...(result.choice === undefined ? [] : [`After: ${choiceLine(result.choice)}`]),
       ...(result.inUse === undefined ? [] : [`Records holding the value: ${result.inUse}${result.inUse > 0 ? ' (they keep it)' : ''}`]),
       result.choiceSet
-        ? `Choice set: ${result.choiceSet.sysId}${result.choiceSet.created ? ', created by this save' : ''}; scope: ${result.choiceSet.scope}`
+        ? `Choice set: ${result.choiceSet.sysId}${result.choiceSet.created ? ', created by this save' : ''}; scope: ${result.scope.scope} (${result.choiceSet.scope})`
         : 'Choice set: none left',
       choiceColumnLine(result.column, result.element),
       `List now (${result.choices.length}):`,

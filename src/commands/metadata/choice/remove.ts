@@ -32,7 +32,7 @@ choice keeps the list's choice set.`
     const table = identifier(flags, 'table', NAME, true)!
     const column = identifier(flags, 'column', NAME, true)!
     const language = identifier(flags, 'language', LANGUAGE, true)!
-    const value = choiceText(flags, 'value', {max: 4000, required: true})!
+    const value = choiceText(flags, 'value', {max: 4000, query: true, required: true})!
     const options = scopeOptions(flags)
     const result = await new ChoiceWriter(this.instance).removeChoice(table, column, {...options, language, updateSet: options.updateSet!, value,
       ...(flags['confirm-in-use'] === true ? {confirmInUse: true} : {})})

@@ -60,13 +60,16 @@ export function identifier(flags: MetadataFlags, name: string, pattern: RegExp, 
 }
 
 /** Choice text as the platform keeps it: no control characters or surrounding spaces, within the column's length. */
-export function choiceText(flags: MetadataFlags, name: string, rule: {allowEmpty?: boolean; max: number; required?: boolean}): string | undefined {
-  const {allowEmpty = false, max, required = false} = rule
+export function choiceText(flags: MetadataFlags, name: string, rule: {allowEmpty?: boolean; max: number; query?: boolean; required?: boolean}): string | undefined {
+  const {allowEmpty = false, max, query = false, required = false} = rule
   const value = flags[name]
   if (value === undefined && !required) return undefined
   if (typeof value !== 'string' || value.length > max || value !== value.trim() || /\p{Cc}/u.test(value) || (!allowEmpty && value === '')) {
     reject(`--${name} must be${allowEmpty ? '' : ' non-empty'} text of at most ${max} characters, without control characters or surrounding spaces.`)
   }
+
+  // A choice value is also a query term (the in-use count): no condition separator and no script.
+  if (query && ((value as string).includes('^') || /javascript:/i.test(value as string))) reject(`--${name} cannot contain ^ or javascript:.`)
 
   return value as string
 }

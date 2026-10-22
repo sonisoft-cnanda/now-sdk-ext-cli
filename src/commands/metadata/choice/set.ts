@@ -28,10 +28,10 @@ says when it is not.`
     inactive: Flags.boolean({allowNo: true, description: 'Inactivate (--inactive) or reactivate (--no-inactive) the choice.'}),
     label: Flags.string({description: 'Label. Required to add a choice.'}),
     language: Flags.string({default: 'en', description: 'Choice language (sys_choice.language).'}),
-    sequence: Flags.integer({description: 'Position in the list (sys_choice.sequence).'}),
+    sequence: Flags.integer({description: 'Position in the list (sys_choice.sequence).', max: 2_147_483_647, min: -2_147_483_647}),
     table: Flags.string({description: 'Table name.', required: true}),
     'update-set': Flags.string({description: 'In progress update set of the list\'s application. The capture follows it.', required: true}),
-    value: Flags.string({description: 'The stored value; it identifies the choice in the list.', required: true}),
+    value: Flags.string({description: 'The stored value; it identifies the choice in the list. No ^ or javascript:.', required: true}),
   }
   protected metadataAction = 'choice set'
   protected metadataTable = 'sys_choice'
@@ -41,7 +41,7 @@ says when it is not.`
     const table = identifier(flags, 'table', NAME, true)!
     const column = identifier(flags, 'column', NAME, true)!
     const language = identifier(flags, 'language', LANGUAGE, true)!
-    const value = choiceText(flags, 'value', {max: 4000, required: true})!
+    const value = choiceText(flags, 'value', {max: 4000, query: true, required: true})!
     const label = choiceText(flags, 'label', {max: 100})
     const hint = choiceText(flags, 'hint', {allowEmpty: true, max: 255})
     const sequence = flags.sequence as number | undefined

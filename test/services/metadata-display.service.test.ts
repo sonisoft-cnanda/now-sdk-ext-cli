@@ -179,12 +179,18 @@ describe('metadata output for applications we do not own', () => {
     const lines = display.choiceListLines(list).join('\n')
     expect(lines).toContain('Choice list: x_acme_ticket.severity (en), 2 choice(s)')
     expect(lines).toContain('Choice: dropdown with -- None --')
-    expect(lines).toContain(`Choice set: ${ID}; scope: ${ID}; update name: sys_choice_x_acme_ticket_severity`)
+    expect(lines).toContain(`Choice set: ${ID}; scope: ${ID} (change it with --scope-id ${ID}); update name: sys_choice_x_acme_ticket_severity`)
+    expect(display.choiceListLines({...list, choiceSet: {sysId: ID, scope: 'global', updateName: 'n'}}).join('\n')).toContain('(change it with --scope global)')
+    for (const [setting, text] of [['2', 'Choice: suggestion'], ['3', 'Choice: dropdown without -- None --'], ['0', 'Choice: none, so the form shows a plain field']]) {
+      expect(display.choiceListLines({...list, column: {...column, choice: setting}}).join('\n')).toContain(text)
+    }
+
+    expect(display.choiceList({...list, choices: [{...choice('1', 'Low', 1), hint: 'a\u001B[2Jb'}]}).choices[0].hint).toBe('a [2Jb')
     expect(lines).toMatch(/ {4}1 {2}"1" "Low "/)
     expect(lines).toMatch(/ {4}- {2}"9" "Old" \(inactive\)/)
     const plain = display.choiceListLines({...list, column: {...column, choice: ''}, choiceSet: undefined}).join('\n')
     expect(plain).toContain('Choice: none, so the form shows a plain field')
-    expect(plain).toContain('the first choice creates one')
+    expect(plain).toContain(`the first choice creates one in the column's application (--scope-id ${ID})`)
     expect(display.choiceListLines({...list, column: {...column, table: 'task'}, choiceSet: undefined}).join('\n')).toContain('shows task\'s list')
 
     const result = (extra: object) => display.choiceSuccess(display.choiceResult({table: 'x_acme_ticket', element: 'severity', language: 'en', value: '2',
@@ -203,6 +209,11 @@ describe('metadata output for applications we do not own', () => {
     expect(removed).toContain('Verified choice removed')
     expect(removed).toContain('Records holding the value: 3 (they keep it)')
     expect(removed).toContain('Choice set: none left')
+    const emptied = result({action: 'delete', previous: choice('2', 'Two', 2), inUse: 0, choices: []})
+    expect(emptied).toContain(`Choice set: ${ID}; scope: x_acme (${ID})`)
+    expect(emptied).toContain('List now (0):')
+    expect(emptied).toContain('Records holding the value: 0')
+    expect(emptied).not.toContain('they keep it')
   })
 
   it.each([
@@ -212,7 +223,7 @@ describe('metadata output for applications we do not own', () => {
     ['choice_ambiguous', 'in the UI'],
     ['choice_unchanged', 'nothing was posted'],
     ['column_not_found', 'prefix included'],
-    ['scope_mismatch', 'another application'],
+    ['scope_mismatch', 'pass it as --scope-id'],
   ] as const)('gives %s its own remediation', (code, text) => {
     const failure = projectMetadataError(new MetadataScopeError(code, {table: 'task', field: 'approval', records: 3}), {action: 'choice set'})
     expect(failure.remediation[0]).toContain(text)

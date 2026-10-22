@@ -266,6 +266,8 @@ describe('metadata choice', () => {
     const set = jest.spyOn(ChoiceWriter.prototype, 'setChoice').mockResolvedValue(result)
     await expect(command(MetadataChoiceSet, {label: 'Severity 4', sequence: 4}).run()).resolves.toMatchObject({action: 'insert', value: '4'})
     expect(set).toHaveBeenCalledWith('x_acme_ticket', 'severity', {language: 'en', label: 'Severity 4', sequence: 4, scope: {scope: 'x_acme'}, updateSet: ID, value: '4'})
+    await command(MetadataChoiceSet, {inactive: true, sequence: 0}).run()
+    expect(set).toHaveBeenLastCalledWith('x_acme_ticket', 'severity', {language: 'en', inactive: true, sequence: 0, scope: {scope: 'x_acme'}, updateSet: ID, value: '4'})
     await command(MetadataChoiceSet, {inactive: false, hint: '', scope: undefined, 'scope-id': ID, 'acknowledge-upgrade-skip': true}).run()
     expect(set).toHaveBeenLastCalledWith('x_acme_ticket', 'severity', {language: 'en', inactive: false, hint: '', scope: {sysId: ID}, updateSet: ID, value: '4',
       storeCustomization: {acknowledgeUpgradeSkip: true}})
@@ -291,6 +293,9 @@ describe('metadata choice', () => {
     [MetadataChoiceSet, {'update-set': 'abc'}, 'invalid identifier'],
     [MetadataChoiceSet, {scope: undefined}, 'exactly one'],
     [MetadataChoiceRemove, {value: '\u0007'}, 'control characters'],
+    [MetadataChoiceSet, {value: 'a^b'}, 'cannot contain ^ or javascript:'],
+    [MetadataChoiceRemove, {value: 'JavaScript:gs.log(1)'}, 'cannot contain ^ or javascript:'],
+    [MetadataChoiceSet, {hint: 'a\u001B[2J'}, 'control characters'],
     [MetadataChoiceGet, {column: 'x;y'}, 'invalid identifier'],
   ])('refuses bad input before any request (%#)', async (type, extra, message) => {
     const calls = [jest.spyOn(ChoiceWriter.prototype, 'getChoices'), jest.spyOn(ChoiceWriter.prototype, 'setChoice'), jest.spyOn(ChoiceWriter.prototype, 'removeChoice')]
