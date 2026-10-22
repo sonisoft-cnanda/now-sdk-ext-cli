@@ -11,8 +11,11 @@ export default class UpdateSetComplete extends WorkingSetCommand<typeof UpdateSe
   static description = `Complete an update set after checking what it holds, and read the state back.
 
 Refused unless the set holds exactly --expected-captures captures, all of the set's own application, one per
-record, and no other user is working in it. A completed set is never reopened. Restore your working set
-afterwards with nex update-set restore.`
+record, and no other user is working in it. Complete a set as soon as its change is proven: an open set
+that is anyone's current set keeps capturing their changes. Restore your working set afterwards with
+nex update-set restore. For more work later, reopen the set in the UI only if neither it nor its batch base
+has ever been retrieved by another instance or exported; if unsure, treat it as left and use a new set
+(update-sets skill: Complete early, reopen deliberately).`
   static examples = ['<%= config.bin %> <%= command.id %> 0123456789abcdef0123456789abcdef --expected-captures 3 --auth dev']
   static flags = {
     'expected-captures': Flags.integer({description: 'The number of captures you reviewed in the set.', min: 0, required: true}),

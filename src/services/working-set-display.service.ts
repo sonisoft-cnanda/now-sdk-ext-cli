@@ -27,7 +27,7 @@ const REMEDIATION: Record<string, string> = {
   no_single_default: 'The application has no single In progress Default to fall back to. Restore with an In progress set of that application.',
   scope_mismatch: 'A capture can move only to a set of its own application (detail.application). Create a set in that application.',
   script_result_unavailable: 'The background script result could not be read. Check nex update-set current and syslog before retrying.',
-  update_set_closed: 'The set is not In progress. Never reopen a completed set; put further changes in a new set.',
+  update_set_closed: 'The set is not In progress. Put further changes in a new set, or reopen this one in the UI only if neither it nor its batch base has ever been retrieved by another instance or exported (if unsure, treat it as left; update-sets skill: Complete early, reopen deliberately).',
   update_set_exists: 'An In progress set with this name already exists in the application. Use it (nex update-set use) or choose another name.',
   update_set_in_use: 'Another user is working in this set. Ask them to switch sets before completing.',
   update_set_not_found: 'No update set has that sys_id.',
