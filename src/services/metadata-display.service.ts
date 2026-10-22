@@ -1,10 +1,12 @@
-import {type ColumnWriteResult, type FormLayout, type FormLayoutWriteResult, isPolicyRefusal, type ListLayout, type ListLayoutWriteResult, type MetadataErrorDetail,
+import {type Choice, type ChoiceList, type ChoiceWriteResult, type ColumnWriteResult, type FormLayout, type FormLayoutWriteResult, isPolicyRefusal, type ListLayout, type ListLayoutWriteResult, type MetadataErrorDetail,
   MetadataScopeError, MetadataVerificationError, type MetadataWriteResult, redactMessage} from '@sonisoft/now-sdk-ext-core'
 
 /** A ServiceNow sys_id. */
 export const ID = /^[a-f\d]{32}$/i
 /** A table, field or scope name. */
 export const NAME = /^[a-z\d_]+$/i
+/** A choice language (sys_choice.language), as core accepts it. */
+export const LANGUAGE = /^[a-z][a-z_]{1,9}$/i
 
 export class MetadataInputError extends Error {
   constructor(message: string) {
@@ -35,11 +37,22 @@ const cleanMessage = (text: string): string => redactMessage(text).replaceAll(/<
 const cleanName = (text: string): string => text.replaceAll(/\p{Cc}/gu, ' ')
 
 const REFUSAL_REMEDIATION: Record<string, string> = {
+  choice_ambiguous: 'The list has more than one choice with that value in this language (detail.table, detail.field). Change them in the UI.',
+  choice_in_use: 'Records hold this value (detail.records). Prefer nex metadata choice set --inactive, which keeps its label and hides it from new selections; '
+    + 'or re-run with --confirm-in-use: the records keep the value, which then has no choice in the list.',
+  choice_list_inherited: 'The column is defined on detail.table and this table has no choice list of its own, so it shows detail.table\'s list. '
+    + 'Change that list (--table <detail.table>); a list of its own here would replace it on this table.',
+  choice_not_found: 'The list has no choice with that value in this language. Read it with nex metadata choice get.',
+  choice_unchanged: 'The choice already has those values; nothing was posted.',
   column_exists: 'The table, or a table it extends, already has a column of that name (detail.table, detail.field). Choose another name; the name includes the platform\'s prefix.',
+  column_not_found: 'The table and the tables it extends have no column of that name (detail.table, detail.field). Check the name, prefix included (u_ in Global).',
   domain_not_supported: 'The list or your user is outside the global domain. A save would create a new list in your session\'s domain and leave this one unchanged: change it in the List Layout UI from the right domain.',
   field_not_supported: 'The field named in detail.field is not on the form (or not offered by the List Layout page) for this table and view, or cannot be written there.',
   form_redirected: 'The form redirected to detail.redirectPath instead of loading: the table may not support form writes, or the session lacks access.',
   protected_record: 'The vendor protected this file (sys_policy read or protected). It cannot be changed; create a new record instead.',
+  scope_mismatch: 'The record belongs to another application (for a choice: the list, or the column when the table has no list yet). '
+    + 'Use that application (--scope <name> or --scope-id <sys_id>) with an update set of it. For a choice, nex metadata choice get shows '
+    + 'the list\'s application sys_id: pass it as --scope-id, or --scope global when it is global.',
   section_not_supported: 'The section holds an annotation, chart or embedded list (detail.field), which this save cannot write back. Change it in the Form Layout UI; never drop those elements from the list.',
   store_scope: 'This is an installed Store application. Changing its files makes upgrades skip them. After review, re-run with --acknowledge-upgrade-skip and --update-set, and record the customization in the update set description.',
   table_not_supported: 'The table (or the referenced table, detail.table) does not exist, or is one of the platform\'s own schema tables, or extends one.',
@@ -141,7 +154,78 @@ export function projectMetadataError(error: unknown, context: {action: string; s
   return failure
 }
 
+function choiceProjection(choice: Choice): Choice {
+  return {dependentValue: cleanName(choice.dependentValue), hint: cleanName(choice.hint), inactive: choice.inactive, label: cleanName(choice.label),
+    language: choice.language, ...(choice.sequence === undefined ? {} : {sequence: choice.sequence}), sysId: choice.sysId, value: cleanName(choice.value)}
+}
+
+function choiceColumnProjection(column: ChoiceList['column']): ChoiceList['column'] {
+  return {choice: cleanName(column.choice), scope: cleanName(column.scope), table: cleanName(column.table), type: cleanName(column.type)}
+}
+
+/** The flag that takes an application as core reports it: a sys_id, or the literal global. */
+function scopeFlag(scope: string): string {
+  return scope === 'global' ? '--scope global' : `--scope-id ${cleanName(scope)}`
+}
+
+function choiceLine(choice: Choice): string {
+  return `  ${String(choice.sequence ?? '-').padStart(5)}  ${JSON.stringify(choice.value)} ${JSON.stringify(choice.label)}${choice.inactive ? ' (inactive)' : ''}`
+    + `${choice.dependentValue ? ` [depends on ${JSON.stringify(choice.dependentValue)}]` : ''}`
+}
+
+/** The column's dictionary Choice setting, and a warning when the form will not offer the choices. */
+function choiceColumnLine(column: ChoiceList['column'], element: string): string {
+  const setting: Record<string, string> = {1: 'dropdown with -- None --', 2: 'suggestion', 3: 'dropdown without -- None --'}
+  return setting[column.choice]
+    ? `Column: ${column.table}.${element} (${column.type}); Choice: ${setting[column.choice]}; column scope: ${column.scope}`
+    : `Column: ${column.table}.${element} (${column.type}); Choice: none, so the form shows a plain field and does not offer these choices. `
+      + 'Set the dictionary Choice to a dropdown for them to show.'
+}
+
 export class MetadataDisplayService {
+  choiceList(list: ChoiceList): ChoiceList {
+    return {choices: list.choices.map(choice => choiceProjection(choice)), column: choiceColumnProjection(list.column), element: list.element, language: list.language,
+      table: list.table, ...(list.choiceSet === undefined ? {} : {choiceSet: {...list.choiceSet, updateName: cleanName(list.choiceSet.updateName)}})}
+  }
+
+  choiceListLines(list: ChoiceList): string[] {
+    return [`Choice list: ${list.table}.${list.element} (${list.language}), ${list.choices.length} choice(s)`,
+      choiceColumnLine(list.column, list.element),
+      list.choiceSet
+        ? `Choice set: ${list.choiceSet.sysId}; scope: ${list.choiceSet.scope} (change it with ${scopeFlag(list.choiceSet.scope)}); update name: ${list.choiceSet.updateName}`
+        : list.column.table === list.table
+          ? `Choice set: none; the first choice creates one in the column's application (${scopeFlag(list.column.scope)}).`
+          : `Choice set: none; the table shows ${list.column.table}'s list for this column.`,
+      ...list.choices.map(choice => choiceLine(choice))]
+  }
+
+  choiceResult(result: ChoiceWriteResult): ChoiceWriteResult {
+    return {action: result.action, capture: captureProjection(result.capture) as ChoiceWriteResult['capture'],
+      choices: result.choices.map(choice => choiceProjection(choice)), column: choiceColumnProjection(result.column), element: result.element, language: result.language,
+      messages: result.messages.map(item => cleanMessage(item)), scope: {scope: result.scope.scope, sysId: result.scope.sysId}, sysId: result.sysId,
+      table: result.table, value: cleanName(result.value),
+      ...(result.choice === undefined ? {} : {choice: choiceProjection(result.choice)}),
+      ...(result.previous === undefined ? {} : {previous: choiceProjection(result.previous)}),
+      ...(result.choiceSet === undefined ? {} : {choiceSet: {...result.choiceSet, updateName: cleanName(result.choiceSet.updateName)}}),
+      ...(result.inUse === undefined ? {} : {inUse: result.inUse})}
+  }
+
+  choiceSuccess(result: ChoiceWriteResult): string[] {
+    const verb = {delete: 'removed', insert: 'added', update: 'changed'}[result.action]
+    return [`Verified choice ${verb}: ${result.table}.${result.element} value ${JSON.stringify(result.value)} (${result.language}); choice ${result.sysId}`,
+      ...(result.previous === undefined ? [] : [`Before:${choiceLine(result.previous)}`]),
+      ...(result.choice === undefined ? [] : [`After: ${choiceLine(result.choice)}`]),
+      ...(result.inUse === undefined ? [] : [`Records holding the value: ${result.inUse}${result.inUse > 0 ? ' (they keep it)' : ''}`]),
+      result.choiceSet
+        ? `Choice set: ${result.choiceSet.sysId}${result.choiceSet.created ? ', created by this save' : ''}; scope: ${result.scope.scope} (${result.choiceSet.scope})`
+        : 'Choice set: none left',
+      choiceColumnLine(result.column, result.element),
+      `List now (${result.choices.length}):`,
+      ...result.choices.map(choice => choiceLine(choice)),
+      ...this.captureLines(result.capture),
+      ...result.messages]
+  }
+
   columnResult(result: ColumnWriteResult): ColumnWriteResult {
     return {capture: captureProjection(result.capture) as ColumnWriteResult['capture'], captures: result.captures.map(item => cleanName(item)),
       column: result.column, formSections: result.formSections, label: cleanName(result.label), messages: result.messages.map(item => cleanMessage(item)),

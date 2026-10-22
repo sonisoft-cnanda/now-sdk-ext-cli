@@ -84,8 +84,9 @@ right call, so it is allowed, but never by accident:
 
 - `--acknowledge-upgrade-skip` is required on every write to a Store application's file.
   Without it the write is refused with `store_scope` before anything is sent.
-- `--update-set` is required for a Store application (`update_set_required`), and the set must
-  be your working set (`update_set_not_current`): make it current with `nex update-set use`.
+- `--update-set` is required for a Store application (`update_set_required`). For a form or list
+  layout or a new column the set must also be your working set (`update_set_not_current`): make
+  it current with `nex update-set use`. A choice change follows the set given, current or not.
 - Files the vendor locked (`sys_policy` read or protected) are refused with `protected_record`.
 - The result's `capture.customization` reports the consequence: `replaceOnUpgrade: false`
   means upgrades skip the file, and `baselineVersion: true` means a vendor version exists.
@@ -162,6 +163,40 @@ the field is placed on it. Upgrades skip customized files.
 The command does not remove columns. Deleting a column deletes its data wherever its capture is
 committed, turns its Dictionary and Field Label captures into DELETEs, and leaves its form element
 behind.
+
+### Choice lists
+
+`metadata choice get|set|remove` read and change a column's choices through the choice form, as
+the UI's New and Edit on a choice do, and verify the choice, the list's application file and its
+one capture:
+
+```bash
+nex metadata choice get --table x_acme_ticket --column severity [--language en] --auth dev --read-only
+nex metadata choice set --table x_acme_ticket --column severity --value 4 --label 'Severity 4' \
+  [--sequence 4] [--inactive | --no-inactive] [--hint text] \
+  --scope x_acme --update-set <set> --auth dev --json
+nex metadata choice remove --table x_acme_ticket --column severity --value 4 [--confirm-in-use] \
+  --scope x_acme --update-set <set> --auth dev --json
+```
+
+A choice row has no application; the list does, through its choice set (`sys_choice_set`, one
+per table and column), which the first choice creates. `get` shows its application's sys_id
+(`choiceSet.scope`): pass it as `--scope-id` (or `--scope global` when it is `global`). A table with no list yet takes the column's application. A table that
+only shows the list of a table it extends is refused (`choice_list_inherited`): change that
+table's list. `set` adds the value with `--label`, or changes only the given options that differ on
+an existing one (`choice_unchanged` when nothing does); `--inactive` hides a choice from new
+selections and keeps it for the records that hold it. `remove` counts those records first and is
+refused while any exist (`choice_in_use`, `detail.records`) unless `--confirm-in-use`; the records
+keep the value. Removing the last choice keeps the choice set.
+
+Every change rewrites one capture, `sys_choice_<table>_<column>` (type Choice list), holding the
+choice set and the whole list. It is checked to be in `--update-set` and to hold the choice as
+saved (or no longer hold a removed one). The capture follows the set given, which need not be the
+working set. A list of an installed Store application needs `--acknowledge-upgrade-skip`.
+
+Choices show on the form only when the column's dictionary Choice setting is a dropdown or
+suggestion. A column added with `metadata column add --type choice` is a dropdown; `get` and every
+result say when a column is not.
 
 ### The working set lifecycle
 
