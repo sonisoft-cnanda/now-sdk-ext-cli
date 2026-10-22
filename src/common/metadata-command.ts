@@ -59,6 +59,18 @@ export function identifier(flags: MetadataFlags, name: string, pattern: RegExp, 
   return value as string
 }
 
+/** Choice text as the platform keeps it: no control characters or surrounding spaces, within the column's length. */
+export function choiceText(flags: MetadataFlags, name: string, rule: {allowEmpty?: boolean; max: number; required?: boolean}): string | undefined {
+  const {allowEmpty = false, max, required = false} = rule
+  const value = flags[name]
+  if (value === undefined && !required) return undefined
+  if (typeof value !== 'string' || value.length > max || value !== value.trim() || /\p{Cc}/u.test(value) || (!allowEmpty && value === '')) {
+    reject(`--${name} must be${allowEmpty ? '' : ' non-empty'} text of at most ${max} characters, without control characters or surrounding spaces.`)
+  }
+
+  return value as string
+}
+
 async function objectInput(flags: MetadataFlags, name: string): Promise<MetadataWriteOptions['fields']> {
   if (flags[name] !== undefined && flags[`${name}-file`] !== undefined) reject(`Use one ${name} source.`)
   let text = flags[name]

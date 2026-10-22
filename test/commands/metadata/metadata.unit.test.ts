@@ -1,6 +1,6 @@
 import {afterEach, describe, expect, it, jest} from '@jest/globals'
 import {Command} from '@oclif/core'
-import {ColumnWriter, FormLayoutWriter, ListLayoutWriter, MetadataFormWriter, MetadataScopeError, policyRefusal} from '@sonisoft/now-sdk-ext-core'
+import {ChoiceWriter, ColumnWriter, FormLayoutWriter, ListLayoutWriter, MetadataFormWriter, MetadataScopeError, policyRefusal} from '@sonisoft/now-sdk-ext-core'
 import {mkdtemp, rm, writeFile} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
@@ -14,6 +14,9 @@ import MetadataLayoutSet, {layoutElements} from '../../../src/commands/metadata/
 import MetadataListLayoutGet from '../../../src/commands/metadata/list-layout/get.js'
 import MetadataListLayoutSet, {listColumns} from '../../../src/commands/metadata/list-layout/set.js'
 import MetadataColumnAdd from '../../../src/commands/metadata/column/add.js'
+import MetadataChoiceGet from '../../../src/commands/metadata/choice/get.js'
+import MetadataChoiceRemove from '../../../src/commands/metadata/choice/remove.js'
+import MetadataChoiceSet from '../../../src/commands/metadata/choice/set.js'
 import {AuthenticatedCommand} from '../../../src/common/authenticated-command.js'
 
 const ID = 'a'.repeat(32)
@@ -241,6 +244,58 @@ describe('metadata column add', () => {
     const add = jest.spyOn(ColumnWriter.prototype, 'addColumn')
     await expect(command(extra).run()).rejects.toThrow(message)
     expect(add).not.toHaveBeenCalled()
+  })
+})
+
+describe('metadata choice', () => {
+  const column = {table: 'x_acme_ticket', type: 'integer', choice: '1', scope: ID}
+  const capture = {action: 'INSERT_OR_UPDATE', updateSetSysId: ID, updateSetName: 'S', updateSetScope: ID, recordScope: ID, preferencesUnchanged: true,
+    preferenceRowsReplaced: [], currentUpdateSet: {switched: false}}
+  const result = {table: 'x_acme_ticket', element: 'severity', language: 'en', value: '4', action: 'insert' as const, sysId: ID, column, capture, messages: [],
+    scope: {sysId: ID, scope: 'x_acme'}, choices: [], choiceSet: {sysId: ID, scope: ID, updateName: 'sys_choice_x_acme_ticket_severity', created: false}}
+  const command = (type: any, extra: object) => Object.assign(Object.create(type.prototype), {instance: {}, jsonEnabled: () => true,
+    flags: {table: 'x_acme_ticket', column: 'severity', language: 'en', value: '4', scope: 'x_acme', 'update-set': ID, ...extra}})
+
+  it('reads a list through ChoiceWriter in the language given', async () => {
+    const get = jest.spyOn(ChoiceWriter.prototype, 'getChoices').mockResolvedValue({table: 'x_acme_ticket', element: 'severity', language: 'fr', column, choices: []})
+    await expect(command(MetadataChoiceGet, {language: 'fr'}).run()).resolves.toMatchObject({language: 'fr', choices: []})
+    expect(get).toHaveBeenCalledWith('x_acme_ticket', 'severity', {language: 'fr'})
+  })
+
+  it('sets a choice with only the options given, the scope and the set', async () => {
+    const set = jest.spyOn(ChoiceWriter.prototype, 'setChoice').mockResolvedValue(result)
+    await expect(command(MetadataChoiceSet, {label: 'Severity 4', sequence: 4}).run()).resolves.toMatchObject({action: 'insert', value: '4'})
+    expect(set).toHaveBeenCalledWith('x_acme_ticket', 'severity', {language: 'en', label: 'Severity 4', sequence: 4, scope: {scope: 'x_acme'}, updateSet: ID, value: '4'})
+    await command(MetadataChoiceSet, {inactive: false, hint: '', scope: undefined, 'scope-id': ID, 'acknowledge-upgrade-skip': true}).run()
+    expect(set).toHaveBeenLastCalledWith('x_acme_ticket', 'severity', {language: 'en', inactive: false, hint: '', scope: {sysId: ID}, updateSet: ID, value: '4',
+      storeCustomization: {acknowledgeUpgradeSkip: true}})
+  })
+
+  it('removes a choice, passing --confirm-in-use only when given', async () => {
+    const remove = jest.spyOn(ChoiceWriter.prototype, 'removeChoice').mockResolvedValue({...result, action: 'delete', inUse: 2})
+    await expect(command(MetadataChoiceRemove, {}).run()).resolves.toMatchObject({action: 'delete', inUse: 2})
+    expect(remove).toHaveBeenCalledWith('x_acme_ticket', 'severity', {language: 'en', scope: {scope: 'x_acme'}, updateSet: ID, value: '4'})
+    await command(MetadataChoiceRemove, {'confirm-in-use': true}).run()
+    expect(remove).toHaveBeenLastCalledWith('x_acme_ticket', 'severity', {language: 'en', scope: {scope: 'x_acme'}, updateSet: ID, value: '4', confirmInUse: true})
+  })
+
+  it.each([
+    [MetadataChoiceSet, {table: 'bad^table'}, 'invalid identifier'],
+    [MetadataChoiceSet, {column: 'a b'}, 'invalid identifier'],
+    [MetadataChoiceSet, {language: 'e n'}, 'invalid identifier'],
+    [MetadataChoiceSet, {value: ''}, 'non-empty text'],
+    [MetadataChoiceSet, {value: ' 4'}, 'surrounding spaces'],
+    [MetadataChoiceSet, {value: '4\n'}, 'control characters'],
+    [MetadataChoiceSet, {label: 'x'.repeat(101)}, 'at most 100'],
+    [MetadataChoiceSet, {hint: 'x'.repeat(256)}, 'at most 255'],
+    [MetadataChoiceSet, {'update-set': 'abc'}, 'invalid identifier'],
+    [MetadataChoiceSet, {scope: undefined}, 'exactly one'],
+    [MetadataChoiceRemove, {value: '\u0007'}, 'control characters'],
+    [MetadataChoiceGet, {column: 'x;y'}, 'invalid identifier'],
+  ])('refuses bad input before any request (%#)', async (type, extra, message) => {
+    const calls = [jest.spyOn(ChoiceWriter.prototype, 'getChoices'), jest.spyOn(ChoiceWriter.prototype, 'setChoice'), jest.spyOn(ChoiceWriter.prototype, 'removeChoice')]
+    await expect(command(type, extra).run()).rejects.toThrow(message)
+    for (const call of calls) expect(call).not.toHaveBeenCalled()
   })
 })
 

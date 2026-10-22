@@ -168,4 +168,54 @@ describe('metadata output for applications we do not own', () => {
       [['a', '.split', 'b', '.split', 'c'], ['a', '.split', 'c', '.split', 'b'], true],
     ] as const) expect(summary([...before], [...after]).includes('order changed')).toBe(changed)
   })
+
+  it('renders a choice list, its column setting and a verified choice change, without server markup', () => {
+    const display = new MetadataDisplayService()
+    const choice = (value: string, label: string, sequence?: number, inactive = false) => ({sysId: ID, value, label, inactive, hint: '', dependentValue: '',
+      language: 'en', ...(sequence === undefined ? {} : {sequence})})
+    const column = {table: 'x_acme_ticket', type: 'integer', choice: '1', scope: ID}
+    const list = display.choiceList({table: 'x_acme_ticket', element: 'severity', language: 'en', column,
+      choiceSet: {sysId: ID, scope: ID, updateName: 'sys_choice_x_acme_ticket_severity'}, choices: [choice('1', 'Low\u0007', 1), choice('9', 'Old', undefined, true)]})
+    const lines = display.choiceListLines(list).join('\n')
+    expect(lines).toContain('Choice list: x_acme_ticket.severity (en), 2 choice(s)')
+    expect(lines).toContain('Choice: dropdown with -- None --')
+    expect(lines).toContain(`Choice set: ${ID}; scope: ${ID}; update name: sys_choice_x_acme_ticket_severity`)
+    expect(lines).toMatch(/ {4}1 {2}"1" "Low "/)
+    expect(lines).toMatch(/ {4}- {2}"9" "Old" \(inactive\)/)
+    const plain = display.choiceListLines({...list, column: {...column, choice: ''}, choiceSet: undefined}).join('\n')
+    expect(plain).toContain('Choice: none, so the form shows a plain field')
+    expect(plain).toContain('the first choice creates one')
+    expect(display.choiceListLines({...list, column: {...column, table: 'task'}, choiceSet: undefined}).join('\n')).toContain('shows task\'s list')
+
+    const result = (extra: object) => display.choiceSuccess(display.choiceResult({table: 'x_acme_ticket', element: 'severity', language: 'en', value: '2',
+      sysId: ID, column, scope: {sysId: ID, scope: 'x_acme'}, capture, messages: ['<b>saved</b>'], choices: [choice('1', 'Low', 1), choice('2', 'Two', 2)],
+      choiceSet: {sysId: ID, scope: ID, updateName: 'sys_choice_x_acme_ticket_severity', created: false}, action: 'insert', ...extra})).join('\n')
+    const added = result({choice: choice('2', 'Two', 2), choiceSet: {sysId: ID, scope: ID, updateName: 'n', created: true}})
+    expect(added).toContain(`Verified choice added: x_acme_ticket.severity value "2" (en); choice ${ID}`)
+    expect(added).toContain('created by this save')
+    expect(added).toContain('List now (2):')
+    expect(added).toContain('[omitted]saved[omitted]')
+    expect(added).toContain('Capture: INSERT_OR_UPDATE')
+    const changed = result({action: 'update', previous: choice('2', 'Too', 5), choice: choice('2', 'Two', 2, true)})
+    expect(changed).toMatch(/Before: +5 {2}"2" "Too"/)
+    expect(changed).toMatch(/After: +2 {2}"2" "Two" \(inactive\)/)
+    const removed = result({action: 'delete', previous: choice('2', 'Two', 2), inUse: 3, choiceSet: undefined, choices: []})
+    expect(removed).toContain('Verified choice removed')
+    expect(removed).toContain('Records holding the value: 3 (they keep it)')
+    expect(removed).toContain('Choice set: none left')
+  })
+
+  it.each([
+    ['choice_in_use', '--inactive'],
+    ['choice_list_inherited', '--table <detail.table>'],
+    ['choice_not_found', 'nex metadata choice get'],
+    ['choice_ambiguous', 'in the UI'],
+    ['choice_unchanged', 'nothing was posted'],
+    ['column_not_found', 'prefix included'],
+    ['scope_mismatch', 'another application'],
+  ] as const)('gives %s its own remediation', (code, text) => {
+    const failure = projectMetadataError(new MetadataScopeError(code, {table: 'task', field: 'approval', records: 3}), {action: 'choice set'})
+    expect(failure.remediation[0]).toContain(text)
+    expect(failure).toMatchObject({code, writeAttempted: false})
+  })
 })
