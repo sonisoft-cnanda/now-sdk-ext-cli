@@ -113,7 +113,7 @@ async function write(path: string, xml: string, force: boolean): Promise<void> {
     if (error instanceof ExportOutputError) throw error
     throw new ExportOutputError('output_write_failed')
   } finally {
-    await rm(temporary, {force: true})
+    await rm(temporary, {force: true}).catch(() => {})
   }
 }
 
