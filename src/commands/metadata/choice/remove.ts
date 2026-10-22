@@ -22,7 +22,7 @@ choice keeps the list's choice set.`
     language: Flags.string({default: 'en', description: 'Choice language (sys_choice.language).'}),
     table: Flags.string({description: 'Table name.', required: true}),
     'update-set': Flags.string({description: 'In progress update set of the list\'s application. The capture follows it.', required: true}),
-    value: Flags.string({description: 'The stored value of the choice to remove.', required: true}),
+    value: Flags.string({description: 'The stored value of the choice to remove. No ^ or javascript:.', required: true}),
   }
   protected metadataAction = 'choice remove'
   protected metadataTable = 'sys_choice'

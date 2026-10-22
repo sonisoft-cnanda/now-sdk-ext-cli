@@ -7,7 +7,8 @@ import {LANGUAGE, MetadataDisplayService, NAME} from '../../../services/metadata
 export default class MetadataChoiceGet extends MetadataBaseCommand<typeof MetadataChoiceGet> {
   static description = `Read a column's choice list in one language, in list order, with the column's dictionary Choice setting.
 
-"choiceSet" is the list's application file (sys_choice_set): its scope is the application to change the list in. A
+"choiceSet" is the list's application file (sys_choice_set): its scope, a sys_id (or global), is the application to
+change the list in: pass it as --scope-id (or --scope global). A
 table without one shows the list of the table that defines the column. Choices show on the form only when the
 column's Choice setting is a dropdown or suggestion.`
   static examples = [

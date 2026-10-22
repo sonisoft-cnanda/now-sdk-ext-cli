@@ -177,7 +177,7 @@ function choiceLine(choice: Choice): string {
 function choiceColumnLine(column: ChoiceList['column'], element: string): string {
   const setting: Record<string, string> = {1: 'dropdown with -- None --', 2: 'suggestion', 3: 'dropdown without -- None --'}
   return setting[column.choice]
-    ? `Column: ${column.table}.${element} (${column.type}); Choice: ${setting[column.choice]}; scope: ${column.scope}`
+    ? `Column: ${column.table}.${element} (${column.type}); Choice: ${setting[column.choice]}; column scope: ${column.scope}`
     : `Column: ${column.table}.${element} (${column.type}); Choice: none, so the form shows a plain field and does not offer these choices. `
       + 'Set the dictionary Choice to a dropdown for them to show.'
 }
