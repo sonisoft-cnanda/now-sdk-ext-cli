@@ -193,8 +193,10 @@ nex metadata column remove --table x_acme_ticket --column triage_note \
   (`nex update-set move --target <Default> --records <capture sys_ids>`, the move KB 172693
   allows), or set this set to Ignore if it holds nothing else. If the set has left, they ship. `false` means its capture
   is in another set, or its history does not show it was created here: committing this set deletes
-  the column and its data on every instance that has it. If the set that created it never shipped,
-  keep the DELETE out of shipped sets too.
+  the column and its data on every instance that has it. If the set that created it never left
+  this instance, that set still creates the column (it keeps its INSERT_OR_UPDATE): move its
+  captures of the column and the new DELETEs to the Default, or Ignore a set that holds nothing
+  else. Remove such a column with the set that created it.
 - Other references to the column (UI policies, ACLs, business rules, scripts) are not checked.
 
 ### Choice lists

@@ -271,7 +271,9 @@ export class MetadataDisplayService {
           + 'application\'s Default (nex update-set move --target <Default sys_id> --records <capture sys_ids>), or set this set to Ignore if it '
           + 'holds nothing else. If the set has left, the DELETEs must ship.'
         : 'The column\'s capture is in another set, or its history does not show it was created here. Committing this set deletes the column '
-          + 'and its data on every instance that has it. If the set that created it never shipped, keep this DELETE out of shipped sets too.',
+          + 'and its data on every instance that has it. If the set that created it never left this instance, that set still creates the column: '
+          + 'move its captures of the column and these DELETEs to the application\'s Default, or Ignore a set that holds nothing else. '
+          + 'Remove such a column with the set that created it.',
       ...result.messages]
   }
 
