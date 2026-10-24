@@ -48,8 +48,8 @@ const REFUSAL_REMEDIATION: Record<string, string> = {
   column_has_data: 'Rows hold a value in this column (detail.records); removing it deletes those values here and wherever the DELETE is committed. '
     + 'Re-run with --acknowledge-data-loss only if that is intended.',
   column_has_dependents: 'The platform will also delete the onChange client scripts and UI policy actions that name this column (detail.records), '
-    + 'each captured as a DELETE. Read them first (nex query -t sys_script_client -q table=<table>^field=<column>, and the same on '
-    + 'sys_ui_policy_action), then re-run with --acknowledge-dependent-deletes only if deleting them is intended.',
+    + 'each captured as a DELETE. Read them first (nex query -t sys_script_client -q table=<table>^field=<column>^typeINonChange,onCellEdit -l 100, and '
+    + 'nex query -t sys_ui_policy_action -q table=<table>^field=<column> -l 100), then re-run with --acknowledge-dependent-deletes only if deleting them is intended.',
   column_not_deletable: 'The platform does not allow this column to be deleted: only a u_ column, or a scoped application\'s own column loaded in '
     + 'that application, can be. A vendor column cannot be removed.',
   column_not_found: 'The table and the tables it extends have no column of that name (detail.table, detail.field). Check the name, prefix included (u_ in Global).',
