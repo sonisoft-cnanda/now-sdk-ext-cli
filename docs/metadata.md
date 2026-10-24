@@ -160,9 +160,39 @@ before saving (`column_exists`). A column in an installed Store application need
 application (`capture.customization` reports the Dictionary file), and so is the form section when
 the field is placed on it. Upgrades skip customized files.
 
-The command does not remove columns. Deleting a column deletes its data wherever its capture is
-committed, turns its Dictionary and Field Label captures into DELETEs, and leaves its form element
-behind.
+`metadata column remove` removes a column through the dictionary form's Delete Column action, the
+platform's own path, and is explicitly gated because it deletes the column's data wherever its
+DELETE capture is committed:
+
+```bash
+nex metadata column remove --table x_acme_ticket --column triage_note \
+  --confirm x_acme_ticket.triage_note [--acknowledge-data-loss] [--acknowledge-dependent-deletes] \
+  --scope x_acme --update-set <set> --auth dev --json
+```
+
+- `--confirm` must be `<table>.<column>` exactly (`confirmation_required`).
+- Only a column the platform allows to be deleted is removed: a `u_` column (Global, or an
+  installed Store application with `--acknowledge-upgrade-skip`), or a scoped application's own
+  column. A vendor column is refused (`column_not_deletable`), as is another application's
+  (`scope_mismatch`).
+- Rows holding a value are counted first; any need `--acknowledge-data-loss` (`column_has_data`,
+  `detail.records`).
+- The platform deletes the onChange client scripts and UI policy actions that name the column.
+  They need `--acknowledge-dependent-deletes` (`column_has_dependents`); another application's are
+  refused (`column_referenced`).
+- After the save the column, its labels and those dependents are verified gone, each with a DELETE
+  capture in `--update-set` (which need not be the working set). A capture already in that set
+  turns into a DELETE in place; otherwise a new DELETE is written there.
+- The platform leaves the column's choices, choice set, form elements and list elements behind;
+  `leftovers` lists them. Take the elements out of their layouts with `metadata layout get|set` /
+  `list-layout get|set` (the set must be the working set).
+- `createdInThisSet: true` means the column was created in this same set: rather than ship a DELETE
+  for a column the target never had, move the DELETE captures to another In progress set and set
+  that set to Ignore, or set this set to Ignore if it holds nothing else. `false` means its capture
+  is in another set, or its history does not show it was created here: committing this set deletes
+  the column and its data on every instance that has it. If the set that created it never shipped,
+  keep the DELETE out of shipped sets too.
+- Other references to the column (UI policies, ACLs, business rules, scripts) are not checked.
 
 ### Choice lists
 

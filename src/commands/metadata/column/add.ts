@@ -16,7 +16,7 @@ Field Label, and Form Layout when the field was placed) is checked to be in --up
 A column in an installed Store application needs --acknowledge-upgrade-skip: its files are customizations of that
 application, and so is the form section when the field is placed on it; upgrades skip customized files.
 
-Removing a column deletes its data and is not part of this command.`
+Removing a column deletes its data: that is nex metadata column remove, explicitly confirmed.`
   static examples = [
     '<%= config.bin %> <%= command.id %> --table x_acme_ticket --column triage_note --label "Triage note" --max-length 100 --scope x_acme --update-set 0123456789abcdef0123456789abcdef --auth dev',
     '<%= config.bin %> <%= command.id %> --table cmn_cost_center --column approver --label Approver --type reference --reference sys_user --scope global --update-set 0123456789abcdef0123456789abcdef --auth dev',

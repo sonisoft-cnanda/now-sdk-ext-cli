@@ -1,4 +1,4 @@
-import {type Choice, type ChoiceList, type ChoiceWriteResult, type ColumnWriteResult, type FormLayout, type FormLayoutWriteResult, isPolicyRefusal, type ListLayout, type ListLayoutWriteResult, type MetadataErrorDetail,
+import {type Choice, type ChoiceList, type ChoiceWriteResult, type ColumnRemoveResult, type ColumnWriteResult, type FormLayout, type FormLayoutWriteResult, isPolicyRefusal, type ListLayout, type ListLayoutWriteResult, type MetadataErrorDetail,
   MetadataScopeError, MetadataVerificationError, type MetadataWriteResult, redactMessage} from '@sonisoft/now-sdk-ext-core'
 
 /** A ServiceNow sys_id. */
@@ -45,7 +45,17 @@ const REFUSAL_REMEDIATION: Record<string, string> = {
   choice_not_found: 'The list has no choice with that value in this language. Read it with nex metadata choice get.',
   choice_unchanged: 'The choice already has those values; nothing was posted.',
   column_exists: 'The table, or a table it extends, already has a column of that name (detail.table, detail.field). Choose another name; the name includes the platform\'s prefix.',
+  column_has_data: 'Rows hold a value in this column (detail.records); removing it deletes those values here and wherever the DELETE is committed. '
+    + 'Re-run with --acknowledge-data-loss only if that is intended.',
+  column_has_dependents: 'The platform will also delete the onChange client scripts and UI policy actions that name this column (detail.records), '
+    + 'each captured as a DELETE. Read them first (nex query -t sys_script_client -q table=<table>^field=<column>^typeINonChange,onCellEdit -l 100, and '
+    + 'nex query -t sys_ui_policy_action -q table=<table>^field=<column> -l 100), then re-run with --acknowledge-dependent-deletes only if deleting them is intended.',
+  column_not_deletable: 'The platform does not allow this column to be deleted: only a u_ column, or a scoped application\'s own column loaded in '
+    + 'that application, can be. A vendor column cannot be removed.',
   column_not_found: 'The table and the tables it extends have no column of that name (detail.table, detail.field). Check the name, prefix included (u_ in Global).',
+  column_referenced: 'A client script or UI policy action of another application names this column (detail.table is its table), and the platform '
+    + 'would delete it with the column. Remove or change it in its own application first.',
+  confirmation_required: 'Pass --confirm <table>.<column> naming the column exactly.',
   domain_not_supported: 'The list or your user is outside the global domain. A save would create a new list in your session\'s domain and leave this one unchanged: change it in the List Layout UI from the right domain.',
   field_not_supported: 'The field named in detail.field is not on the form (or not offered by the List Layout page) for this table and view, or cannot be written there.',
   form_redirected: 'The form redirected to detail.redirectPath instead of loading: the table may not support form writes, or the session lacks access.',
@@ -226,6 +236,43 @@ export class MetadataDisplayService {
       ...result.messages]
   }
 
+  columnRemoveResult(result: ColumnRemoveResult): ColumnRemoveResult {
+    const {leftovers} = result
+    return {capture: captureProjection(result.capture) as ColumnRemoveResult['capture'], captures: result.captures.map(item => cleanName(item)),
+      column: result.column, createdInThisSet: result.createdInThisSet,
+      deleted: {clientScripts: [...result.deleted.clientScripts], labels: result.deleted.labels.map(item => cleanName(item)),
+        uiPolicyActions: [...result.deleted.uiPolicyActions]},
+      leftovers: {choices: leftovers.choices, ...(leftovers.choiceSet === undefined ? {} : {choiceSet: leftovers.choiceSet}),
+        formElements: leftovers.formElements.map(item => ({...item})), listElements: leftovers.listElements.map(item => ({...item}))},
+      messages: result.messages.map(item => cleanMessage(item)), records: result.records, scope: {scope: result.scope.scope, sysId: result.scope.sysId},
+      sysId: result.sysId, table: result.table}
+  }
+
+  columnRemoveSuccess(result: ColumnRemoveResult): string[] {
+    const {deleted, leftovers} = result
+    const left = [
+      ...(leftovers.choices || leftovers.choiceSet ? [`${leftovers.choices} choice(s)${leftovers.choiceSet ? ` and choice set ${leftovers.choiceSet}` : ''}`] : []),
+      ...leftovers.formElements.map(item => `form element ${item.sysId} in section ${item.section}`),
+      ...leftovers.listElements.map(item => `list element ${item.sysId} in list ${item.list}`),
+    ]
+    return [`Verified column removed: ${result.table}.${result.column} (dictionary ${result.sysId}); scope: ${result.scope.scope} (${result.scope.sysId})`,
+      `Rows that held a value: ${result.records}${result.records > 0 ? ' (deleted with the column)' : ''}`,
+      `Also deleted by the platform: ${deleted.labels.length} label(s), ${deleted.clientScripts.length} client script(s), ${deleted.uiPolicyActions.length} UI policy action(s)`,
+      `DELETE captures: ${result.captures.join(', ')}`,
+      ...this.captureLines(result.capture),
+      left.length > 0
+        ? `Left behind by the platform, naming a column that no longer exists: ${left.join('; ')}. Take the elements out of their layouts `
+          + '(nex metadata layout get|set, list-layout get|set; the set must be the working set).'
+        : 'Left behind by the platform: no choices, choice set, form elements or list elements were found.',
+      'Other references to the column (UI policies, ACLs, business rules, scripts) are not checked.',
+      result.createdInThisSet
+        ? 'The column was created in this set: do not ship its DELETE captures. Move them to another In progress set and set that set '
+          + 'to Ignore, or set this set to Ignore if it holds nothing else.'
+        : 'The column\'s capture is in another set, or its history does not show it was created here. Committing this set deletes the column '
+          + 'and its data on every instance that has it. If the set that created it never shipped, keep this DELETE out of shipped sets too.',
+      ...result.messages]
+  }
+
   columnResult(result: ColumnWriteResult): ColumnWriteResult {
     return {capture: captureProjection(result.capture) as ColumnWriteResult['capture'], captures: result.captures.map(item => cleanName(item)),
       column: result.column, formSections: result.formSections, label: cleanName(result.label), messages: result.messages.map(item => cleanMessage(item)),
@@ -242,7 +289,7 @@ export class MetadataDisplayService {
       `Captures: ${result.captures.join(', ')}`,
       ...this.captureLines(result.capture),
       ...result.messages,
-      'This command does not remove columns: deleting one deletes its data wherever its capture is committed.']
+      'Removing a column deletes its data wherever its capture is committed: that is nex metadata column remove, explicitly confirmed.']
   }
 
   failure(failure: MetadataFailure): string[] {

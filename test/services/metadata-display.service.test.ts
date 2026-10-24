@@ -133,7 +133,7 @@ describe('metadata output for applications we do not own', () => {
     expect(placed).toContain('nex metadata layout set')
     expect(placed).toContain('Captures: sys_dictionary_x_acme_ticket_triage_note, sys_documentation_x_acme_ticket_triage_note_en')
     expect(placed).toContain('[omitted]saved[omitted]')
-    expect(placed).toContain('does not remove columns')
+    expect(placed).toContain('nex metadata column remove')
     const unplaced = column([])
     expect(unplaced).toContain('Form: not placed by this save')
     expect(unplaced).toContain('another application\'s table')
@@ -216,7 +216,34 @@ describe('metadata output for applications we do not own', () => {
     expect(emptied).not.toContain('they keep it')
   })
 
+  it('renders a verified removal: data, dependents, leftovers, and what to do when the column was created in this set', () => {
+    const display = new MetadataDisplayService()
+    const removal = (extra: object) => display.columnRemoveSuccess(display.columnRemoveResult({table: 'x_acme_ticket', column: 'triage_note', sysId: ID,
+      scope: {sysId: ID, scope: 'x_acme'}, records: 0, createdInThisSet: false, deleted: {labels: ['l'], clientScripts: [ID], uiPolicyActions: []},
+      captures: ['sys_dictionary_x_acme_ticket_triage_note'], leftovers: {choices: 0, formElements: [], listElements: []}, capture, messages: ['<b>gone</b>'],
+      ...extra})).join('\n')
+    const plain = removal({})
+    expect(plain).toContain(`Verified column removed: x_acme_ticket.triage_note (dictionary ${ID}); scope: x_acme (${ID})`)
+    expect(plain).toContain('Rows that held a value: 0\n')
+    expect(plain).toContain('1 label(s), 1 client script(s), 0 UI policy action(s)')
+    expect(plain).toContain('no choices, choice set, form elements or list elements were found')
+    expect(plain).toContain('Other references to the column (UI policies, ACLs, business rules, scripts) are not checked.')
+    expect(plain).toContain('does not show it was created here')
+    expect(plain).toContain('keep this DELETE out of shipped sets too')
+    expect(plain).toContain('[omitted]gone[omitted]')
+    const created = removal({records: 4, createdInThisSet: true, leftovers: {choices: 2, choiceSet: ID, formElements: [{sysId: ID, section: ID}],
+      listElements: [{sysId: ID, list: ID}]}})
+    expect(created).toContain('Rows that held a value: 4 (deleted with the column)')
+    expect(created).toContain(`2 choice(s) and choice set ${ID}; form element ${ID} in section ${ID}; list element ${ID} in list ${ID}`)
+    expect(created).toContain('do not ship its DELETE captures')
+  })
+
   it.each([
+    ['confirmation_required', '--confirm <table>.<column>'],
+    ['column_not_deletable', 'vendor column cannot be removed'],
+    ['column_has_data', '--acknowledge-data-loss'],
+    ['column_has_dependents', 'nex query -t sys_script_client'],
+    ['column_referenced', 'in its own application first'],
     ['choice_in_use', '--inactive'],
     ['choice_list_inherited', '--table <detail.table>'],
     ['choice_not_found', 'nex metadata choice get'],
