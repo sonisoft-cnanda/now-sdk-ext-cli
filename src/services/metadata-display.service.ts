@@ -266,10 +266,14 @@ export class MetadataDisplayService {
         : 'Left behind by the platform: no choices, choice set, form elements or list elements were found.',
       'Other references to the column (UI policies, ACLs, business rules, scripts) are not checked.',
       result.createdInThisSet
-        ? 'The column was created in this set: do not ship its DELETE captures. Move them to another In progress set and set that set '
-          + 'to Ignore, or set this set to Ignore if it holds nothing else.'
+        ? 'The column was created in this set. If this set has never left this instance (not completed, exported or retrieved), do not ship '
+          + 'the DELETEs that replaced its own captures (the Dictionary and Field Label, and any dependent created in this set): move them to the '
+          + 'application\'s Default (nex update-set move --target <Default sys_id> --records <capture sys_ids>), or set this set to Ignore if it '
+          + 'holds nothing else. If the set has left, the DELETEs must ship.'
         : 'The column\'s capture is in another set, or its history does not show it was created here. Committing this set deletes the column '
-          + 'and its data on every instance that has it. If the set that created it never shipped, keep this DELETE out of shipped sets too.',
+          + 'and its data on every instance that has it. If the set that created it never left this instance, that set still creates the column: '
+          + 'in both sets, move to the application\'s Default the captures of the column and of everything created with it, keeping any DELETE '
+          + 'of a label or dependent that shipped earlier (update-sets and table-columns skills). Remove such a column with the set that created it.',
       ...result.messages]
   }
 

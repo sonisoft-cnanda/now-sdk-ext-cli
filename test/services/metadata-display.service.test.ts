@@ -229,13 +229,16 @@ describe('metadata output for applications we do not own', () => {
     expect(plain).toContain('no choices, choice set, form elements or list elements were found')
     expect(plain).toContain('Other references to the column (UI policies, ACLs, business rules, scripts) are not checked.')
     expect(plain).toContain('does not show it was created here')
-    expect(plain).toContain('keep this DELETE out of shipped sets too')
+    expect(plain).toContain('that set still creates the column')
+    expect(plain).toContain('Remove such a column with the set that created it.')
     expect(plain).toContain('[omitted]gone[omitted]')
     const created = removal({records: 4, createdInThisSet: true, leftovers: {choices: 2, choiceSet: ID, formElements: [{sysId: ID, section: ID}],
       listElements: [{sysId: ID, list: ID}]}})
     expect(created).toContain('Rows that held a value: 4 (deleted with the column)')
     expect(created).toContain(`2 choice(s) and choice set ${ID}; form element ${ID} in section ${ID}; list element ${ID} in list ${ID}`)
-    expect(created).toContain('do not ship its DELETE captures')
+    expect(created).toContain('If this set has never left this instance')
+    expect(created).toContain('If the set has left, the DELETEs must ship.')
+    expect(created).toContain('nex update-set move --target <Default sys_id>')
   })
 
   it.each([
