@@ -266,8 +266,8 @@ export class MetadataDisplayService {
         : 'Left behind by the platform: no choices, choice set, form elements or list elements were found.',
       'Other references to the column (UI policies, ACLs, business rules, scripts) are not checked.',
       result.createdInThisSet
-        ? 'The column was created in this set: do not ship its DELETE captures. Move them to another In progress set and set that set '
-          + 'to Ignore, or set this set to Ignore if it holds nothing else.'
+        ? 'The column was created in this set: do not ship its DELETE captures. Move them to the application\'s Default '
+          + '(nex update-set move --target <Default sys_id> --records <capture sys_ids>), or set this set to Ignore if it holds nothing else.'
         : 'The column\'s capture is in another set, or its history does not show it was created here. Committing this set deletes the column '
           + 'and its data on every instance that has it. If the set that created it never shipped, keep this DELETE out of shipped sets too.',
       ...result.messages]

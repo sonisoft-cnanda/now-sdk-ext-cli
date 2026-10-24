@@ -236,6 +236,7 @@ describe('metadata output for applications we do not own', () => {
     expect(created).toContain('Rows that held a value: 4 (deleted with the column)')
     expect(created).toContain(`2 choice(s) and choice set ${ID}; form element ${ID} in section ${ID}; list element ${ID} in list ${ID}`)
     expect(created).toContain('do not ship its DELETE captures')
+    expect(created).toContain('nex update-set move --target <Default sys_id>')
   })
 
   it.each([
