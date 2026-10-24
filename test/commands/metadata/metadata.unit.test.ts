@@ -14,6 +14,7 @@ import MetadataLayoutSet, {layoutElements} from '../../../src/commands/metadata/
 import MetadataListLayoutGet from '../../../src/commands/metadata/list-layout/get.js'
 import MetadataListLayoutSet, {listColumns} from '../../../src/commands/metadata/list-layout/set.js'
 import MetadataColumnAdd from '../../../src/commands/metadata/column/add.js'
+import MetadataColumnRemove from '../../../src/commands/metadata/column/remove.js'
 import MetadataChoiceGet from '../../../src/commands/metadata/choice/get.js'
 import MetadataChoiceRemove from '../../../src/commands/metadata/choice/remove.js'
 import MetadataChoiceSet from '../../../src/commands/metadata/choice/set.js'
@@ -244,6 +245,39 @@ describe('metadata column add', () => {
     const add = jest.spyOn(ColumnWriter.prototype, 'addColumn')
     await expect(command(extra).run()).rejects.toThrow(message)
     expect(add).not.toHaveBeenCalled()
+  })
+})
+
+describe('metadata column remove', () => {
+  const capture = {action: 'DELETE', updateSetSysId: ID, updateSetName: 'S', updateSetScope: ID, recordScope: ID, preferencesUnchanged: true,
+    preferenceRowsReplaced: [], currentUpdateSet: {switched: false}}
+  const result = {table: 'x_acme_ticket', column: 'triage_note', sysId: ID, scope: {sysId: ID, scope: 'x_acme'}, records: 3, createdInThisSet: false,
+    deleted: {labels: ['sys_documentation_x_acme_ticket_triage_note_en'], clientScripts: [], uiPolicyActions: []},
+    captures: ['sys_dictionary_x_acme_ticket_triage_note'], leftovers: {choices: 0, formElements: [], listElements: []}, capture, messages: []}
+  const command = (extra: object) => Object.assign(Object.create(MetadataColumnRemove.prototype), {instance: {}, jsonEnabled: () => true,
+    flags: {table: 'x_acme_ticket', column: 'triage_note', confirm: 'x_acme_ticket.triage_note', scope: 'x_acme', 'update-set': ID, ...extra}})
+
+  it('removes through ColumnWriter with the confirmation, and passes each acknowledgement only when given', async () => {
+    const remove = jest.spyOn(ColumnWriter.prototype, 'removeColumn').mockResolvedValue(result)
+    await expect(command({}).run()).resolves.toMatchObject({column: 'triage_note', records: 3})
+    expect(remove).toHaveBeenCalledWith('x_acme_ticket', 'triage_note', {confirm: {column: 'triage_note', table: 'x_acme_ticket'}, scope: {scope: 'x_acme'}, updateSet: ID})
+    await command({'acknowledge-data-loss': true, 'acknowledge-dependent-deletes': true, 'acknowledge-upgrade-skip': true}).run()
+    expect(remove).toHaveBeenLastCalledWith('x_acme_ticket', 'triage_note', {confirm: {column: 'triage_note', table: 'x_acme_ticket'}, scope: {scope: 'x_acme'},
+      updateSet: ID, acknowledgeDataLoss: true, acknowledgeDependentDeletes: true, storeCustomization: {acknowledgeUpgradeSkip: true}})
+  })
+
+  it.each([
+    [{confirm: 'triage_note'}, '--confirm must be exactly x_acme_ticket.triage_note'],
+    [{confirm: 'x_acme_ticket.other'}, '--confirm must be exactly'],
+    [{confirm: 'X_ACME_TICKET.triage_note'}, '--confirm must be exactly'],
+    [{table: 'bad^table'}, 'invalid identifier'],
+    [{column: 'Triage'}, 'invalid identifier'],
+    [{'update-set': 'abc'}, 'invalid identifier'],
+    [{scope: undefined}, 'exactly one'],
+  ])('refuses %o before any request', async (extra, message) => {
+    const remove = jest.spyOn(ColumnWriter.prototype, 'removeColumn')
+    await expect(command(extra).run()).rejects.toThrow(message)
+    expect(remove).not.toHaveBeenCalled()
   })
 })
 
