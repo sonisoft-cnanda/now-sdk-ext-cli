@@ -272,8 +272,8 @@ export class MetadataDisplayService {
           + 'holds nothing else. If the set has left, the DELETEs must ship.'
         : 'The column\'s capture is in another set, or its history does not show it was created here. Committing this set deletes the column '
           + 'and its data on every instance that has it. If the set that created it never left this instance, that set still creates the column: '
-          + 'move its captures of the column and these DELETEs to the application\'s Default, or Ignore a set that holds nothing else. '
-          + 'Remove such a column with the set that created it.',
+          + 'in both sets, move to the application\'s Default the captures of the column and of everything created with it, keeping any DELETE '
+          + 'of a label or dependent that shipped earlier (update-sets and table-columns skills). Remove such a column with the set that created it.',
       ...result.messages]
   }
 

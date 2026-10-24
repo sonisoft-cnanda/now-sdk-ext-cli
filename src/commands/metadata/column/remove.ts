@@ -19,7 +19,8 @@ not be the working set). The platform leaves the column's choices, choice set, f
 the result lists them; other references (UI policies, ACLs, scripts) are not checked. createdInThisSet true means the
 column was created in this set: if the set has never left this instance, move the DELETEs that replaced its own captures
 to the application's Default (nex update-set move) rather than ship them. Otherwise committing the set deletes the column
-wherever it exists.`
+wherever it exists; the result says what to do when the set that created it never left. Remove such a column with that
+set.`
   static examples = [
     '<%= config.bin %> <%= command.id %> --table x_acme_ticket --column triage_note --confirm x_acme_ticket.triage_note --scope x_acme --update-set 0123456789abcdef0123456789abcdef --auth dev',
     '<%= config.bin %> <%= command.id %> --table cmn_cost_center --column u_tier --confirm cmn_cost_center.u_tier --scope global --update-set 0123456789abcdef0123456789abcdef --auth dev',
