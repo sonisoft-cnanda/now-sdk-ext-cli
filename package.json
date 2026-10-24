@@ -32,7 +32,7 @@
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
-    "@oclif/core": "^4.5.1",
+    "@oclif/core": "^5.0.0",
     "@oclif/prettier-config": "^0.2.1",
     "@oclif/test": "^4",
     "@semantic-release/git": "^10.0.1",
