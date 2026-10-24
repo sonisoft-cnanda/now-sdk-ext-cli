@@ -226,8 +226,10 @@ describe('metadata output for applications we do not own', () => {
     expect(plain).toContain(`Verified column removed: x_acme_ticket.triage_note (dictionary ${ID}); scope: x_acme (${ID})`)
     expect(plain).toContain('Rows that held a value: 0\n')
     expect(plain).toContain('1 label(s), 1 client script(s), 0 UI policy action(s)')
-    expect(plain).toContain('Left behind by the platform: nothing.')
-    expect(plain).toContain('committing the set deletes the column and its data on the target')
+    expect(plain).toContain('no choices, choice set, form elements or list elements were found')
+    expect(plain).toContain('Other references to the column (UI policies, ACLs, business rules, scripts) are not checked.')
+    expect(plain).toContain('does not show it was created here')
+    expect(plain).toContain('keep this DELETE out of shipped sets too')
     expect(plain).toContain('[omitted]gone[omitted]')
     const created = removal({records: 4, createdInThisSet: true, leftovers: {choices: 2, choiceSet: ID, formElements: [{sysId: ID, section: ID}],
       listElements: [{sysId: ID, list: ID}]}})
@@ -240,7 +242,7 @@ describe('metadata output for applications we do not own', () => {
     ['confirmation_required', '--confirm <table>.<column>'],
     ['column_not_deletable', 'vendor column cannot be removed'],
     ['column_has_data', '--acknowledge-data-loss'],
-    ['column_has_dependents', '--acknowledge-dependent-deletes'],
+    ['column_has_dependents', 'nex query -t sys_script_client'],
     ['column_referenced', 'in its own application first'],
     ['choice_in_use', '--inactive'],
     ['choice_list_inherited', '--table <detail.table>'],

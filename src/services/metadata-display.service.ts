@@ -47,13 +47,14 @@ const REFUSAL_REMEDIATION: Record<string, string> = {
   column_exists: 'The table, or a table it extends, already has a column of that name (detail.table, detail.field). Choose another name; the name includes the platform\'s prefix.',
   column_has_data: 'Rows hold a value in this column (detail.records); removing it deletes those values here and wherever the DELETE is committed. '
     + 'Re-run with --acknowledge-data-loss only if that is intended.',
-  column_has_dependents: 'The platform will also delete the onChange client scripts and UI policy actions that name this column (detail.records). '
-    + 'Review them, then re-run with --acknowledge-dependent-deletes.',
+  column_has_dependents: 'The platform will also delete the onChange client scripts and UI policy actions that name this column (detail.records), '
+    + 'each captured as a DELETE. Read them first (nex query -t sys_script_client -q table=<table>^field=<column>, and the same on '
+    + 'sys_ui_policy_action), then re-run with --acknowledge-dependent-deletes only if deleting them is intended.',
   column_not_deletable: 'The platform does not allow this column to be deleted: only a u_ column, or a scoped application\'s own column loaded in '
     + 'that application, can be. A vendor column cannot be removed.',
   column_not_found: 'The table and the tables it extends have no column of that name (detail.table, detail.field). Check the name, prefix included (u_ in Global).',
-  column_referenced: 'A client script or UI policy action of another application names this column (detail.table), and the platform would delete it '
-    + 'with the column. Remove or change it in its own application first.',
+  column_referenced: 'A client script or UI policy action of another application names this column (detail.table is its table), and the platform '
+    + 'would delete it with the column. Remove or change it in its own application first.',
   confirmation_required: 'Pass --confirm <table>.<column> naming the column exactly.',
   domain_not_supported: 'The list or your user is outside the global domain. A save would create a new list in your session\'s domain and leave this one unchanged: change it in the List Layout UI from the right domain.',
   field_not_supported: 'The field named in detail.field is not on the form (or not offered by the List Layout page) for this table and view, or cannot be written there.',
@@ -260,13 +261,15 @@ export class MetadataDisplayService {
       `DELETE captures: ${result.captures.join(', ')}`,
       ...this.captureLines(result.capture),
       left.length > 0
-        ? `Left behind by the platform, naming a column that no longer exists: ${left.join('; ')}. Remove the form and list elements with `
-          + 'nex metadata layout set / list-layout set in the same set.'
-        : 'Left behind by the platform: nothing.',
+        ? `Left behind by the platform, naming a column that no longer exists: ${left.join('; ')}. Take the elements out of their layouts `
+          + '(nex metadata layout get|set, list-layout get|set; the set must be the working set).'
+        : 'Left behind by the platform: no choices, choice set, form elements or list elements were found.',
+      'Other references to the column (UI policies, ACLs, business rules, scripts) are not checked.',
       result.createdInThisSet
-        ? 'The column was created in this set: do not ship its DELETE captures. Move them to a set that never ships and Ignore it, '
-          + 'or Ignore this set if it holds nothing else.'
-        : 'The column existed before this set: committing the set deletes the column and its data on the target.',
+        ? 'The column was created in this set: do not ship its DELETE captures. Move them to another In progress set and set that set '
+          + 'to Ignore, or set this set to Ignore if it holds nothing else.'
+        : 'The column\'s capture is in another set, or its history does not show it was created here. Committing this set deletes the column '
+          + 'and its data on every instance that has it. If the set that created it never shipped, keep this DELETE out of shipped sets too.',
       ...result.messages]
   }
 

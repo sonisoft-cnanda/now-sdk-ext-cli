@@ -267,9 +267,10 @@ describe('metadata column remove', () => {
   })
 
   it.each([
-    [{confirm: 'triage_note'}, '--confirm must be exactly x_acme_ticket.triage_note'],
-    [{confirm: 'x_acme_ticket.other'}, '--confirm must be exactly'],
-    [{confirm: 'X_ACME_TICKET.triage_note'}, '--confirm must be exactly'],
+    [{confirm: 'triage_note'}, '--confirm must name the table and column being removed, as <table>.<column>.'],
+    [{confirm: 'x_acme_ticket.other'}, '--confirm must name the table and column'],
+    [{confirm: 'X_ACME_TICKET.triage_note'}, '--confirm must name the table and column'],
+    [{confirm: ' x_acme_ticket.triage_note'}, '--confirm must name the table and column'],
     [{table: 'bad^table'}, 'invalid identifier'],
     [{column: 'Triage'}, 'invalid identifier'],
     [{'update-set': 'abc'}, 'invalid identifier'],

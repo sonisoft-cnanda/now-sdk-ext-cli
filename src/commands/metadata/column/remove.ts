@@ -16,11 +16,12 @@ installed Store application needs --acknowledge-upgrade-skip.
 
 The column's labels and those dependents are verified deleted, each with a DELETE capture in --update-set (which need
 not be the working set). The platform leaves the column's choices, choice set, form elements and list elements behind;
-the result lists them. A column created in this same set (createdInThisSet) is better taken back by moving its DELETE
-captures to a set that never ships, or by setting the set to Ignore, than by shipping the DELETE.`
+the result lists them; other references (UI policies, ACLs, scripts) are not checked. A column created in this same set
+(createdInThisSet true) is better taken back by moving its DELETE captures to another set and setting that set to Ignore
+than by shipping the DELETE. With createdInThisSet false, committing the set deletes the column wherever it exists.`
   static examples = [
     '<%= config.bin %> <%= command.id %> --table x_acme_ticket --column triage_note --confirm x_acme_ticket.triage_note --scope x_acme --update-set 0123456789abcdef0123456789abcdef --auth dev',
-    '<%= config.bin %> <%= command.id %> --table cmn_cost_center --column u_tier --confirm cmn_cost_center.u_tier --acknowledge-data-loss --scope global --update-set 0123456789abcdef0123456789abcdef --auth dev',
+    '<%= config.bin %> <%= command.id %> --table cmn_cost_center --column u_tier --confirm cmn_cost_center.u_tier --scope global --update-set 0123456789abcdef0123456789abcdef --auth dev',
   ]
   static flags = {
     ...scopeFlags,
@@ -38,7 +39,7 @@ captures to a set that never ships, or by setting the set to Ignore, than by shi
     const flags = this.flags as MetadataFlags
     const table = identifier(flags, 'table', NAME, true)!
     const column = identifier(flags, 'column', /^[a-z][a-z\d_]*$/, true)!
-    if (flags.confirm !== `${table}.${column}`) throw new MetadataInputError(`--confirm must be exactly ${table}.${column}.`)
+    if (flags.confirm !== `${table}.${column}`) throw new MetadataInputError('--confirm must name the table and column being removed, as <table>.<column>.')
     const options = scopeOptions(flags)
     const result = await new ColumnWriter(this.instance).removeColumn(table, column, {...options, confirm: {column, table}, updateSet: options.updateSet!,
       ...(flags['acknowledge-data-loss'] === true ? {acknowledgeDataLoss: true} : {}),
