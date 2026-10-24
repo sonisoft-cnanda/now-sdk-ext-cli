@@ -188,7 +188,7 @@ nex metadata column remove --table x_acme_ticket --column triage_note \
   `list-layout get|set` (the set must be the working set).
 - `createdInThisSet: true` means the column was created in this same set: rather than ship a DELETE
   for a column the target never had, move the DELETE captures to the application's Default
-  (`nex update-set move --target <Default> --records <capture sys_ids>`, the one move ServiceNow
+  (`nex update-set move --target <Default> --records <capture sys_ids>`, the move KB 172693
   allows), or set this set to Ignore if it holds nothing else. `false` means its capture
   is in another set, or its history does not show it was created here: committing this set deletes
   the column and its data on every instance that has it. If the set that created it never shipped,
