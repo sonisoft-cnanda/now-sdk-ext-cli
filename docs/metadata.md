@@ -186,10 +186,12 @@ nex metadata column remove --table x_acme_ticket --column triage_note \
 - The platform leaves the column's choices, choice set, form elements and list elements behind;
   `leftovers` lists them. Take the elements out of their layouts with `metadata layout get|set` /
   `list-layout get|set` (the set must be the working set).
-- `createdInThisSet: true` means the column was created in this same set: rather than ship a DELETE
-  for a column the target never had, move the DELETE captures to the application's Default
+- `createdInThisSet: true` means the column was created in this same set. If the set has never
+  left this instance (not completed, exported or retrieved), do not ship a DELETE for a column the
+  target never had: move the DELETEs that replaced the set's own captures (Dictionary, Field
+  Label, and any dependent created in this set) to the application's Default
   (`nex update-set move --target <Default> --records <capture sys_ids>`, the move KB 172693
-  allows), or set this set to Ignore if it holds nothing else. `false` means its capture
+  allows), or set this set to Ignore if it holds nothing else. If the set has left, they ship. `false` means its capture
   is in another set, or its history does not show it was created here: committing this set deletes
   the column and its data on every instance that has it. If the set that created it never shipped,
   keep the DELETE out of shipped sets too.

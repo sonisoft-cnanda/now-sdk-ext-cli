@@ -16,9 +16,10 @@ installed Store application needs --acknowledge-upgrade-skip.
 
 The column's labels and those dependents are verified deleted, each with a DELETE capture in --update-set (which need
 not be the working set). The platform leaves the column's choices, choice set, form elements and list elements behind;
-the result lists them; other references (UI policies, ACLs, scripts) are not checked. A column created in this same set
-(createdInThisSet true) is better taken back by moving its DELETE captures to the application's Default (nex update-set
-move) than by shipping the DELETE. With createdInThisSet false, committing the set deletes the column wherever it exists.`
+the result lists them; other references (UI policies, ACLs, scripts) are not checked. createdInThisSet true means the
+column was created in this set: if the set has never left this instance, move the DELETEs that replaced its own captures
+to the application's Default (nex update-set move) rather than ship them. Otherwise committing the set deletes the column
+wherever it exists.`
   static examples = [
     '<%= config.bin %> <%= command.id %> --table x_acme_ticket --column triage_note --confirm x_acme_ticket.triage_note --scope x_acme --update-set 0123456789abcdef0123456789abcdef --auth dev',
     '<%= config.bin %> <%= command.id %> --table cmn_cost_center --column u_tier --confirm cmn_cost_center.u_tier --scope global --update-set 0123456789abcdef0123456789abcdef --auth dev',
