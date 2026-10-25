@@ -618,7 +618,15 @@ nex flow definition -i 887dda5583237210fdb8f7b6feaad32c --type action --auth dev
 # Redirect the full JSON definition to a file, or pipe it into another tool
 nex flow definition -i 887dda5583237210fdb8f7b6feaad32c --json --auth dev > flow.json
 nex flow definition -i 887dda5583237210fdb8f7b6feaad32c --type action --json --auth dev | jq .summary.steps
+
+# Debug a flow or subflow to step 3, report every step's data there, and cancel the run (Test > Debug)
+nex flow debug run --flow x_myapp.create_task_copy --inputs '{"table":"incident"}' --break 3 --json --auth dev
+
+# Or step through it interactively (n, s, o, c, b 2,3, p, q)
+nex flow debug --flow x_myapp.create_task_copy --inputs '{"table":"incident"}' --auth dev
 ```
+
+`nex flow debug` runs the flow for real: debug a copy in a scratch app. See the [flow debug guide](docs/flow-debug.md).
 
 **Features:**
 - Execute flows, subflows, and actions with structured inputs
