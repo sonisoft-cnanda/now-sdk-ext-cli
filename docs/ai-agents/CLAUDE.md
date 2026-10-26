@@ -145,6 +145,8 @@ Every command at a glance:
 | `nex flow test` | Test a flow without requiring it to be published |
 | `nex flow copy` | Copy a flow into a target scoped application |
 | `nex flow definition` | Read the design-time definition of a flow, subflow, or action |
+| `nex flow debug run` | Debug a flow/subflow to a breakpoint, report each step's runtime data, cancel the run |
+| `nex flow debug start` / `step` / `resume` / `skip-all` / `inspect` / `break` / `cancel` / `list` | Step a debug run (Workflow Studio Test > Debug) one command at a time |
 | `nex flow status` | Get the status of a flow execution context |
 | `nex flow details` | Get rich per-action execution details for a flow context |
 | `nex flow logs` | Get execution log entries for a flow context |
@@ -642,7 +644,7 @@ To use a store app's API, run in `global` and call it fully qualified (`x_acme_u
 
 ### Flow
 
-Execute and manage Flow Designer flows, subflows, and actions. This is the most comprehensive topic with 13 commands covering the full flow development lifecycle.
+Execute and manage Flow Designer flows, subflows, and actions. This is the most comprehensive topic, covering the full flow development lifecycle, including step-by-step debugging (`nex flow debug`).
 
 #### `nex flow run`
 
@@ -883,6 +885,43 @@ Send a message to a paused flow execution (e.g., to resume a flow waiting for us
 ```bash
 nex flow message -c <ctx> -m "approved" -p '{"notes":"Looks good"}' --auth dev
 ```
+
+#### `nex flow debug run` (and the `nex flow debug` subcommands)
+
+Debug a flow or subflow the way Workflow Studio's **Test > Debug** does: run to a breakpoint, read each step's
+runtime inputs and outputs, and end the run. **It executes the flow for real**: debug a copy (`nex flow copy`) in
+a scratch app. `--deny-execute` / `--read-only` refuse it; `cancel` still works under `--deny-execute`.
+
+| Flag | Short | Type | Required | Default | Description |
+|------|-------|------|----------|---------|-------------|
+| `--flow` | `-f` | string | yes | — | Flow or subflow sys_id, or `scope.internal_name` |
+| `--inputs` | `-i` | string | no | — | JSON object or `@file`: subflow inputs, or a flow's trigger outputs (`current`, `table_name`) |
+| `--input` | | string | no | — | `name=value`, repeatable |
+| `--break` | `-b` | string | yes | — | Step numbers as Workflow Studio shows them: `3` or `2,3` |
+| `--after` | | option | no | `cancel` | `cancel`, `resume` (run on to the end, ignoring later breakpoints; still running at `--timeout` = left running), or `stay` (leave it paused) |
+| `--timeout` | | integer | no | `60` | Seconds to wait for a pause or the end |
+| `--full` | | boolean | no | `false` | Whole values, and internal `__*` outputs |
+| `--json` | | boolean | no | `false` | The whole result: `session`, `snapshot` (steps with inputs/outputs), `cancel` |
+
+```bash
+nex flow debug run -f x_myapp.create_task_copy -i '{"table":"incident"}' -b 3 --json --auth dev | jq '.snapshot.steps[] | {n: .step.number, state, outputs}'
+```
+
+Stepping one command at a time (each takes the **root** `--context` that `start` printed, also after step into
+a subflow):
+
+```bash
+CTX=$(nex flow debug start -f x_myapp.create_task_copy -i @inputs.json --json --auth dev | jq -r .contextId)
+nex flow debug break   -c "$CTX" --steps 3 --auth dev
+nex flow debug resume  -c "$CTX" --json --auth dev
+nex flow debug step    -c "$CTX" --into --json --auth dev
+nex flow debug inspect -c "$CTX" --step 1 --json --auth dev
+nex flow debug cancel  -c "$CTX" --auth dev          # always end the run
+nex flow debug list --auth dev                       # open runs left behind
+```
+
+Refusals carry `code`, `detail` and `remediation` (`unknown_input`, `missing_input`, `unknown_breakpoint` with
+`detail.validSteps`, `not_paused`, `not_a_debug_session`, …). See [docs/flow-debug.md](../flow-debug.md).
 
 ---
 
