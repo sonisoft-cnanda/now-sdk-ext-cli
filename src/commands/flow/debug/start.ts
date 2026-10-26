@@ -1,6 +1,7 @@
+import {Errors} from '@oclif/core'
 import {FlowDebugger, type FlowDebugSession} from '@sonisoft/now-sdk-ext-core'
 
-import {FlowDebugCommand, parseInputs, parseSteps, startFlags, timeoutFlag} from '../../../common/flow-debug-command.js'
+import {FlowDebugCommand, interruptGuard, parseInputs, parseSteps, startFlags, timeoutFlag} from '../../../common/flow-debug-command.js'
 import {FlowDebugDisplayService} from '../../../services/flow-debug-display.service.js'
 
 export default class FlowDebugStart extends FlowDebugCommand<typeof FlowDebugStart> {
@@ -26,10 +27,21 @@ nex flow test.`
   public async run(): Promise<FlowDebugSession> {
     const {flags} = this
     const inputs = await parseInputs(flags.inputs, flags.input)
-    const session = await new FlowDebugger(this.instance).start({
-      breakpoints: flags.break === undefined ? undefined : parseSteps(flags.break), flow: flags.flow as string, inputs, timeoutMs: flags.timeout * 1000,
-    })
-    this.print(new FlowDebugDisplayService().session(session))
-    return session
+    const dbg = new FlowDebugger(this.instance)
+    const guard = interruptGuard(line => this.log(line))
+    try {
+      const session = await dbg.start({
+        breakpoints: flags.break === undefined ? undefined : parseSteps(flags.break), flow: flags.flow as string, inputs, timeoutMs: flags.timeout * 1000,
+      })
+      if (guard.interrupted) {
+        await dbg.cancel(session.contextId)
+        throw new Errors.CLIError(`Interrupted: run ${session.contextId} was cancelled.`)
+      }
+
+      this.print(new FlowDebugDisplayService().session(session))
+      return session
+    } finally {
+      guard.release()
+    }
   }
 }

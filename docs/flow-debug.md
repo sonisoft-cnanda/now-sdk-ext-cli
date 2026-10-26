@@ -18,8 +18,9 @@ nex flow debug run --flow x_myapp.create_task_copy \
 
 `run` starts the run, resumes it to the first `--break` step, prints the run there (with `--json`, the whole
 snapshot: every step's state, error, inputs and outputs), and cancels it. Nothing is left open.
-`--after resume` lets it finish instead and reports the end as well; `--after stay` leaves it paused for the
-commands below.
+`--after resume` lets it run on to the end, ignoring the other breakpoints, and reports where it got to within
+`--timeout`; a run still going then is left running, and the output says so. `--after stay` leaves it paused
+for the commands below. Ctrl+C cancels the run once the current call returns.
 
 ## Step by step
 
@@ -47,20 +48,22 @@ Every command takes the **root** context id `start` printed, even after stepping
 the run into the child context and sends commands there. `--json` returns the core objects (`FlowDebugSession`,
 `FlowDebugSnapshot`, …).
 
-Waiting: each command waits up to `--timeout` seconds (60 by default) for the run to pause again or end. If it is
-still running when the wait ends, the snapshot says so (`timedOut`); check it again with `inspect`, or `cancel`.
+Waiting: `start`, `step`, `resume`, `skip-all`, `run` and the prompt's commands wait up to `--timeout` seconds
+(60 by default) for the run to pause again or end. If it has not visibly moved on when the wait ends, the
+snapshot says so (`timedOut`); check it again with `inspect`, or `cancel`. `break --add` and `--remove` keep the
+other breakpoints, including ones without a step number.
 
 ## Interactively
 
 ```bash
 nex flow debug --flow x_myapp.create_task_copy -i @inputs.json --break 3 --auth dev
-nex flow debug --context <ctx> --auth dev      # continue an open run
+nex flow debug --context <ctx> --break 4 --auth dev      # continue an open run, adding a breakpoint
 ```
 
 At the `debug [paused @ step 1]>` prompt: `n` step over, `s` step into, `o` step out, `c` resume, `skip`,
 `b 2,3` add breakpoints, `b -2` remove one, `b` list, `p [N]` step data (`pp` in full), `w` where, `l` the steps
-it can stop at, `q` cancel and quit, `detach` exit and leave the run open, `help`. Ctrl+C and Ctrl+D cancel the
-run before exiting. The interactive form needs a terminal; scripts use the subcommands.
+it can stop at, `q` cancel and quit, `detach` exit and leave the run open, `help`. Ctrl+C, Ctrl+D and SIGTERM
+cancel the run before exiting, also while it is still starting; a command in flight is allowed to return first. The interactive form needs a terminal; scripts use the subcommands.
 
 ## Inputs
 

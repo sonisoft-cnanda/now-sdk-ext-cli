@@ -1,5 +1,5 @@
 import {Command, Errors, Flags} from '@oclif/core'
-import {FlowDebugError, flushLogs} from '@sonisoft/now-sdk-ext-core'
+import {type FlowDebugBreakpoint, FlowDebugError, type FlowDebugStepRef, flushLogs} from '@sonisoft/now-sdk-ext-core'
 import {readFile} from 'node:fs/promises'
 
 import {FlowDebugDisplayService, projectFlowDebugError} from '../services/flow-debug-display.service.js'
@@ -55,6 +55,70 @@ export function parseSteps(text: string): number[] {
   }
 
   return [...new Set(steps)]
+}
+
+const SIGNALS = ['SIGINT', 'SIGTERM'] as const
+type Listener = (...args: unknown[]) => void
+
+/**
+ * Notice SIGINT / SIGTERM while a run is at stake, instead of dying with it left open: the
+ * command checks `interrupted` once core returns and cancels, or `onInterrupt` is called.
+ *
+ * Other handlers for those signals are set aside while the guard is held, including ones added
+ * meanwhile, and put back on release: sn-credstore's lock cleanup calls process.exit on SIGINT,
+ * and it is installed lazily, mid-request, the first time a token is renewed. Its 'exit' handler
+ * still removes the lock when nex exits normally.
+ */
+export function interruptGuard(log: (line: string) => void, onInterrupt?: (signal: string) => void):
+  {readonly interrupted: boolean; onInterrupt?: (signal: string) => void; release(): void} {
+  const stashed: Array<[string, Listener]> = []
+  const guard = {
+    interrupted: false,
+    onInterrupt,
+    release() {
+      process.off('newListener', onNew)
+      for (const signal of SIGNALS) process.off(signal, onSignal)
+      for (const [signal, listener] of stashed.splice(0)) process.on(signal, listener)
+    },
+  }
+  function onSignal(signal: string) {
+    if (guard.onInterrupt) {
+      guard.onInterrupt(signal)
+    } else if (!guard.interrupted) {
+      log('Interrupted: the run is cancelled as soon as the current call returns.')
+    }
+
+    guard.interrupted = true
+  }
+
+  const hold = (signal: string, listener: Listener) => {
+    if (listener === onSignal) return
+    process.off(signal, listener)
+    stashed.push([signal, listener])
+  }
+
+  function onNew(event: string | symbol, listener: Listener) {
+    // Called before the listener is added: take it off again right after.
+    if (typeof event === 'string' && (SIGNALS as readonly string[]).includes(event)) queueMicrotask(() => hold(event, listener))
+  }
+
+  for (const signal of SIGNALS) {
+    for (const listener of process.listeners(signal) as Listener[]) hold(signal, listener)
+    process.on(signal, onSignal)
+  }
+
+  process.on('newListener', onNew)
+  return guard
+}
+
+/**
+ * The breakpoints to send after adding `add` and removing `remove` (step numbers). Held ones are
+ * kept by line, so a breakpoint without a step number (an inner action step) is not dropped.
+ */
+export function mergeBreakpoints(held: FlowDebugBreakpoint[], add: number[], remove: number[]): FlowDebugStepRef[] {
+  const kept: FlowDebugStepRef[] = held.filter(b => b.step?.number === undefined || !remove.includes(b.step.number)).map(b => ({line: b.line}))
+  const heldNumbers = new Set(held.map(b => b.step?.number))
+  return [...kept, ...add.filter(n => !heldNumbers.has(n))]
 }
 
 /** Shared failure rendering: a FlowDebugError becomes the CLI's own error with remediation. */

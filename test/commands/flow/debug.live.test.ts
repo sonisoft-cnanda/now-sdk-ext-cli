@@ -20,7 +20,8 @@ const MINUTE = 60_000
 const BIN = resolve('bin/run.js')
 const FIXTURE = 'bfd1455b53001310b6d61901a0490e0c'
 const NESTED = 'b8cb9ed753005310b6d61901a0490e00'
-const MARK = 'NSE-21 nex flow debug live test (test, delete me)'
+// No characters an encoded query treats specially, so the cleanup query matches exactly these rows.
+const MARK = 'NSE-21 nex flow debug live test - delete me'
 const INPUTS = JSON.stringify({field_values: `short_description=${MARK}`, table: 'incident', wait: false})
 const NESTED_INPUTS = JSON.stringify({api_version: '', credential_alias: '', instance_id: 'nse21', instance_url: 'https://nse21-probe.invalid',
   update_set_ids: ['nse21-a']})
@@ -53,6 +54,11 @@ const code = (result: Result): string | undefined => result.json?.error?.flowDeb
 
 ;(live ? describe : describe.skip)(`nex flow debug (${SN_INSTANCE_ALIAS}, live)`, () => {
   const started: string[] = []
+  const incidents = new Set<string>()
+  const record = (snapshot: any) => {
+    const id = snapshot?.steps?.find((s: any) => s.step?.number === 1)?.outputs?.Record?.displayValue
+    if (/^[a-f\d]{32}$/.test(id ?? '')) incidents.add(id)
+  }
   const start = (flow: string, inputs: string, extra: string[] = []) => {
     const session = ok(nex(['flow', 'debug', 'start', '--flow', flow, '--inputs', inputs, ...extra]))
     started.push(session.contextId)
@@ -60,18 +66,43 @@ const code = (result: Result): string | undefined => result.json?.error?.flowDeb
   }
 
   afterAll(() => {
-    for (const id of started) nex(['flow', 'debug', 'cancel', '--context', id])
-    const open = ok(nex(['flow', 'debug', 'list'])).filter((s: any) => s.flowSysId === FIXTURE || s.flowSysId === NESTED)
-    for (const s of open) nex(['flow', 'debug', 'cancel', '--context', s.contextId])
-    nex(['bulk', 'delete', '-t', 'incident', '-q', `short_description=${MARK}`, '--confirm'])
-    const left = ok(nex(['query', '-t', 'incident', '-q', `short_description=${MARK}`, '-f', 'sys_id', '-l', '10'], ['--read-only'])).records
+    const problems: string[] = []
+    const attempt = (what: string, work: () => void) => {
+      try {
+        work()
+      } catch (error) {
+        problems.push(`${what}: ${(error as Error).message}`)
+      }
+    }
+
+    attempt('cancel started runs', () => {
+      for (const id of started) nex(['flow', 'debug', 'cancel', '--context', id])
+    })
+    let open: any[] = []
+    attempt('list open runs', () => {
+      open = ok(nex(['flow', 'debug', 'list'])).filter((s: any) => s.flowSysId === FIXTURE || s.flowSysId === NESTED)
+      for (const s of open) nex(['flow', 'debug', 'cancel', '--context', s.contextId])
+    })
+    const query = `short_description=${MARK}`
+    attempt('delete test incidents', () => {
+      const found = ok(nex(['query', '-t', 'incident', '-q', query, '-f', 'sys_id', '-l', '50'], ['--read-only'])).records
+        .map((row: any) => row.sys_id?.value ?? row.sys_id)
+      for (const id of found) incidents.add(id)
+      if (incidents.size > 0) ok(nex(['bulk', 'delete', '-t', 'incident', '-q', `sys_idIN${[...incidents].join(',')}`, '-l', '50', '--confirm']))
+    })
+    attempt('verify', () => {
+      const left = ok(nex(['query', '-t', 'incident', '-q', `sys_idIN${[...incidents].join(',')}^ORshort_descriptionSTARTSWITHNSE-21 nex flow debug live`,
+        '-f', 'sys_id', '-l', '10'], ['--read-only'])).records
+      if (left.length > 0) problems.push(`incidents left: ${JSON.stringify(left)}`)
+    })
     expect(open).toEqual([])
-    expect(left).toEqual([])
+    expect(problems).toEqual([])
   }, 5 * MINUTE)
 
   it('run stops at the step, reports every step there, and leaves nothing open', () => {
     const result = ok(nex(['flow', 'debug', 'run', '--flow', 'x_2115789_flowdbg.nse21_debug_copy__create_task', '--inputs', INPUTS, '--break', '3']))
     started.push(result.session.contextId)
+    record(result.snapshot)
     expect(result.snapshot.state).toBe('PAUSED')
     expect(result.snapshot.pausedAt.step.number).toBe(3)
     const created = result.snapshot.steps.find((s: any) => s.step?.number === 1)
@@ -85,7 +116,9 @@ const code = (result: Result): string | undefined => result.json?.error?.flowDeb
     expect(session.snapshot.pausedLines).toEqual([1])
     expect(ok(nex(['flow', 'debug', 'break', '--context', ctx, '--steps', '3'])).map((b: any) => b.step.number)).toEqual([3])
     expect(code(nex(['flow', 'debug', 'break', '--context', ctx, '--steps', '9']))).toBe('unknown_breakpoint')
-    expect(ok(nex(['flow', 'debug', 'resume', '--context', ctx])).pausedAt.step.number).toBe(3)
+    const atThree = ok(nex(['flow', 'debug', 'resume', '--context', ctx]))
+    record(atThree)
+    expect(atThree.pausedAt.step.number).toBe(3)
     expect(ok(nex(['flow', 'debug', 'inspect', '--context', ctx, '--step', '1'])).steps.length).toBeGreaterThan(0)
     expect(ok(nex(['flow', 'debug', 'step', '--context', ctx])).state).toBe('COMPLETE')
     expect(code(nex(['flow', 'debug', 'step', '--context', ctx]))).toBe('not_paused')

@@ -898,7 +898,7 @@ a scratch app. `--deny-execute` / `--read-only` refuse it; `cancel` still works 
 | `--inputs` | `-i` | string | no | — | JSON object or `@file`: subflow inputs, or a flow's trigger outputs (`current`, `table_name`) |
 | `--input` | | string | no | — | `name=value`, repeatable |
 | `--break` | `-b` | string | yes | — | Step numbers as Workflow Studio shows them: `3` or `2,3` |
-| `--after` | | option | no | `cancel` | `cancel`, `resume` (let it finish), or `stay` (leave it paused) |
+| `--after` | | option | no | `cancel` | `cancel`, `resume` (run on to the end, ignoring later breakpoints; still running at `--timeout` = left running), or `stay` (leave it paused) |
 | `--timeout` | | integer | no | `60` | Seconds to wait for a pause or the end |
 | `--full` | | boolean | no | `false` | Whole values, and internal `__*` outputs |
 | `--json` | | boolean | no | `false` | The whole result: `session`, `snapshot` (steps with inputs/outputs), `cancel` |

@@ -3,6 +3,7 @@ import type {FlowDebugger, FlowDebugSnapshot} from '@sonisoft/now-sdk-ext-core'
 import {FlowDebugError} from '@sonisoft/now-sdk-ext-core'
 
 import {FlowDebugDisplayService, projectFlowDebugError} from '../services/flow-debug-display.service.js'
+import {mergeBreakpoints} from './flow-debug-command.js'
 
 /** One line typed at the `nex flow debug` prompt. */
 export type ReplCommand =
@@ -122,8 +123,7 @@ export class FlowDebugRepl {
     const wait = {timeoutMs: this.timeoutMs}
     switch (command.kind) {
       case 'break': {
-        const held = (await this.dbg.getBreakpoints(ctx)).map(b => b.step?.number).filter((n): n is number => n !== undefined)
-        return {lines: this.display.breakpoints(await this.dbg.setBreakpoints(ctx, [...new Set([...command.steps, ...held])].sort((a, b) => a - b)))}
+        return {lines: this.display.breakpoints(await this.dbg.setBreakpoints(ctx, mergeBreakpoints(await this.dbg.getBreakpoints(ctx), command.steps, [])))}
       }
 
       case 'breaks': {
@@ -178,8 +178,7 @@ export class FlowDebugRepl {
       }
 
       case 'unbreak': {
-        const held = (await this.dbg.getBreakpoints(ctx)).map(b => b.step?.number).filter((n): n is number => n !== undefined)
-        const keep = held.filter(n => !command.steps.includes(n))
+        const keep = mergeBreakpoints(await this.dbg.getBreakpoints(ctx), [], command.steps)
         if (keep.length === 0) {
           await this.dbg.clearBreakpoints(ctx)
           return {lines: this.display.breakpoints([])}
@@ -203,4 +202,109 @@ export class FlowDebugRepl {
     // The hints name subcommands; at the prompt the short commands apply.
     return {lines: this.display.snapshot(snapshot).filter(line => !line.startsWith('Next: ') && !line.startsWith('End it: ') && !line.startsWith('Check it: '))}
   }
+}
+
+/** The parts of a readline interface the prompt loop uses; a test passes an EventEmitter. */
+export interface ReplIO {
+  close(): void
+  on(event: 'close' | 'SIGINT', listener: () => void): unknown
+  on(event: 'line', listener: (line: string) => void): unknown
+  prompt(): void
+  setPrompt(prompt: string): void
+}
+
+export interface ReplLoop {
+  /** Resolves once the loop has ended, and the run has been cancelled unless it was detached. */
+  done: Promise<void>
+  /** End the loop from outside (SIGTERM): cancel the run, then close. */
+  stop(lines?: string[]): Promise<void>
+}
+
+/**
+ * Read commands until quit, detach, Ctrl+C or Ctrl+D. Leaving any way but detach cancels the run,
+ * once: a command still in flight is allowed to return first, so a cancel never races it. Nothing
+ * a line or a log does can leave the loop without ending it.
+ */
+export function runRepl(io: ReplIO, repl: FlowDebugRepl, log: (line: string) => void): ReplLoop {
+  let finished = false
+  let busy = false
+  let inflight: Promise<unknown> = Promise.resolve()
+  let resolveDone!: () => void
+  const done = new Promise<void>(resolve => {
+    resolveDone = resolve
+  })
+  const say = (line: string) => {
+    try {
+      log(line)
+    } catch {
+      // Output has gone away; the run is still cancelled.
+    }
+  }
+
+  const finish = async (cancel: boolean, lines: string[] = []): Promise<void> => {
+    if (finished) return done
+    finished = true
+    for (const line of lines) say(line)
+    try {
+      if (busy) say('(cancelling once the current command returns)')
+      await inflight.catch(() => {})
+      if (cancel) for (const line of (await repl.handle({kind: 'quit'})).lines) say(line)
+    } catch (error) {
+      say(`Could not cancel run ${repl.contextId}: ${(error as Error).message}. End it with nex flow debug cancel --context ${repl.contextId}.`)
+    } finally {
+      try {
+        io.close()
+      } catch {
+        // Already closed.
+      }
+
+      resolveDone()
+    }
+
+    return done
+  }
+
+  const handle = async (line: string): Promise<boolean> => {
+    try {
+      const outcome = await repl.handle(parseReplCommand(line))
+      for (const out of outcome.lines) say(out)
+      return outcome.exit !== undefined
+    } catch (error) {
+      say(`Error: ${(error as Error).message}`)
+      return false
+    }
+  }
+
+  const prompt = () => {
+    try {
+      io.setPrompt(replPrompt(repl.snapshot))
+      io.prompt()
+    } catch {
+      finish(true)
+    }
+  }
+
+  io.on('line', (line: string) => {
+    if (finished) return
+    if (busy) {
+      say('(still waiting for the last command)')
+      return
+    }
+
+    busy = true
+    inflight = handle(line).then(exit => {
+      busy = false
+      // quit has already cancelled the run; detach leaves it open.
+      if (exit) finish(false)
+      else if (!finished) prompt()
+    })
+  })
+  io.on('SIGINT', () => {
+    finish(true, ['', 'Cancelling the run (Ctrl+C).'])
+  })
+  io.on('close', () => {
+    finish(true)
+  })
+  prompt()
+  return {done, stop: (lines?: string[]) => finish(true, lines)}
 }

@@ -79,6 +79,13 @@ describe('FlowDebugDisplayService', () => {
     expect(lines).toContain('    text: line1 line2 [31m')
   })
 
+  it('shows the paused step’s data for a loop, whose report keys carry a suffix', () => {
+    const loop: FlowDebugStepData = {...theIf, inputs: {items: {displayValue: 'a, b', value: ''}}, reportKey: 's3.ForEach$'}
+    const lines = display.snapshot({...paused, steps: [create, loop]})
+    expect(lines).toContain('Paused step 3 If: Wait for Completion (NOT_READY)')
+    expect(lines).toContain('    items: a, b')
+  })
+
   it('shows one step’s data, or says it has none yet', () => {
     expect(display.steps(paused, {step: 1})[0]).toBe('Step 1 Create Task (COMPLETE)')
     expect(display.steps(paused, {step: 4})).toEqual(['Step 4 has no data yet.'])

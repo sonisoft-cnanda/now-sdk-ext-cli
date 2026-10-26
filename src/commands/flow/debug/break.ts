@@ -1,7 +1,7 @@
 import {Flags} from '@oclif/core'
 import {type FlowDebugBreakpoint, FlowDebugger} from '@sonisoft/now-sdk-ext-core'
 
-import {contextFlag, FlowDebugCommand, parseSteps} from '../../../common/flow-debug-command.js'
+import {contextFlag, FlowDebugCommand, mergeBreakpoints, parseSteps} from '../../../common/flow-debug-command.js'
 import {FlowDebugDisplayService} from '../../../services/flow-debug-display.service.js'
 
 export default class FlowDebugBreak extends FlowDebugCommand<typeof FlowDebugBreak> {
@@ -27,20 +27,20 @@ the run is paused inside a subflow it stepped into, breakpoints apply to that su
     const {flags} = this
     const dbg = new FlowDebugger(this.instance)
     const ctx = flags.context
-    const held = async () => (await dbg.getBreakpoints(ctx)).map(b => b.step?.number).filter((n): n is number => n !== undefined)
     let breakpoints: FlowDebugBreakpoint[]
     if (flags.steps !== undefined) {
       breakpoints = await dbg.setBreakpoints(ctx, parseSteps(flags.steps))
-    } else if (flags.add !== undefined) {
-      breakpoints = await dbg.setBreakpoints(ctx, [...new Set([...(await held()), ...parseSteps(flags.add)])].sort((a, b) => a - b))
-    } else if (flags.remove !== undefined || flags.clear) {
-      const removing = flags.clear ? undefined : parseSteps(flags.remove as string)
-      const keep = removing === undefined ? [] : (await held()).filter(n => !removing.includes(n))
-      if (keep.length === 0) {
+    } else if (flags.clear) {
+      await dbg.clearBreakpoints(ctx)
+      breakpoints = []
+    } else if (flags.add !== undefined || flags.remove !== undefined) {
+      const refs = mergeBreakpoints(await dbg.getBreakpoints(ctx), flags.add === undefined ? [] : parseSteps(flags.add),
+        flags.remove === undefined ? [] : parseSteps(flags.remove))
+      if (refs.length === 0) {
         await dbg.clearBreakpoints(ctx)
         breakpoints = []
       } else {
-        breakpoints = await dbg.setBreakpoints(ctx, keep)
+        breakpoints = await dbg.setBreakpoints(ctx, refs)
       }
     } else {
       breakpoints = await dbg.getBreakpoints(ctx)

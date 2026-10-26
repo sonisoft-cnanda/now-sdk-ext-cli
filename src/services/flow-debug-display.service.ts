@@ -21,7 +21,7 @@ const VALUE_MAX = 200
 const WARNING = 'Debugging runs the flow for real: records it creates or changes are kept.'
 
 const REMEDIATION: Record<string, string> = {
-  breakpoint_not_verified: 'The debugger cannot stop there (detail.serverMessage). Pick another step: nex flow debug break --context <ctx> --list.',
+  breakpoint_not_verified: 'The debugger cannot stop there (detail.serverMessage). Pick another step: nex flow debug inspect --context <ctx> lists where it can stop.',
   cancel_failed: 'The run is still open (detail.state). Run nex flow debug cancel again, or end it from the flow context record in the instance.',
   context_not_found: 'No flow context has that id. List open runs with nex flow debug list.',
   flow_not_found: 'No flow or subflow matches. Pass its sys_id, or scope.internal_name (nex flow definition shows both).',
@@ -141,9 +141,11 @@ export class FlowDebugDisplayService {
     return chosen.flatMap(step => this.step(step, options))
   }
 
+  /** The paused element's report: its own, or for a loop the latest of its `<id>.…` entries. */
   private pausedStep(snapshot: FlowDebugSnapshot): FlowDebugStepData | undefined {
     const id = snapshot.pausedAt?.step?.snapshotInstanceId
-    return id ? snapshot.steps.find(s => s.reportKey === id) : undefined
+    if (!id) return undefined
+    return snapshot.steps.find(s => s.reportKey === id) ?? snapshot.steps.findLast(s => s.step?.snapshotInstanceId === id)
   }
 
   private values(title: string, values: Record<string, FlowDebugValue>, full: boolean): string[] {

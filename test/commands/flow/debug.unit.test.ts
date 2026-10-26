@@ -13,8 +13,9 @@ import FlowDebugRun from '../../../src/commands/flow/debug/run.js'
 import FlowDebugStart from '../../../src/commands/flow/debug/start.js'
 import FlowDebugStep from '../../../src/commands/flow/debug/step.js'
 import {AuthenticatedCommand} from '../../../src/common/authenticated-command.js'
-import {parseInputs, parseSteps} from '../../../src/common/flow-debug-command.js'
-import {FlowDebugRepl, parseReplCommand, replPrompt} from '../../../src/common/flow-debug-repl.js'
+import {interruptGuard, mergeBreakpoints, parseInputs, parseSteps} from '../../../src/common/flow-debug-command.js'
+import {FlowDebugRepl, parseReplCommand, replPrompt, runRepl} from '../../../src/common/flow-debug-repl.js'
+import {EventEmitter} from 'node:events'
 
 const CTX = 'a'.repeat(32)
 const FLOW = 'f'.repeat(32)
@@ -81,22 +82,33 @@ describe('subcommands', () => {
     expect(target.lines[0]).toBe(`Debug run ${CTX}: Flow (subflow, x_app)`)
   })
 
-  it('break replaces, adds, removes, clears and lists', async () => {
-    const set = jest.spyOn(FlowDebugger.prototype, 'setBreakpoints').mockImplementation(async (_c, steps) => (steps as number[]).map(bp))
-    const get = jest.spyOn(FlowDebugger.prototype, 'getBreakpoints').mockResolvedValue([bp(2), bp(3)])
+  it('break replaces, adds, removes, clears and lists, keeping held breakpoints by line', async () => {
+    const set = jest.spyOn(FlowDebugger.prototype, 'setBreakpoints').mockResolvedValue([])
+    const inner = {flowElementId: 'x-u1', line: 3, verified: true}
+    jest.spyOn(FlowDebugger.prototype, 'getBreakpoints').mockResolvedValue([bp(2), bp(3), inner])
     const clear = jest.spyOn(FlowDebugger.prototype, 'clearBreakpoints').mockResolvedValue()
     await command(FlowDebugBreak, {context: CTX, steps: '4'}).run()
     expect(set).toHaveBeenLastCalledWith(CTX, [4])
     await command(FlowDebugBreak, {add: '4,2', context: CTX}).run()
-    expect(set).toHaveBeenLastCalledWith(CTX, [2, 3, 4])
+    expect(set).toHaveBeenLastCalledWith(CTX, [{line: 4}, {line: 6}, {line: 3}, 4])
     await command(FlowDebugBreak, {context: CTX, remove: '2'}).run()
-    expect(set).toHaveBeenLastCalledWith(CTX, [3])
-    await expect(command(FlowDebugBreak, {context: CTX, remove: '2,3'}).run()).resolves.toEqual([])
-    expect(clear).toHaveBeenCalledTimes(1)
+    expect(set).toHaveBeenLastCalledWith(CTX, [{line: 6}, {line: 3}])
     await command(FlowDebugBreak, {clear: true, context: CTX}).run()
-    expect(clear).toHaveBeenCalledTimes(2)
-    await expect(command(FlowDebugBreak, {context: CTX}).run()).resolves.toEqual([bp(2), bp(3)])
-    expect(get).toHaveBeenCalled()
+    expect(clear).toHaveBeenCalledTimes(1)
+    await command(FlowDebugBreak, {context: CTX}).run()
+  })
+
+  it('removing the last breakpoints clears them', async () => {
+    jest.spyOn(FlowDebugger.prototype, 'getBreakpoints').mockResolvedValue([bp(2)])
+    const clear = jest.spyOn(FlowDebugger.prototype, 'clearBreakpoints').mockResolvedValue()
+    await expect(command(FlowDebugBreak, {context: CTX, remove: '2'}).run()).resolves.toEqual([])
+    expect(clear).toHaveBeenCalled()
+  })
+
+  it('mergeBreakpoints keeps a breakpoint without a step number through an add and a remove', () => {
+    const inner = {flowElementId: 'x-u1', line: 3, verified: true}
+    expect(mergeBreakpoints([bp(2), inner], [5, 2], [])).toEqual([{line: 4}, {line: 3}, 5])
+    expect(mergeBreakpoints([bp(2), inner], [], [2])).toEqual([{line: 3}])
   })
 
   it('step steps over by default, into or out on request, with the timeout', async () => {
@@ -192,11 +204,11 @@ describe('the prompt', () => {
 
   it('b adds to the breakpoints held, and b -N clears when none remain', async () => {
     jest.spyOn(FlowDebugger.prototype, 'getBreakpoints').mockResolvedValue([bp(2)])
-    const set = jest.spyOn(FlowDebugger.prototype, 'setBreakpoints').mockImplementation(async (_c, steps) => (steps as number[]).map(bp))
+    const set = jest.spyOn(FlowDebugger.prototype, 'setBreakpoints').mockResolvedValue([bp(2), bp(3)])
     const clear = jest.spyOn(FlowDebugger.prototype, 'clearBreakpoints').mockResolvedValue()
     const repl = new FlowDebugRepl(new FlowDebugger(new ServiceNowInstance({alias: 'unit-test'})), CTX, 1000)
     await repl.handle({kind: 'break', steps: [3]})
-    expect(set).toHaveBeenCalledWith(CTX, [2, 3])
+    expect(set).toHaveBeenCalledWith(CTX, [{line: 4}, 3])
     await repl.handle({kind: 'unbreak', steps: [2]})
     expect(clear).toHaveBeenCalled()
   })
@@ -207,5 +219,122 @@ describe('the prompt', () => {
     const outcome = await repl.handle({kind: 'into'})
     expect(repl.snapshot?.pausedLines).toEqual([4])
     expect(outcome.lines.some(line => line.startsWith('Next: '))).toBe(false)
+  })
+})
+
+describe('the prompt loop', () => {
+  class FakeIO extends EventEmitter {
+    closed = 0
+    prompts: string[] = []
+    close() {
+      this.closed++
+      this.emit('close')
+    }
+
+    prompt() {}
+    setPrompt(prompt: string) {
+      this.prompts.push(prompt)
+    }
+  }
+
+  const setup = () => {
+    const cancel = jest.spyOn(FlowDebugger.prototype, 'cancel').mockResolvedValue({after: 'CANCELLED', alreadyEnded: false, before: 'PAUSED_IN_DEBUG', cancelled: true, contextId: CTX})
+    const repl = new FlowDebugRepl(new FlowDebugger(new ServiceNowInstance({alias: 'unit-test'})), CTX, 1000)
+    repl.snapshot = snapshot
+    const io = new FakeIO()
+    const lines: string[] = []
+    return {cancel, io, lines, loop: runRepl(io, repl, line => lines.push(line))}
+  }
+
+  it.each([['Ctrl+C', 'SIGINT'], ['Ctrl+D', 'close']])('%s cancels the run once and ends the loop', async (_name, event) => {
+    const {cancel, io, loop} = setup()
+    io.emit(event)
+    io.emit(event)
+    await loop.done
+    expect(cancel).toHaveBeenCalledTimes(1)
+  })
+
+  it('q cancels once; detach ends the loop without cancelling', async () => {
+    const quit = setup()
+    quit.io.emit('line', 'q')
+    await quit.loop.done
+    expect(quit.cancel).toHaveBeenCalledTimes(1)
+    expect(quit.io.closed).toBeGreaterThan(0)
+    jest.restoreAllMocks()
+    const detach = setup()
+    detach.io.emit('line', 'detach')
+    await detach.loop.done
+    expect(detach.cancel).not.toHaveBeenCalled()
+  })
+
+  it('Ctrl+C during a command waits for it to return before cancelling', async () => {
+    let release: () => void = () => {}
+    const order: string[] = []
+    jest.spyOn(FlowDebugger.prototype, 'stepOver').mockImplementation(() => new Promise(resolve => {
+      release = () => {
+        order.push('step returned')
+        resolve(snapshot)
+      }
+    }))
+    const {cancel, io, loop} = setup()
+    cancel.mockImplementation(async () => {
+      order.push('cancel')
+      return {after: 'CANCELLED', alreadyEnded: false, before: 'PAUSED_IN_DEBUG', cancelled: true, contextId: CTX}
+    })
+    io.emit('line', 'n')
+    io.emit('SIGINT')
+    await new Promise(resolve => setImmediate(resolve))
+    expect(cancel).not.toHaveBeenCalled()
+    release()
+    await loop.done
+    expect(order).toEqual(['step returned', 'cancel'])
+  })
+
+  it('an error in a command, or in printing, never leaves the loop without cancelling', async () => {
+    jest.spyOn(FlowDebugger.prototype, 'stepOver').mockRejectedValue(new Error('network'))
+    const {cancel, io, lines, loop} = setup()
+    io.emit('line', 'n')
+    await new Promise(resolve => setImmediate(resolve))
+    expect(lines).toContain('Error: network')
+    io.emit('close')
+    await loop.done
+    expect(cancel).toHaveBeenCalledTimes(1)
+  })
+
+  it('stop (SIGTERM) cancels and ends the loop', async () => {
+    const {cancel, loop} = setup()
+    await loop.stop(['Cancelling the run (SIGTERM).'])
+    await loop.done
+    expect(cancel).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('the interrupt guard', () => {
+  it('holds other SIGINT handlers aside, including ones added while it is held, and puts them back', async () => {
+    const exiting = jest.fn()
+    const late = jest.fn()
+    process.on('SIGINT', exiting)
+    const lines: string[] = []
+    const guard = interruptGuard(line => lines.push(line))
+    process.on('SIGINT', late)
+    await Promise.resolve()
+    process.emit('SIGINT')
+    expect(guard.interrupted).toBe(true)
+    expect(exiting).not.toHaveBeenCalled()
+    expect(late).not.toHaveBeenCalled()
+    expect(lines[0]).toMatch(/cancelled as soon as/)
+    guard.release()
+    expect(process.listeners('SIGINT')).toEqual(expect.arrayContaining([exiting, late]))
+    process.off('SIGINT', exiting)
+    process.off('SIGINT', late)
+  })
+
+  it('calls onInterrupt with the signal when one is given', () => {
+    const seen: string[] = []
+    const guard = interruptGuard(() => {}, signal => seen.push(signal))
+    // A real signal passes its name to the listener; emit does only what it is given.
+    process.emit('SIGTERM', 'SIGTERM')
+    guard.release()
+    expect(seen).toEqual(['SIGTERM'])
   })
 })
