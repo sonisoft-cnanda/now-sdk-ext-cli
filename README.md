@@ -81,7 +81,7 @@ Discover business rules, UI actions, client scripts, UI/data policies, workflows
 - **Update Sets**: Create, inspect, clone, and manage update sets
 - **Workflow Creation**: Create workflows with activities, transitions, and conditions
 - **Scope Management**: Switch application scopes programmatically
-- **Store Integration**: Search, install, and update apps from the ServiceNow Store
+- **Store Integration**: Search, install, and update apps from the ServiceNow Store, and repair an installed store or company app from its repository (`nex store repair`, see [the guide](docs/store-repair.md))
 - **JSON Output**: Perfect for parsing and automation
 
 #### 🔄 CI/CD Integration
