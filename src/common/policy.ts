@@ -82,7 +82,7 @@ export function buildLayers(flags: PolicyFlags, warn: (message: string) => void)
  * the fix differs completely: unset an environment variable, or drop a flag.
  */
 function remediation(verbs: readonly Verb[], missing: Verb, layer: string): string {
-  const what = missing === 'execute' ? 'running scripts or flows' : 'changing instance data'
+  const what = missing === 'execute' ? 'running or scheduling server-side script (scripts, flows, ATF, scheduled jobs)' : 'changing instance data'
 
   if (layer.startsWith(DENY_ENV)) {
     return `Refused: ${what} is denied by ${DENY_ENV}. ` +

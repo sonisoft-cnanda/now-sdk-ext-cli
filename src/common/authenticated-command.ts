@@ -37,7 +37,7 @@ export abstract class AuthenticatedCommand<T extends typeof Command> extends Com
     // with them. The layer an agent cannot reach is NEX_POLICY_DENY, which outranks
     // every flag — that is what makes pointing nex at production meaningful.
     'deny-execute': Flags.boolean({
-      description: 'Refuse background scripts, flow runs and ATF runs for this invocation.',
+      description: 'Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write), flow runs and ATF runs for this invocation.',
       helpGroup: 'GLOBAL',
       required: false,
     }),
