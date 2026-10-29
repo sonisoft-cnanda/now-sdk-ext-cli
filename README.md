@@ -821,7 +821,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -885,7 +885,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -950,7 +950,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -1007,7 +1007,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -1069,7 +1069,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -1141,7 +1141,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -1223,7 +1223,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -1297,7 +1297,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -1371,7 +1371,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -1441,7 +1441,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -1486,7 +1486,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -1533,7 +1533,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -1795,7 +1795,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -1839,7 +1839,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -1900,7 +1900,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -1947,7 +1947,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -1989,7 +1989,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2055,7 +2055,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2123,7 +2123,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -2261,7 +2261,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2311,7 +2311,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2359,7 +2359,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2426,7 +2426,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2496,7 +2496,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2556,7 +2556,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2600,7 +2600,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2659,7 +2659,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2706,7 +2706,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2757,7 +2757,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2818,7 +2818,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2867,7 +2867,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2926,7 +2926,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2990,7 +2990,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -3080,7 +3080,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -3198,7 +3198,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -3248,7 +3248,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -3299,7 +3299,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -3664,7 +3664,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -3724,7 +3724,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -3776,7 +3776,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -3831,7 +3831,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -3892,7 +3892,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -3947,7 +3947,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -3993,7 +3993,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -4038,7 +4038,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4085,7 +4085,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4132,7 +4132,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4192,7 +4192,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4252,7 +4252,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4313,7 +4313,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4377,7 +4377,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4434,7 +4434,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4484,7 +4484,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4541,7 +4541,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4592,7 +4592,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4644,7 +4644,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4691,7 +4691,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4731,7 +4731,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4785,7 +4785,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4845,7 +4845,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4900,7 +4900,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4957,7 +4957,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -5015,7 +5015,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -5067,7 +5067,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -5113,7 +5113,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -5157,7 +5157,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -5205,7 +5205,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -5250,7 +5250,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -5297,7 +5297,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -5344,7 +5344,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -5390,7 +5390,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -5437,7 +5437,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -5481,7 +5481,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -5527,7 +5527,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -5584,7 +5584,7 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
