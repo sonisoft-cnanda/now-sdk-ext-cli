@@ -183,6 +183,7 @@ Every command at a glance:
 | `nex store search` | Search the ServiceNow Store |
 | `nex store install` | Install a store application |
 | `nex store update` | Update a store application |
+| `nex store repair` | Repair an installed store or company app: reinstall its installed version from the repository |
 | `nex store validate` | Validate a batch install definition file |
 | **Task** | |
 | `nex task find` | Find a task by its number |
@@ -1279,6 +1280,47 @@ Update an installed store application to a new version.
 ```bash
 nex store update -a abc123 -v 16.0.0 --auth dev
 ```
+
+#### `nex store repair`
+
+Repair an installed store or company application: the **Repair Application** link on its
+`sys_store_app` record. The App Client reinstalls the **installed** version from the
+application repository, without uninstalling the app. Use it when an installed app is broken,
+or an install or update skipped files it should have applied. Long-running: a queued repair
+can wait minutes before it runs.
+
+| Argument / flag | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `APP` | string | yes | — | The installed app's scope, or its `sys_store_app` sys_id |
+| `--demo-data` | boolean | no | `false` | Also load demo data (refused if the app has none) |
+| `--no-wait` | boolean | no | `false` | Return the tracker id without waiting |
+| `--poll-interval` | integer | no | `5000` | Polling interval in ms |
+| `--timeout` | integer | no | `1800000` | Timeout in ms |
+
+```bash
+nex store repair x_acme_app --json --auth dev | jq '{repaired, warnings, counts: .history.counts, notApplied: .history.skippedFiles}'
+```
+
+- `repaired: true` only when the tracker succeeded **and** a new, finished `sys_upgrade_history`
+  row was written. The App Client also reports success when it decided nothing needed
+  reinstalling, so do not read success alone.
+- Anything else exits 1, with the result (or, for `wait_failed`, the started repair) under
+  `error.storeAppRepair`. The codes:
+  - `not_confirmed`: success, but no finished history.
+  - `repair_failed`: the tracker failed.
+  - `timed_out`: still running when `--timeout` ended.
+  - `wait_failed`: progress reads failed after the start.
+- After `timed_out` or `wait_failed` the repair may still be running. **Do not start another**;
+  follow `trackerId` with `nex query -t sys_execution_tracker -q sys_id=<trackerId>`.
+- `history.skippedFiles` lists up to 50 files that were not applied (skipped because customized,
+  errors, manual merge, table not found, fatal error, not loaded, apply-once), problem files first.
+- Refused before anything is sent, with `error.code`: `invalid_app`, `app_not_found`,
+  `not_a_store_app` (developed on this instance, no repository copy), `app_inactive`,
+  `contains_plugins` (repair those from the UI), `no_demo_data`.
+- `start_failed` means the request **was** sent, but the App Client did not confirm a start.
+  Check `sys_execution_tracker` before retrying.
+- A repair is a write: `--read-only` and `--deny-write` refuse it. Never repair on an instance you
+  may not change; it rewrites the app's files.
 
 #### `nex store validate`
 
