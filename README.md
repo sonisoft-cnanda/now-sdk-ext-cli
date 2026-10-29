@@ -673,7 +673,7 @@ $ npm install -g @sonisoft/now-sdk-ext-cli
 $ nex COMMAND
 running command...
 $ nex (--version)
-@sonisoft/now-sdk-ext-cli/5.6.0 linux-x64 node-v26.7.0
+@sonisoft/now-sdk-ext-cli/5.16.0 linux-x64 node-v26.8.1
 $ nex --help [COMMAND]
 USAGE
   $ nex COMMAND
@@ -737,6 +737,16 @@ rather than silently denying nothing.
 * [`nex flow action`](#nex-flow-action)
 * [`nex flow cancel`](#nex-flow-cancel)
 * [`nex flow copy`](#nex-flow-copy)
+* [`nex flow debug`](#nex-flow-debug)
+* [`nex flow debug break`](#nex-flow-debug-break)
+* [`nex flow debug cancel`](#nex-flow-debug-cancel)
+* [`nex flow debug inspect`](#nex-flow-debug-inspect)
+* [`nex flow debug list`](#nex-flow-debug-list)
+* [`nex flow debug resume`](#nex-flow-debug-resume)
+* [`nex flow debug run`](#nex-flow-debug-run)
+* [`nex flow debug skip-all`](#nex-flow-debug-skip-all)
+* [`nex flow debug start`](#nex-flow-debug-start)
+* [`nex flow debug step`](#nex-flow-debug-step)
 * [`nex flow definition`](#nex-flow-definition)
 * [`nex flow details`](#nex-flow-details)
 * [`nex flow error`](#nex-flow-error)
@@ -750,8 +760,17 @@ rather than silently denying nothing.
 * [`nex health check`](#nex-health-check)
 * [`nex help [COMMAND]`](#nex-help-command)
 * [`nex log`](#nex-log)
+* [`nex metadata choice get`](#nex-metadata-choice-get)
+* [`nex metadata choice remove`](#nex-metadata-choice-remove)
+* [`nex metadata choice set`](#nex-metadata-choice-set)
+* [`nex metadata column add`](#nex-metadata-column-add)
+* [`nex metadata column remove`](#nex-metadata-column-remove)
 * [`nex metadata delete`](#nex-metadata-delete)
 * [`nex metadata insert`](#nex-metadata-insert)
+* [`nex metadata layout get`](#nex-metadata-layout-get)
+* [`nex metadata layout set`](#nex-metadata-layout-set)
+* [`nex metadata list-layout get`](#nex-metadata-list-layout-get)
+* [`nex metadata list-layout set`](#nex-metadata-list-layout-set)
 * [`nex metadata update`](#nex-metadata-update)
 * [`nex plugins`](#nex-plugins)
 * [`nex plugins add PLUGIN`](#nex-plugins-add-plugin)
@@ -781,6 +800,7 @@ rather than silently denying nothing.
 * [`nex search groups`](#nex-search-groups)
 * [`nex search tables`](#nex-search-tables)
 * [`nex store install`](#nex-store-install)
+* [`nex store repair APP`](#nex-store-repair-app)
 * [`nex store search`](#nex-store-search)
 * [`nex store update`](#nex-store-update)
 * [`nex store validate`](#nex-store-validate)
@@ -794,12 +814,35 @@ rather than silently denying nothing.
 * [`nex transaction list`](#nex-transaction-list)
 * [`nex update-set`](#nex-update-set)
 * [`nex update-set clone`](#nex-update-set-clone)
+* [`nex update-set complete SET`](#nex-update-set-complete-set)
 * [`nex update-set create`](#nex-update-set-create)
 * [`nex update-set current`](#nex-update-set-current)
+* [`nex update-set export SET`](#nex-update-set-export-set)
 * [`nex update-set inspect`](#nex-update-set-inspect)
 * [`nex update-set move`](#nex-update-set-move)
+* [`nex update-set move-capture`](#nex-update-set-move-capture)
+* [`nex update-set restore`](#nex-update-set-restore)
+* [`nex update-set use SET`](#nex-update-set-use-set)
+* [`nex workflow activity add`](#nex-workflow-activity-add)
+* [`nex workflow activity remove`](#nex-workflow-activity-remove)
+* [`nex workflow activity update`](#nex-workflow-activity-update)
+* [`nex workflow checkout WORKFLOW`](#nex-workflow-checkout-workflow)
+* [`nex workflow condition add`](#nex-workflow-condition-add)
+* [`nex workflow condition remove`](#nex-workflow-condition-remove)
+* [`nex workflow condition update`](#nex-workflow-condition-update)
+* [`nex workflow convert [WORKFLOW]`](#nex-workflow-convert-workflow)
 * [`nex workflow create`](#nex-workflow-create)
+* [`nex workflow definitions [TYPE]`](#nex-workflow-definitions-type)
+* [`nex workflow discard [WORKFLOW]`](#nex-workflow-discard-workflow)
+* [`nex workflow export WORKFLOW`](#nex-workflow-export-workflow)
+* [`nex workflow list`](#nex-workflow-list)
+* [`nex workflow new`](#nex-workflow-new)
+* [`nex workflow outline [WORKFLOW]`](#nex-workflow-outline-workflow)
 * [`nex workflow publish`](#nex-workflow-publish)
+* [`nex workflow show [WORKFLOW]`](#nex-workflow-show-workflow)
+* [`nex workflow transition add`](#nex-workflow-transition-add)
+* [`nex workflow transition remove`](#nex-workflow-transition-remove)
+* [`nex workflow validate [WORKFLOW]`](#nex-workflow-validate-workflow)
 * [`nex xml export`](#nex-xml-export)
 * [`nex xml import`](#nex-xml-import)
 
@@ -821,7 +864,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -856,7 +900,7 @@ EXAMPLES
     $ nex aggregate count --table incident --query "active=true" --json --auth dev
 ```
 
-_See code: [src/commands/aggregate/count.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/aggregate/count.ts)_
+_See code: [src/commands/aggregate/count.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/aggregate/count.ts)_
 
 ## `nex aggregate group`
 
@@ -885,7 +929,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -924,7 +969,7 @@ EXAMPLES
     $ nex aggregate group --table incident --group-by priority --count --having "count>10" --auth dev
 ```
 
-_See code: [src/commands/aggregate/group.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/aggregate/group.ts)_
+_See code: [src/commands/aggregate/group.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/aggregate/group.ts)_
 
 ## `nex aggregate query`
 
@@ -950,7 +995,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -987,7 +1033,7 @@ EXAMPLES
     $ nex aggregate query --table incident --sum reassignment_count --json --auth dev
 ```
 
-_See code: [src/commands/aggregate/query.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/aggregate/query.ts)_
+_See code: [src/commands/aggregate/query.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/aggregate/query.ts)_
 
 ## `nex app`
 
@@ -1007,7 +1053,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -1050,7 +1097,7 @@ EXAMPLES
     $ nex app -u -i a1b2c3d4e5f6 -s x_my_custom_app -a dev-instance
 ```
 
-_See code: [src/commands/app/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/app/index.ts)_
+_See code: [src/commands/app/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/app/index.ts)_
 
 ## `nex app install`
 
@@ -1069,7 +1116,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -1118,7 +1166,7 @@ EXAMPLES
     $ nex app install -b -d ./apps.json -a dev-instance --log-level debug
 ```
 
-_See code: [src/commands/app/install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/app/install.ts)_
+_See code: [src/commands/app/install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/app/install.ts)_
 
 ## `nex app repo-install`
 
@@ -1141,7 +1189,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -1203,7 +1252,7 @@ EXAMPLES
     $ nex app repo-install -s x_my_app -a dev-instance --log-level debug
 ```
 
-_See code: [src/commands/app/repo-install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/app/repo-install.ts)_
+_See code: [src/commands/app/repo-install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/app/repo-install.ts)_
 
 ## `nex app repo-list`
 
@@ -1223,7 +1272,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -1278,7 +1328,7 @@ EXAMPLES
     $ nex app repo-list -a dev-instance
 ```
 
-_See code: [src/commands/app/repo-list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/app/repo-list.ts)_
+_See code: [src/commands/app/repo-list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/app/repo-list.ts)_
 
 ## `nex app uninstall`
 
@@ -1297,7 +1347,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -1340,7 +1391,7 @@ EXAMPLES
     $ nex app uninstall -i a1b2c3d4e5f6 -s x_my_custom_app -a dev-instance
 ```
 
-_See code: [src/commands/app/uninstall.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/app/uninstall.ts)_
+_See code: [src/commands/app/uninstall.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/app/uninstall.ts)_
 
 ## `nex atf`
 
@@ -1371,7 +1422,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -1423,7 +1475,7 @@ EXAMPLES
     $ nex atf --suite-id e077e00b83103210621e78c6feaad383 --poll-interval 10000 --auth dev-instance
 ```
 
-_See code: [src/commands/atf/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/atf/index.ts)_
+_See code: [src/commands/atf/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/atf/index.ts)_
 
 ## `nex attachment get`
 
@@ -1441,7 +1493,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -1466,7 +1519,7 @@ EXAMPLES
     $ nex attachment get -s att123 --json --auth dev
 ```
 
-_See code: [src/commands/attachment/get.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/attachment/get.ts)_
+_See code: [src/commands/attachment/get.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/attachment/get.ts)_
 
 ## `nex attachment list`
 
@@ -1486,7 +1539,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -1511,7 +1565,7 @@ EXAMPLES
     $ nex attachment list -t incident -r abc123 --limit 50 --json --auth dev
 ```
 
-_See code: [src/commands/attachment/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/attachment/list.ts)_
+_See code: [src/commands/attachment/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/attachment/list.ts)_
 
 ## `nex attachment upload`
 
@@ -1533,7 +1587,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -1558,7 +1613,7 @@ EXAMPLES
     $ nex attachment upload -t incident -r abc123 -f ./data.csv --content-type text/csv --auth dev
 ```
 
-_See code: [src/commands/attachment/upload.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/attachment/upload.ts)_
+_See code: [src/commands/attachment/upload.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/attachment/upload.ts)_
 
 ## `nex auth browser-session`
 
@@ -1581,7 +1636,7 @@ DESCRIPTION
   Create a verified Playwright cookie session using a stored SDK alias.
 ```
 
-_See code: [src/commands/auth/browser-session.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/auth/browser-session.ts)_
+_See code: [src/commands/auth/browser-session.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/auth/browser-session.ts)_
 
 ## `nex auth delete [ALIAS]`
 
@@ -1616,7 +1671,7 @@ EXAMPLES
     $ nex auth delete --all
 ```
 
-_See code: [src/commands/auth/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/auth/delete.ts)_
+_See code: [src/commands/auth/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/auth/delete.ts)_
 
 ## `nex auth doctor`
 
@@ -1644,7 +1699,7 @@ EXAMPLES
     $ nex auth doctor --json
 ```
 
-_See code: [src/commands/auth/doctor.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/auth/doctor.ts)_
+_See code: [src/commands/auth/doctor.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/auth/doctor.ts)_
 
 ## `nex auth list`
 
@@ -1677,7 +1732,7 @@ EXAMPLES
     $ nex auth list --json
 ```
 
-_See code: [src/commands/auth/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/auth/list.ts)_
+_See code: [src/commands/auth/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/auth/list.ts)_
 
 ## `nex auth open`
 
@@ -1685,7 +1740,7 @@ Open a verified UI session in a dedicated desktop browser using a stored SDK ali
 
 ```
 USAGE
-  $ nex auth open -a <value> [--json] [--cred-store] [--browser edge|chrome|brave] [--cdp <value>] [--force]
+  $ nex auth open -a <value> [--json] [--browser edge|chrome|brave] [--cdp <value>] [--cred-store] [--force]
     [--output <value>]
 
 FLAGS
@@ -1717,7 +1772,7 @@ EXAMPLES
     $ nex auth open -a dev206299 --cdp http://127.0.0.1:9222
 ```
 
-_See code: [src/commands/auth/open.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/auth/open.ts)_
+_See code: [src/commands/auth/open.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/auth/open.ts)_
 
 ## `nex auth use ALIAS`
 
@@ -1745,7 +1800,7 @@ EXAMPLES
     $ nex auth use dev206299
 ```
 
-_See code: [src/commands/auth/use.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/auth/use.ts)_
+_See code: [src/commands/auth/use.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/auth/use.ts)_
 
 ## `nex autocomplete [SHELL]`
 
@@ -1795,7 +1850,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -1820,7 +1876,7 @@ EXAMPLES
     $ nex batch create --file ./records.json --no-transaction --auth dev
 ```
 
-_See code: [src/commands/batch/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/batch/create.ts)_
+_See code: [src/commands/batch/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/batch/create.ts)_
 
 ## `nex batch update`
 
@@ -1839,7 +1895,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -1864,7 +1921,7 @@ EXAMPLES
     $ nex batch update --file ./updates.json --stop-on-error --auth dev
 ```
 
-_See code: [src/commands/batch/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/batch/update.ts)_
+_See code: [src/commands/batch/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/batch/update.ts)_
 
 ## `nex behavior`
 
@@ -1900,7 +1957,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -1922,7 +1980,7 @@ EXAMPLES
   $ nex behavior --table change_request --category business_rules --details scripts --auth dev --json
 ```
 
-_See code: [src/commands/behavior/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/behavior/index.ts)_
+_See code: [src/commands/behavior/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/behavior/index.ts)_
 
 ## `nex behavior details`
 
@@ -1947,7 +2005,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -1967,7 +2026,7 @@ EXAMPLES
   $ nex behavior details --reference business_rules:sys_script:0123456789abcdef0123456789abcdef --details scripts --auth dev --json
 ```
 
-_See code: [src/commands/behavior/details.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/behavior/details.ts)_
+_See code: [src/commands/behavior/details.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/behavior/details.ts)_
 
 ## `nex bulk delete`
 
@@ -1989,7 +2048,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2031,7 +2091,7 @@ EXAMPLES
     $ nex bulk delete --table u_staging --query "processed=true" --confirm --json --auth dev
 ```
 
-_See code: [src/commands/bulk/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/bulk/delete.ts)_
+_See code: [src/commands/bulk/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/bulk/delete.ts)_
 
 ## `nex bulk update`
 
@@ -2055,7 +2115,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2100,7 +2161,7 @@ EXAMPLES
     $ nex bulk update --table incident --query "active=true" --data '{"state":"6"}' --confirm --json --auth dev
 ```
 
-_See code: [src/commands/bulk/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/bulk/update.ts)_
+_See code: [src/commands/bulk/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/bulk/update.ts)_
 
 ## `nex exec SCOPE [FILE]`
 
@@ -2123,7 +2184,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -2236,7 +2298,7 @@ EXAMPLES
     $ nex exec global ./script.js --auth dev-instance --params '{"token":"abc123","env":"dev"}'
 ```
 
-_See code: [src/commands/exec/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/exec/index.ts)_
+_See code: [src/commands/exec/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/exec/index.ts)_
 
 ## `nex flow action`
 
@@ -2261,7 +2323,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2290,7 +2353,7 @@ EXAMPLES
       '{"table":"incident","values":{"short_description":"Test"}}' --auth dev
 ```
 
-_See code: [src/commands/flow/action.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/flow/action.ts)_
+_See code: [src/commands/flow/action.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/action.ts)_
 
 ## `nex flow cancel`
 
@@ -2311,7 +2374,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2337,7 +2401,7 @@ EXAMPLES
     $ nex flow cancel --context-id abc123def456 --reason "No longer needed" --auth dev
 ```
 
-_See code: [src/commands/flow/cancel.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/flow/cancel.ts)_
+_See code: [src/commands/flow/cancel.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/cancel.ts)_
 
 ## `nex flow copy`
 
@@ -2359,7 +2423,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2402,7 +2467,484 @@ EXAMPLES
       dev
 ```
 
-_See code: [src/commands/flow/copy.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/flow/copy.ts)_
+_See code: [src/commands/flow/copy.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/copy.ts)_
+
+## `nex flow debug`
+
+Debug a flow or subflow interactively, step by step, as Workflow Studio's Test > Debug does.
+
+```
+USAGE
+  $ nex flow debug [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>] [--log-file]
+    [--log-level debug|warn|error|info|trace] [--read-only] [-b <value>] [-c <value> | -f <value> | -i <value> | --input
+    <value>...] [--timeout <value>]
+
+FLAGS
+  -a, --auth=<value>      Auth alias to use.
+  -b, --break=<value>     Steps to break at, by the number Workflow Studio shows: 2,3.
+  -c, --context=<value>   Continue an open run instead of starting one: its root context id. --break adds breakpoints to
+                          it.
+  -f, --flow=<value>      Flow or subflow: sys_id, or scope.internal_name.
+  -i, --inputs=<value>    Inputs as a JSON object, or @file to read one. For a flow: its trigger outputs (current,
+                          table_name).
+      --input=<value>...  One input as name=value (a string). Repeatable; applied over --inputs.
+      --timeout=<value>   [default: 60] Seconds to wait for the run to pause again or end.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Debug a flow or subflow interactively, step by step, as Workflow Studio's Test > Debug does.
+
+  Starts a run with --flow and --inputs (or continues an open one with --context), then reads commands at a
+  prompt: n (step over), s (step into a subflow), o (step out), c (resume), b 2,3 (breakpoints), p [N] (step
+  data), q (cancel and quit). Type help at the prompt for the full list.
+
+  The run is real: records it creates or changes are kept. Debug a copy (nex flow copy) in a scratch app.
+  Quitting, Ctrl+C and Ctrl+D cancel the run; detach leaves it open. Needs a terminal: from scripts and agents
+  use nex flow debug run, or the start / step / resume / inspect / cancel subcommands.
+
+EXAMPLES
+  $ nex flow debug --flow x_myapp.create_task_copy --inputs '{"table":"incident"}' --break 3 --auth dev
+
+  $ nex flow debug --context 0123456789abcdef0123456789abcdef --auth dev
+```
+
+_See code: [src/commands/flow/debug/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/debug/index.ts)_
+
+## `nex flow debug break`
+
+Set, add, remove, clear or list a debug run's breakpoints, by step number.
+
+```
+USAGE
+  $ nex flow debug break -c <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
+    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--add <value> | -s <value> | --remove
+    <value> | --clear]
+
+FLAGS
+  -a, --auth=<value>     Auth alias to use.
+  -c, --context=<value>  (required) Root context id that nex flow debug start printed.
+  -s, --steps=<value>    Replace the breakpoints with these steps: 2,3.
+      --add=<value>      Add breakpoints at these steps, keeping the others.
+      --clear            Remove every breakpoint.
+      --remove=<value>   Remove the breakpoints at these steps.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Set, add, remove, clear or list a debug run's breakpoints, by step number.
+
+  Steps are the numbers Workflow Studio shows. nex looks each one up in the debugger's own list of places it
+  can stop, and refuses one it cannot, listing the valid steps. With no option, lists the breakpoints. While
+  the run is paused inside a subflow it stepped into, breakpoints apply to that subflow.
+
+EXAMPLES
+  $ nex flow debug break --context 0123456789abcdef0123456789abcdef --steps 2,3 --auth dev
+
+  $ nex flow debug break -c 0123456789abcdef0123456789abcdef --add 4 --auth dev
+
+  $ nex flow debug break -c 0123456789abcdef0123456789abcdef --clear --auth dev
+```
+
+_See code: [src/commands/flow/debug/break.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/debug/break.ts)_
+
+## `nex flow debug cancel`
+
+End a debug run, and any subflow it stepped into, then read it back. Safe to repeat.
+
+```
+USAGE
+  $ nex flow debug cancel -c <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
+    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+
+FLAGS
+  -a, --auth=<value>     Auth alias to use.
+  -c, --context=<value>  (required) Root context id that nex flow debug start printed.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  End a debug run, and any subflow it stepped into, then read it back. Safe to repeat.
+
+  It refuses a flow context the debugger did not start, so it cannot end a real flow run. Needs write, not
+  execute: it still works under --deny-execute.
+
+EXAMPLES
+  $ nex flow debug cancel --context 0123456789abcdef0123456789abcdef --auth dev
+```
+
+_See code: [src/commands/flow/debug/cancel.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/debug/cancel.ts)_
+
+## `nex flow debug inspect`
+
+Show a debug run without moving it: where it is, and each step's runtime inputs and outputs.
+
+```
+USAGE
+  $ nex flow debug inspect -c <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
+    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--full] [--step <value>]
+
+FLAGS
+  -a, --auth=<value>     Auth alias to use.
+  -c, --context=<value>  (required) Root context id that nex flow debug start printed.
+      --full             Show values in full, and the engine's internal outputs.
+      --step=<value>     Only this step's inputs and outputs.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Show a debug run without moving it: where it is, and each step's runtime inputs and outputs.
+
+  Values longer than 200 characters are cut, and the engine's internal outputs (__action_status__ and the like)
+  are hidden, unless --full. --json returns the whole snapshot. Values are the run's real data.
+
+EXAMPLES
+  $ nex flow debug inspect --context 0123456789abcdef0123456789abcdef --auth dev
+
+  $ nex flow debug inspect -c 0123456789abcdef0123456789abcdef --step 1 --full --auth dev
+```
+
+_See code: [src/commands/flow/debug/inspect.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/debug/inspect.ts)_
+
+## `nex flow debug list`
+
+List debug runs that are still open on the instance (paused, waiting or running), newest first.
+
+```
+USAGE
+  $ nex flow debug list [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
+    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--created-by <value>] [--limit <value>]
+
+FLAGS
+  -a, --auth=<value>        Auth alias to use.
+      --created-by=<value>  Only runs started by this user name.
+      --limit=<value>       [default: 50] At most this many.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  List debug runs that are still open on the instance (paused, waiting or running), newest first.
+
+  A run left paused, by a crashed terminal or an agent that never cancelled, holds a flow context open. Find it
+  here and end it with nex flow debug cancel.
+
+EXAMPLES
+  $ nex flow debug list --auth dev
+
+  $ nex flow debug list --created-by admin --json --auth dev
+```
+
+_See code: [src/commands/flow/debug/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/debug/list.ts)_
+
+## `nex flow debug resume`
+
+Resume a paused debug run: run to the next breakpoint, or to the end.
+
+```
+USAGE
+  $ nex flow debug resume -c <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
+    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--full] [--timeout <value>]
+
+FLAGS
+  -a, --auth=<value>     Auth alias to use.
+  -c, --context=<value>  (required) Root context id that nex flow debug start printed.
+      --full             Show values in full, and the engine's internal outputs.
+      --timeout=<value>  [default: 60] Seconds to wait for the run to pause again or end.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Resume a paused debug run: run to the next breakpoint, or to the end.
+
+EXAMPLES
+  $ nex flow debug resume --context 0123456789abcdef0123456789abcdef --auth dev
+```
+
+_See code: [src/commands/flow/debug/resume.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/debug/resume.ts)_
+
+## `nex flow debug run`
+
+Debug a flow or subflow to a breakpoint in one call, report every step's data there, and end the run.
+
+```
+USAGE
+  $ nex flow debug run -f <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
+    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-b <value>] [--input <value>...] [-i
+    <value>] [--after cancel|resume|stay] [--full] [--timeout <value>]
+
+FLAGS
+  -a, --auth=<value>      Auth alias to use.
+  -b, --break=<value>     Steps to break at, by the number Workflow Studio shows: 2,3.
+  -f, --flow=<value>      (required) Flow or subflow: sys_id, or scope.internal_name.
+  -i, --inputs=<value>    Inputs as a JSON object, or @file to read one. For a flow: its trigger outputs (current,
+                          table_name).
+      --after=<option>    [default: cancel] After the breakpoint: cancel the run, let it finish (resume), or leave it
+                          paused (stay).
+                          <options: cancel|resume|stay>
+      --full              Show values in full, and the engine's internal outputs.
+      --input=<value>...  One input as name=value (a string). Repeatable; applied over --inputs.
+      --timeout=<value>   [default: 60] Seconds to wait for the run to pause again or end.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Debug a flow or subflow to a breakpoint in one call, report every step's data there, and end the run.
+
+  For agents and scripts: start, run to the first of the --break steps, print the run there (with --json, the
+  whole snapshot), then cancel it, so nothing is left open. --after resume lets it run on to the end, ignoring
+  the other breakpoints, and reports where it got to within --timeout (a run still going then is left
+  running, and the output says so); --after stay leaves it paused for nex flow debug commands. Ctrl+C
+  cancels the run once the current call returns.
+
+  The run is real: records it creates or changes are kept. Debug a copy (nex flow copy) in a scratch app.
+
+EXAMPLES
+  $ nex flow debug run --flow x_myapp.create_task_copy --inputs '{"table":"incident"}' --break 3 --json --auth dev
+
+  $ nex flow debug run -f 0123456789abcdef0123456789abcdef -i @inputs.json -b 2 --after resume --auth dev
+```
+
+_See code: [src/commands/flow/debug/run.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/debug/run.ts)_
+
+## `nex flow debug skip-all`
+
+Run a paused debug run to the end, ignoring its breakpoints (Workflow Studio's "Skip all breakpoints").
+
+```
+USAGE
+  $ nex flow debug skip-all -c <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
+    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--timeout <value>]
+
+FLAGS
+  -a, --auth=<value>     Auth alias to use.
+  -c, --context=<value>  (required) Root context id that nex flow debug start printed.
+      --timeout=<value>  [default: 60] Seconds to wait for the run to pause again or end.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Run a paused debug run to the end, ignoring its breakpoints (Workflow Studio's "Skip all breakpoints").
+
+EXAMPLES
+  $ nex flow debug skip-all --context 0123456789abcdef0123456789abcdef --auth dev
+```
+
+_See code: [src/commands/flow/debug/skip-all.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/debug/skip-all.ts)_
+
+## `nex flow debug start`
+
+Start a Workflow Studio debug run (Test > Debug) of a flow or subflow, and leave it paused.
+
+```
+USAGE
+  $ nex flow debug start -f <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
+    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-b <value>] [--input <value>...] [-i
+    <value>] [--timeout <value>]
+
+FLAGS
+  -a, --auth=<value>      Auth alias to use.
+  -b, --break=<value>     Steps to break at, by the number Workflow Studio shows: 2,3.
+  -f, --flow=<value>      (required) Flow or subflow: sys_id, or scope.internal_name.
+  -i, --inputs=<value>    Inputs as a JSON object, or @file to read one. For a flow: its trigger outputs (current,
+                          table_name).
+      --input=<value>...  One input as name=value (a string). Repeatable; applied over --inputs.
+      --timeout=<value>   [default: 60] Seconds to wait for the run to pause again or end.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Start a Workflow Studio debug run (Test > Debug) of a flow or subflow, and leave it paused.
+
+  The flow's current draft runs, for real: records it creates or changes are kept. Debug a copy (nex flow copy)
+  in a scratch app. The run pauses before its first step; this prints its root context id, the steps it can
+  stop at, and where it is. Continue it with nex flow debug step, resume or skip-all, and always end it: run it
+  to the end, or nex flow debug cancel. nex flow debug run does all of that in one call.
+
+  Subflow inputs are checked against the subflow's declared inputs before anything runs. A JSON array for an
+  array input is sent the way Workflow Studio sends it. For a flow, --inputs are its trigger outputs, as for
+  nex flow test.
+
+EXAMPLES
+  $ nex flow debug start --flow x_myapp.create_task_copy --inputs '{"table":"incident","field_values":"short_description=Debug"}' --break 3 --auth dev
+
+  $ nex flow debug start -f 0123456789abcdef0123456789abcdef -i @inputs.json --json --auth dev
+```
+
+_See code: [src/commands/flow/debug/start.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/debug/start.ts)_
+
+## `nex flow debug step`
+
+Run the paused step of a debug run and stop at the next one, then show where it is.
+
+```
+USAGE
+  $ nex flow debug step -c <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
+    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--full] [--into | --out] [--timeout
+    <value>]
+
+FLAGS
+  -a, --auth=<value>     Auth alias to use.
+  -c, --context=<value>  (required) Root context id that nex flow debug start printed.
+      --full             Show values in full, and the engine's internal outputs.
+      --into             Step into a subflow call.
+      --out              Step out of the current subflow.
+      --timeout=<value>  [default: 60] Seconds to wait for the run to pause again or end.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Run the paused step of a debug run and stop at the next one, then show where it is.
+
+  Step over by default. --into enters a subflow call: the subflow runs in a child context, and later commands
+  apply to it until it finishes. --out runs the rest of the current subflow (at the top level, the rest of the
+  run). A step that fails does not pause: the run ends in ERROR, and the error is shown.
+
+EXAMPLES
+  $ nex flow debug step --context 0123456789abcdef0123456789abcdef --auth dev
+
+  $ nex flow debug step -c 0123456789abcdef0123456789abcdef --into --json --auth dev
+```
+
+_See code: [src/commands/flow/debug/step.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/debug/step.ts)_
 
 ## `nex flow definition`
 
@@ -2426,7 +2968,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2475,7 +3018,7 @@ EXAMPLES
     $ nex flow definition -i 887dda5583237210fdb8f7b6feaad32c --type action --json --auth dev | jq .summary.steps
 ```
 
-_See code: [src/commands/flow/definition.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/flow/definition.ts)_
+_See code: [src/commands/flow/definition.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/definition.ts)_
 
 ## `nex flow details`
 
@@ -2496,7 +3039,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2536,7 +3080,7 @@ EXAMPLES
     $ nex flow details -c d4e5f6789012345678abcdef01234567 --json --auth dev
 ```
 
-_See code: [src/commands/flow/details.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/flow/details.ts)_
+_See code: [src/commands/flow/details.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/details.ts)_
 
 ## `nex flow error`
 
@@ -2556,7 +3100,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2578,7 +3123,7 @@ EXAMPLES
     $ nex flow error --context-id abc123def456 --auth dev
 ```
 
-_See code: [src/commands/flow/error.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/flow/error.ts)_
+_See code: [src/commands/flow/error.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/error.ts)_
 
 ## `nex flow logs`
 
@@ -2600,7 +3145,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2636,7 +3182,7 @@ EXAMPLES
     $ nex flow logs -c d4e5f6789012345678abcdef01234567 --json --auth dev
 ```
 
-_See code: [src/commands/flow/logs.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/flow/logs.ts)_
+_See code: [src/commands/flow/logs.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/logs.ts)_
 
 ## `nex flow message`
 
@@ -2659,7 +3205,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2686,7 +3233,7 @@ EXAMPLES
     $ nex flow message --context-id abc123def456 --message "data_ready" --payload '{"status":"ok"}' --auth dev
 ```
 
-_See code: [src/commands/flow/message.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/flow/message.ts)_
+_See code: [src/commands/flow/message.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/message.ts)_
 
 ## `nex flow outputs`
 
@@ -2706,7 +3253,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2732,7 +3280,7 @@ EXAMPLES
     $ nex flow outputs --context-id abc123def456 --json --auth dev
 ```
 
-_See code: [src/commands/flow/outputs.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/flow/outputs.ts)_
+_See code: [src/commands/flow/outputs.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/outputs.ts)_
 
 ## `nex flow run`
 
@@ -2757,7 +3305,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2798,7 +3347,7 @@ EXAMPLES
     $ nex flow run --name global.my_flow --mode background --auth dev
 ```
 
-_See code: [src/commands/flow/run.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/flow/run.ts)_
+_See code: [src/commands/flow/run.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/run.ts)_
 
 ## `nex flow status`
 
@@ -2818,7 +3367,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2842,7 +3392,7 @@ EXAMPLES
     $ nex flow status --context-id abc123def456 --auth dev
 ```
 
-_See code: [src/commands/flow/status.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/flow/status.ts)_
+_See code: [src/commands/flow/status.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/status.ts)_
 
 ## `nex flow subflow`
 
@@ -2867,7 +3417,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2902,7 +3453,7 @@ EXAMPLES
     $ nex flow subflow --name x_myapp.process_record --inputs '{"table":"incident","sys_id":"abc123"}' --auth dev
 ```
 
-_See code: [src/commands/flow/subflow.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/flow/subflow.ts)_
+_See code: [src/commands/flow/subflow.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/subflow.ts)_
 
 ## `nex flow test`
 
@@ -2926,7 +3477,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2965,7 +3517,7 @@ EXAMPLES
     $ nex flow test -f 887dda5583237210fdb8f7b6feaad32c -o '{"current":"abc123"}' --json --auth dev
 ```
 
-_See code: [src/commands/flow/test.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/flow/test.ts)_
+_See code: [src/commands/flow/test.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/test.ts)_
 
 ## `nex health check`
 
@@ -2990,7 +3542,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -3035,7 +3588,7 @@ EXAMPLES
     $ nex health check --json --auth dev
 ```
 
-_See code: [src/commands/health/check.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/health/check.ts)_
+_See code: [src/commands/health/check.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/health/check.ts)_
 
 ## `nex help [COMMAND]`
 
@@ -3080,7 +3633,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -3171,7 +3725,317 @@ EXAMPLES
     $ nex log --no-color --auth dev-instance
 ```
 
-_See code: [src/commands/log/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/log/index.ts)_
+_See code: [src/commands/log/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/log/index.ts)_
+
+## `nex metadata choice get`
+
+Read a column's choice list in one language, in list order, with the column's dictionary Choice setting.
+
+```
+USAGE
+  $ nex metadata choice get --column <value> --table <value> [--json] [-a <value>] [--cred-store] [--deny-execute]
+    [--deny-write] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--language
+    <value>]
+
+FLAGS
+  -a, --auth=<value>      Auth alias to use.
+      --column=<value>    (required) Column name, prefix included (u_ in Global).
+      --language=<value>  [default: en] Choice language (sys_choice.language).
+      --table=<value>     (required) Table name.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Read a column's choice list in one language, in list order, with the column's dictionary Choice setting.
+
+  "choiceSet" is the list's application file (sys_choice_set): its scope, a sys_id (or global), is the application to
+  change the list in: pass it as --scope-id (or --scope global). A
+  table without one shows the list of the table that defines the column. Choices show on the form only when the
+  column's Choice setting is a dropdown or suggestion.
+
+EXAMPLES
+  $ nex metadata choice get --table incident --column state --auth dev --read-only
+
+  $ nex metadata choice get --table x_acme_ticket --column severity --language fr --auth dev --read-only --json
+```
+
+_See code: [src/commands/metadata/choice/get.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/metadata/choice/get.ts)_
+
+## `nex metadata choice remove`
+
+Remove a choice from a column's choice list through the choice form, and verify it.
+
+```
+USAGE
+  $ nex metadata choice remove --update-set <value> --column <value> --table <value> --value <value> [--json] [-a <value>]
+    [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>] [--log-file] [--log-level
+    debug|warn|error|info|trace] [--read-only] [--acknowledge-upgrade-skip] [--scope <value> | --scope-id <value>]
+    [--confirm-in-use] [--language <value>]
+
+FLAGS
+  -a, --auth=<value>              Auth alias to use.
+      --acknowledge-upgrade-skip  Required to change a file of an installed Store application. Upgrades of that
+                                  application then skip the file until the customization is reviewed. Use only after
+                                  review; requires --update-set.
+      --column=<value>            (required) Column name, prefix included (u_ in Global).
+      --confirm-in-use            Remove the choice even though records hold its value.
+      --language=<value>          [default: en] Choice language (sys_choice.language).
+      --scope=<value>             Explicit application scope name, or literal global.
+      --scope-id=<value>          Explicit application scope sys_id.
+      --table=<value>             (required) Table name.
+      --update-set=<value>        (required) In progress update set of the list's application. The capture follows it.
+      --value=<value>             (required) The stored value of the choice to remove. No ^ or javascript:.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Remove a choice from a column's choice list through the choice form, and verify it.
+
+  The records holding the value are counted first. While any do, the removal is refused unless --confirm-in-use is
+  given: those records keep the value, which then has no choice in the list. Inactivating it instead (nex metadata
+  choice set --inactive) keeps its label and hides it from new selections. The one Choice list capture,
+  sys_choice_<table>_<column>, is checked to be in --update-set and no longer to hold the choice. Removing the last
+  choice keeps the list's choice set.
+
+EXAMPLES
+  $ nex metadata choice remove --table x_acme_ticket --column severity --value 4 --scope x_acme --update-set 0123456789abcdef0123456789abcdef --auth dev
+```
+
+_See code: [src/commands/metadata/choice/remove.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/metadata/choice/remove.ts)_
+
+## `nex metadata choice set`
+
+Add a choice to a column's choice list, or change the one with that value, through the choice form, and verify it.
+
+```
+USAGE
+  $ nex metadata choice set --update-set <value> --column <value> --table <value> --value <value> [--json] [-a <value>]
+    [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>] [--log-file] [--log-level
+    debug|warn|error|info|trace] [--read-only] [--acknowledge-upgrade-skip] [--scope <value> | --scope-id <value>]
+    [--hint <value>] [--inactive] [--label <value>] [--language <value>] [--sequence <value>]
+
+FLAGS
+  -a, --auth=<value>              Auth alias to use.
+      --acknowledge-upgrade-skip  Required to change a file of an installed Store application. Upgrades of that
+                                  application then skip the file until the customization is reviewed. Use only after
+                                  review; requires --update-set.
+      --column=<value>            (required) Column name, prefix included (u_ in Global).
+      --hint=<value>              Hint shown for the choice.
+      --[no-]inactive             Inactivate (--inactive) or reactivate (--no-inactive) the choice.
+      --label=<value>             Label. Required to add a choice.
+      --language=<value>          [default: en] Choice language (sys_choice.language).
+      --scope=<value>             Explicit application scope name, or literal global.
+      --scope-id=<value>          Explicit application scope sys_id.
+      --sequence=<value>          Position in the list (sys_choice.sequence).
+      --table=<value>             (required) Table name.
+      --update-set=<value>        (required) In progress update set of the list's application. The capture follows it.
+      --value=<value>             (required) The stored value; it identifies the choice in the list. No ^ or
+                                  javascript:.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Add a choice to a column's choice list, or change the one with that value, through the choice form, and verify it.
+
+  With a value the list does not have, --label is required and the choice is added. With one it has, only the options
+  given that differ are changed: --label, --sequence (the order), --inactive / --no-inactive, --hint. Inactivating
+  keeps the choice for the records that hold it and hides it from new selections. The list must belong to the
+  application given (a table with no list yet takes the column's application); a table that only shows the list of a
+  table it extends is refused: change that table's list. The one Choice list capture, sys_choice_<table>_<column>,
+  which holds the whole list, is checked to be in --update-set. The set need not be the working set. A list of an
+  installed Store application needs --acknowledge-upgrade-skip.
+
+  Choices show on the form only when the column's dictionary Choice setting is a dropdown or suggestion; the result
+  says when it is not.
+
+EXAMPLES
+  $ nex metadata choice set --table x_acme_ticket --column severity --value 4 --label "Severity 4" --sequence 4 --scope x_acme --update-set 0123456789abcdef0123456789abcdef --auth dev
+
+  $ nex metadata choice set --table cmn_cost_center --column u_tier --value gold --inactive --scope global --update-set 0123456789abcdef0123456789abcdef --auth dev
+```
+
+_See code: [src/commands/metadata/choice/set.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/metadata/choice/set.ts)_
+
+## `nex metadata column add`
+
+Add a column to a table through the dictionary form and verify the column, its label, its form placement and their captures.
+
+```
+USAGE
+  $ nex metadata column add --update-set <value> --column <value> --label <value> --table <value> [--json] [-a <value>]
+    [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>] [--log-file] [--log-level
+    debug|warn|error|info|trace] [--read-only] [--acknowledge-upgrade-skip] [--scope <value> | --scope-id <value>]
+    [--max-length <value>] [--reference <value>] [--type <value>]
+
+FLAGS
+  -a, --auth=<value>              Auth alias to use.
+      --acknowledge-upgrade-skip  Required to change a file of an installed Store application. Upgrades of that
+                                  application then skip the file until the customization is reviewed. Use only after
+                                  review; requires --update-set.
+      --column=<value>            (required) Column name, lower case. The platform's prefix is added when missing.
+      --label=<value>             (required) Column label.
+      --max-length=<value>        Maximum length, for string types. The type's default applies when omitted.
+      --reference=<value>         Referenced table: required for --type reference, optional for glide_list.
+      --scope=<value>             Explicit application scope name, or literal global.
+      --scope-id=<value>          Explicit application scope sys_id.
+      --table=<value>             (required) Table name.
+      --type=<value>              [default: string] Column type: a sys_glide_object name such as string, integer,
+                                  boolean, glide_date_time or reference.
+      --update-set=<value>        (required) In progress update set of the application. It must be the working set (nex
+                                  update-set use).
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Add a column to a table through the dictionary form and verify the column, its label, its form placement and their
+  captures.
+
+  The platform names the column: u_<name> in Global and in an installed Store application, <scope>_<name> when an
+  application adds it to another application's table, and <name> unchanged on a scoped application's own table. The
+  prefix is added for you; the result names the column as saved. On Global tables and an application's own tables the
+  platform also appends the field to the end of the Default view's main section (move it with nex metadata layout set),
+  unless a field of that name is already on the form, as after re-adding a deleted column. Every capture (Dictionary,
+  Field Label, and Form Layout when the field was placed) is checked to be in --update-set, which must be the working
+  set.
+  A column in an installed Store application needs --acknowledge-upgrade-skip: its files are customizations of that
+  application, and so is the form section when the field is placed on it; upgrades skip customized files.
+
+  Removing a column deletes its data: that is nex metadata column remove, explicitly confirmed.
+
+EXAMPLES
+  $ nex metadata column add --table x_acme_ticket --column triage_note --label "Triage note" --max-length 100 --scope x_acme --update-set 0123456789abcdef0123456789abcdef --auth dev
+
+  $ nex metadata column add --table cmn_cost_center --column approver --label Approver --type reference --reference sys_user --scope global --update-set 0123456789abcdef0123456789abcdef --auth dev
+```
+
+_See code: [src/commands/metadata/column/add.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/metadata/column/add.ts)_
+
+## `nex metadata column remove`
+
+Remove a column through the dictionary form's Delete Column action, and verify what the platform did.
+
+```
+USAGE
+  $ nex metadata column remove --update-set <value> --column <value> --confirm <value> --table <value> [--json] [-a <value>]
+    [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>] [--log-file] [--log-level
+    debug|warn|error|info|trace] [--read-only] [--acknowledge-upgrade-skip] [--scope <value> | --scope-id <value>]
+    [--acknowledge-data-loss] [--acknowledge-dependent-deletes]
+
+FLAGS
+  -a, --auth=<value>                   Auth alias to use.
+      --acknowledge-data-loss          Required when rows hold a value in the column: the values are deleted with it.
+      --acknowledge-dependent-deletes  Required when the platform will delete client scripts or UI policy actions that
+                                       name the column.
+      --acknowledge-upgrade-skip       Required to change a file of an installed Store application. Upgrades of that
+                                       application then skip the file until the customization is reviewed. Use only
+                                       after review; requires --update-set.
+      --column=<value>                 (required) Column name, prefix included (u_ in Global).
+      --confirm=<value>                (required) Type <table>.<column> exactly, to confirm the removal.
+      --scope=<value>                  Explicit application scope name, or literal global.
+      --scope-id=<value>               Explicit application scope sys_id.
+      --table=<value>                  (required) Table name.
+      --update-set=<value>             (required) In progress update set of the column's application. The DELETE
+                                       captures follow it.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Remove a column through the dictionary form's Delete Column action, and verify what the platform did.
+
+  This deletes the column's data here and on every instance its DELETE capture is committed to. It needs --confirm
+  <table>.<column> naming the column exactly. Rows holding a value are counted first and need --acknowledge-data-loss.
+  The platform also deletes the onChange client scripts and UI policy actions that name the column; those need
+  --acknowledge-dependent-deletes, and another application's are refused. Only a column the platform itself allows to be
+  deleted is removed: a u_ column, or a scoped application's own column (never a vendor column). A u_ column of an
+  installed Store application needs --acknowledge-upgrade-skip.
+
+  The column's labels and those dependents are verified deleted, each with a DELETE capture in --update-set (which need
+  not be the working set). The platform leaves the column's choices, choice set, form elements and list elements behind;
+  the result lists them; other references (UI policies, ACLs, scripts) are not checked. createdInThisSet true means the
+  column was created in this set: if the set has never left this instance, move the DELETEs that replaced its own
+  captures
+  to the application's Default (nex update-set move) rather than ship them. Otherwise committing the set deletes the
+  column
+  wherever it exists; the result says what to do when the set that created it never left. Remove such a column with that
+  set.
+
+EXAMPLES
+  $ nex metadata column remove --table x_acme_ticket --column triage_note --confirm x_acme_ticket.triage_note --scope x_acme --update-set 0123456789abcdef0123456789abcdef --auth dev
+
+  $ nex metadata column remove --table cmn_cost_center --column u_tier --confirm cmn_cost_center.u_tier --scope global --update-set 0123456789abcdef0123456789abcdef --auth dev
+```
+
+_See code: [src/commands/metadata/column/remove.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/metadata/column/remove.ts)_
 
 ## `nex metadata delete`
 
@@ -3181,24 +4045,28 @@ Delete one confirmed metadata record and verify absence and deletion capture.
 USAGE
   $ nex metadata delete --table <value> --confirm-sys-id <value> --confirm-table <value> --sys-id <value> [--json]
     [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>] [--log-file] [--log-level
-    debug|warn|error|info|trace] [--read-only] [--scope <value> | --scope-id <value>] [--update-set <value>] [--view
-    <value>]
+    debug|warn|error|info|trace] [--read-only] [--acknowledge-upgrade-skip] [--scope <value> | --scope-id <value>]
+    [--update-set <value>] [--view <value>]
 
 FLAGS
-  -a, --auth=<value>            Auth alias to use.
-      --confirm-sys-id=<value>  (required) Repeat the exact target sys_id.
-      --confirm-table=<value>   (required) Repeat the exact target table.
-      --scope=<value>           Explicit application scope name, or literal global.
-      --scope-id=<value>        Explicit application scope sys_id.
-      --sys-id=<value>          (required) Exact metadata record sys_id.
-      --table=<value>           (required) Metadata table name.
-      --update-set=<value>      In progress update set in the requested scope.
-      --view=<value>            Form view name.
+  -a, --auth=<value>              Auth alias to use.
+      --acknowledge-upgrade-skip  Required to change a file of an installed Store application. Upgrades of that
+                                  application then skip the file until the customization is reviewed. Use only after
+                                  review; requires --update-set.
+      --confirm-sys-id=<value>    (required) Repeat the exact target sys_id.
+      --confirm-table=<value>     (required) Repeat the exact target table.
+      --scope=<value>             Explicit application scope name, or literal global.
+      --scope-id=<value>          Explicit application scope sys_id.
+      --sys-id=<value>            (required) Exact metadata record sys_id.
+      --table=<value>             (required) Metadata table name.
+      --update-set=<value>        In progress update set in the requested scope. Required for a Store application.
+      --view=<value>              Form view name.
 
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -3217,7 +4085,7 @@ EXAMPLES
   $ nex metadata delete --table sys_script_include --sys-id 0123456789abcdef0123456789abcdef --scope x_example_app --confirm-table sys_script_include --confirm-sys-id 0123456789abcdef0123456789abcdef --auth dev
 ```
 
-_See code: [src/commands/metadata/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.8.0/src/commands/metadata/delete.ts)_
+_See code: [src/commands/metadata/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/metadata/delete.ts)_
 
 ## `nex metadata insert`
 
@@ -3226,29 +4094,34 @@ Insert application metadata through a form and verify scope and capture.
 ```
 USAGE
   $ nex metadata insert --table <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
-    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--scope <value> |
-    --scope-id <value>] [--update-set <value>] [--view <value>] [--fields <value> | --fields-file <value>]
-    [--initial-query <value>] [--variable-field <value>] [--variables <value> | --variables-file <value>]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--acknowledge-upgrade-skip] [--scope <value> | --scope-id <value>] [--update-set <value>] [--view <value>]
+    [--fields <value> | --fields-file <value>] [--initial-query <value>] [--variable-field <value>] [--variables <value>
+    | --variables-file <value>]
 
 FLAGS
-  -a, --auth=<value>            Auth alias to use.
-      --fields=<value>          Field values as a JSON object. Prefer --fields-file for scripts.
-      --fields-file=<value>     Read field values from a JSON object file.
-      --initial-query=<value>   Literal equality terms separated by ^, with lowercase field identifiers. CLI checks
-                                syntax; core checks allowed fields.
-      --scope=<value>           Explicit application scope name, or literal global.
-      --scope-id=<value>        Explicit application scope sys_id.
-      --table=<value>           (required) Metadata table name.
-      --update-set=<value>      In progress update set in the requested scope.
-      --variable-field=<value>  Variable column name. Requires variables.
-      --variables=<value>       Variable values as a JSON object.
-      --variables-file=<value>  Read variable values from a JSON object file.
-      --view=<value>            Form view name.
+  -a, --auth=<value>              Auth alias to use.
+      --acknowledge-upgrade-skip  Required to change a file of an installed Store application. Upgrades of that
+                                  application then skip the file until the customization is reviewed. Use only after
+                                  review; requires --update-set.
+      --fields=<value>            Field values as a JSON object. Prefer --fields-file for scripts.
+      --fields-file=<value>       Read field values from a JSON object file.
+      --initial-query=<value>     Literal equality terms separated by ^, with lowercase field identifiers. CLI checks
+                                  syntax; core checks allowed fields.
+      --scope=<value>             Explicit application scope name, or literal global.
+      --scope-id=<value>          Explicit application scope sys_id.
+      --table=<value>             (required) Metadata table name.
+      --update-set=<value>        In progress update set in the requested scope. Required for a Store application.
+      --variable-field=<value>    Variable column name. Requires variables.
+      --variables=<value>         Variable values as a JSON object.
+      --variables-file=<value>    Read variable values from a JSON object file.
+      --view=<value>              Form view name.
 
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -3267,7 +4140,200 @@ EXAMPLES
   $ nex metadata insert --table sys_script_include --scope x_example_app --fields-file ./fields.json --auth dev
 ```
 
-_See code: [src/commands/metadata/insert.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.8.0/src/commands/metadata/insert.ts)_
+_See code: [src/commands/metadata/insert.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/metadata/insert.ts)_
+
+## `nex metadata layout get`
+
+Read one form section layout in the Form Layout page notation that metadata layout set takes.
+
+```
+USAGE
+  $ nex metadata layout get --section <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+
+FLAGS
+  -a, --auth=<value>     Auth alias to use.
+      --section=<value>  (required) sys_ui_section sys_id.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Read one form section layout in the Form Layout page notation that metadata layout set takes.
+
+EXAMPLES
+  $ nex metadata layout get --section 0123456789abcdef0123456789abcdef --auth dev --read-only
+```
+
+_See code: [src/commands/metadata/layout/get.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/metadata/layout/get.ts)_
+
+## `nex metadata layout set`
+
+Replace one form section layout through the Form Layout page and verify the order and its capture.
+
+```
+USAGE
+  $ nex metadata layout set --update-set <value> --section <value> [--json] [-a <value>] [--cred-store] [--deny-execute]
+    [--deny-write] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--acknowledge-upgrade-skip] [--scope <value> | --scope-id <value>] [--elements <value> | --elements-file <value>]
+
+FLAGS
+  -a, --auth=<value>              Auth alias to use.
+      --acknowledge-upgrade-skip  Required to change a file of an installed Store application. Upgrades of that
+                                  application then skip the file until the customization is reviewed. Use only after
+                                  review; requires --update-set.
+      --elements=<value>          The whole new layout in order, comma-separated: field names, .begin_split, .split,
+                                  .end_split, .formatter.<sys_id>.
+      --elements-file=<value>     Read the layout from a JSON array of strings.
+      --scope=<value>             Explicit application scope name, or literal global.
+      --scope-id=<value>          Explicit application scope sys_id.
+      --section=<value>           (required) sys_ui_section sys_id.
+      --update-set=<value>        (required) In progress update set of the section's application. It must be the working
+                                  set (nex update-set use).
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Replace one form section layout through the Form Layout page and verify the order and its capture.
+
+  The platform captures a section as one Form Layout file, sys_ui_section_<section sys_id>. For a section of an
+  installed
+  Store application, pass --acknowledge-upgrade-skip: upgrades of that application then skip the file.
+
+EXAMPLES
+  $ nex metadata layout set --section 0123456789abcdef0123456789abcdef --elements "name,.begin_split,type,.split,url,.end_split" --scope x_example_app --update-set 0123456789abcdef0123456789abcdef --auth dev
+
+  $ nex metadata layout set --section 0123456789abcdef0123456789abcdef --elements-file ./layout.json --scope-id 0123456789abcdef0123456789abcdef --update-set 0123456789abcdef0123456789abcdef --acknowledge-upgrade-skip --auth dev
+```
+
+_See code: [src/commands/metadata/layout/set.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/metadata/layout/set.ts)_
+
+## `nex metadata list-layout get`
+
+Read a table's list columns for one view, in the order metadata list-layout set takes.
+
+```
+USAGE
+  $ nex metadata list-layout get --table <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--view <value>]
+
+FLAGS
+  -a, --auth=<value>   Auth alias to use.
+      --table=<value>  (required) Table name.
+      --view=<value>   View name. Omit for the Default view.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Read a table's list columns for one view, in the order metadata list-layout set takes.
+
+  Only the table's own list: not a related list and not a user's personalized list. "exists": false means the table
+  shows its parent's list.
+
+EXAMPLES
+  $ nex metadata list-layout get --table cmn_cost_center --auth dev --read-only
+
+  $ nex metadata list-layout get --table incident --view ess --auth dev --read-only
+```
+
+_See code: [src/commands/metadata/list-layout/get.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/metadata/list-layout/get.ts)_
+
+## `nex metadata list-layout set`
+
+Replace a table's list columns for one view through the List Layout page and verify the order and its capture.
+
+```
+USAGE
+  $ nex metadata list-layout set --update-set <value> --table <value> [--json] [-a <value>] [--cred-store] [--deny-execute]
+    [--deny-write] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--acknowledge-upgrade-skip] [--scope <value> | --scope-id <value>] [--columns <value> | --columns-file <value>]
+    [--view <value>]
+
+FLAGS
+  -a, --auth=<value>              Auth alias to use.
+      --acknowledge-upgrade-skip  Required to change a file of an installed Store application. Upgrades of that
+                                  application then skip the file until the customization is reviewed. Use only after
+                                  review; requires --update-set.
+      --columns=<value>           The whole new column list in order, comma-separated; dot-walked as field.field.
+      --columns-file=<value>      Read the columns from a JSON array of strings.
+      --scope=<value>             Explicit application scope name, or literal global.
+      --scope-id=<value>          Explicit application scope sys_id.
+      --table=<value>             (required) Table name.
+      --update-set=<value>        (required) In progress update set of the list's application. It must be the working
+                                  set (nex update-set use).
+      --view=<value>              View name. Omit for the Default view.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Replace a table's list columns for one view through the List Layout page and verify the order and its capture.
+
+  The platform captures the list as one List Layout file, sys_ui_list_<table>_<view> (null for the Default view), and
+  replaces the sys_ui_list record on every save. A table with no list of its own gets one. For a list of an installed
+  Store application, pass --acknowledge-upgrade-skip: upgrades of that application then skip the file.
+
+EXAMPLES
+  $ nex metadata list-layout set --table cmn_cost_center --columns "name,code,manager,valid_from" --scope global --update-set 0123456789abcdef0123456789abcdef --auth dev
+
+  $ nex metadata list-layout set --table sn_grc_indicator --columns-file ./columns.json --scope sn_grc --update-set 0123456789abcdef0123456789abcdef --acknowledge-upgrade-skip --auth dev
+```
+
+_See code: [src/commands/metadata/list-layout/set.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/metadata/list-layout/set.ts)_
 
 ## `nex metadata update`
 
@@ -3276,30 +4342,35 @@ Update application metadata through a form and verify scope and capture.
 ```
 USAGE
   $ nex metadata update --table <value> --sys-id <value> [--json] [-a <value>] [--cred-store] [--deny-execute]
-    [--deny-write] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--scope
-    <value> | --scope-id <value>] [--update-set <value>] [--view <value>] [--fields <value> | --fields-file <value>]
-    [--initial-query <value>] [--variable-field <value>] [--variables <value> | --variables-file <value>]
+    [--deny-write] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--acknowledge-upgrade-skip] [--scope <value> | --scope-id <value>] [--update-set <value>] [--view <value>]
+    [--fields <value> | --fields-file <value>] [--initial-query <value>] [--variable-field <value>] [--variables <value>
+    | --variables-file <value>]
 
 FLAGS
-  -a, --auth=<value>            Auth alias to use.
-      --fields=<value>          Field values as a JSON object. Prefer --fields-file for scripts.
-      --fields-file=<value>     Read field values from a JSON object file.
-      --initial-query=<value>   Literal equality terms separated by ^, with lowercase field identifiers. CLI checks
-                                syntax; core checks allowed fields.
-      --scope=<value>           Explicit application scope name, or literal global.
-      --scope-id=<value>        Explicit application scope sys_id.
-      --sys-id=<value>          (required) Exact metadata record sys_id.
-      --table=<value>           (required) Metadata table name.
-      --update-set=<value>      In progress update set in the requested scope.
-      --variable-field=<value>  Variable column name. Requires variables.
-      --variables=<value>       Variable values as a JSON object.
-      --variables-file=<value>  Read variable values from a JSON object file.
-      --view=<value>            Form view name.
+  -a, --auth=<value>              Auth alias to use.
+      --acknowledge-upgrade-skip  Required to change a file of an installed Store application. Upgrades of that
+                                  application then skip the file until the customization is reviewed. Use only after
+                                  review; requires --update-set.
+      --fields=<value>            Field values as a JSON object. Prefer --fields-file for scripts.
+      --fields-file=<value>       Read field values from a JSON object file.
+      --initial-query=<value>     Literal equality terms separated by ^, with lowercase field identifiers. CLI checks
+                                  syntax; core checks allowed fields.
+      --scope=<value>             Explicit application scope name, or literal global.
+      --scope-id=<value>          Explicit application scope sys_id.
+      --sys-id=<value>            (required) Exact metadata record sys_id.
+      --table=<value>             (required) Metadata table name.
+      --update-set=<value>        In progress update set in the requested scope. Required for a Store application.
+      --variable-field=<value>    Variable column name. Requires variables.
+      --variables=<value>         Variable values as a JSON object.
+      --variables-file=<value>    Read variable values from a JSON object file.
+      --view=<value>              Form view name.
 
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -3318,7 +4389,7 @@ EXAMPLES
   $ nex metadata update --table sys_script_include --sys-id 0123456789abcdef0123456789abcdef --scope x_example_app --fields-file ./fields.json --auth dev
 ```
 
-_See code: [src/commands/metadata/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.8.0/src/commands/metadata/update.ts)_
+_See code: [src/commands/metadata/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/metadata/update.ts)_
 
 ## `nex plugins`
 
@@ -3640,7 +4711,7 @@ EXAMPLES
   NEX_POLICY_DENY=all nex policy status
 ```
 
-_See code: [src/commands/policy/status.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/policy/status.ts)_
+_See code: [src/commands/policy/status.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/policy/status.ts)_
 
 ## `nex query`
 
@@ -3664,7 +4735,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -3703,7 +4775,7 @@ EXAMPLES
     $ nex query --table sys_user --query "active=true" --limit 5 --json --auth dev
 ```
 
-_See code: [src/commands/query/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/query/index.ts)_
+_See code: [src/commands/query/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/query/index.ts)_
 
 ## `nex query app`
 
@@ -3724,7 +4796,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -3756,7 +4829,7 @@ EXAMPLES
     $ nex query app --search "HR" --active --auth dev
 ```
 
-_See code: [src/commands/query/app.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/query/app.ts)_
+_See code: [src/commands/query/app.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/query/app.ts)_
 
 ## `nex query columns`
 
@@ -3776,7 +4849,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -3811,7 +4885,7 @@ EXAMPLES
     $ nex query columns --table incident --json --auth dev
 ```
 
-_See code: [src/commands/query/columns.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/query/columns.ts)_
+_See code: [src/commands/query/columns.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/query/columns.ts)_
 
 ## `nex query syslog`
 
@@ -3831,7 +4905,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -3868,7 +4943,7 @@ EXAMPLES
     $ nex query syslog --query "sourceLIKEincident" --json --auth dev
 ```
 
-_See code: [src/commands/query/syslog.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/query/syslog.ts)_
+_See code: [src/commands/query/syslog.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/query/syslog.ts)_
 
 ## `nex schema`
 
@@ -3892,7 +4967,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -3927,7 +5003,7 @@ EXAMPLES
     $ nex schema --table incident --include-choices --include-relationships --auth dev
 ```
 
-_See code: [src/commands/schema/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/schema/index.ts)_
+_See code: [src/commands/schema/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/schema/index.ts)_
 
 ## `nex schema field`
 
@@ -3947,7 +5023,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -3974,7 +5051,7 @@ EXAMPLES
     $ nex schema field --table incident --field priority --json --auth dev
 ```
 
-_See code: [src/commands/schema/field.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/schema/field.ts)_
+_See code: [src/commands/schema/field.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/schema/field.ts)_
 
 ## `nex schema validate-catalog`
 
@@ -3993,7 +5070,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -4020,7 +5098,7 @@ EXAMPLES
     $ nex schema validate-catalog --sys-id a1b2c3d4e5f6 --json --auth dev
 ```
 
-_See code: [src/commands/schema/validate-catalog.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/schema/validate-catalog.ts)_
+_See code: [src/commands/schema/validate-catalog.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/schema/validate-catalog.ts)_
 
 ## `nex scope`
 
@@ -4038,7 +5116,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4067,7 +5146,7 @@ EXAMPLES
     $ nex scope -l --json --auth dev
 ```
 
-_See code: [src/commands/scope/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/scope/index.ts)_
+_See code: [src/commands/scope/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/scope/index.ts)_
 
 ## `nex scope set`
 
@@ -4085,7 +5164,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4110,7 +5190,7 @@ EXAMPLES
     $ nex scope set -a abc123def456ghi789jkl012mno345pq --json --auth dev
 ```
 
-_See code: [src/commands/scope/set.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/scope/set.ts)_
+_See code: [src/commands/scope/set.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/scope/set.ts)_
 
 ## `nex script-sync pull`
 
@@ -4132,7 +5212,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4170,7 +5251,7 @@ EXAMPLES
     $ nex script-sync pull -n MyClientScript -t sys_script_client --json --auth dev-instance
 ```
 
-_See code: [src/commands/script-sync/pull.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/script-sync/pull.ts)_
+_See code: [src/commands/script-sync/pull.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/script-sync/pull.ts)_
 
 ## `nex script-sync push`
 
@@ -4192,7 +5273,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4231,7 +5313,7 @@ EXAMPLES
     $ nex script-sync push -n MyUIScript -t sys_ui_script -f ./scripts/ui-script.js --json --auth dev-instance
 ```
 
-_See code: [src/commands/script-sync/push.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/script-sync/push.ts)_
+_See code: [src/commands/script-sync/push.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/script-sync/push.ts)_
 
 ## `nex script-sync sync`
 
@@ -4252,7 +5334,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4290,7 +5373,7 @@ EXAMPLES
     $ nex script-sync sync -d ./scripts --json --auth dev-instance
 ```
 
-_See code: [src/commands/script-sync/sync.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/script-sync/sync.ts)_
+_See code: [src/commands/script-sync/sync.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/script-sync/sync.ts)_
 
 ## `nex search`
 
@@ -4313,7 +5396,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4357,7 +5441,7 @@ EXAMPLES
     $ nex search --term "GlideRecord" --limit 10 --json --auth dev-instance
 ```
 
-_See code: [src/commands/search/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/search/index.ts)_
+_See code: [src/commands/search/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/search/index.ts)_
 
 ## `nex search add-table`
 
@@ -4377,7 +5461,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4417,7 +5502,7 @@ EXAMPLES
       dev-instance
 ```
 
-_See code: [src/commands/search/add-table.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/search/add-table.ts)_
+_See code: [src/commands/search/add-table.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/search/add-table.ts)_
 
 ## `nex search groups`
 
@@ -4434,7 +5519,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4466,7 +5552,7 @@ EXAMPLES
     $ nex search groups --json --auth dev-instance
 ```
 
-_See code: [src/commands/search/groups.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/search/groups.ts)_
+_See code: [src/commands/search/groups.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/search/groups.ts)_
 
 ## `nex search tables`
 
@@ -4484,7 +5570,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4517,7 +5604,7 @@ EXAMPLES
     $ nex search tables --search-group "Business Rules" --json --auth dev-instance
 ```
 
-_See code: [src/commands/search/tables.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/search/tables.ts)_
+_See code: [src/commands/search/tables.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/search/tables.ts)_
 
 ## `nex store install`
 
@@ -4541,7 +5628,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4570,7 +5658,71 @@ EXAMPLES
     $ nex store install -a abc123 -v 1.0.0 --demo-data --auth dev
 ```
 
-_See code: [src/commands/store/install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/store/install.ts)_
+_See code: [src/commands/store/install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/store/install.ts)_
+
+## `nex store repair APP`
+
+Repair an installed store or company application: reinstall its installed version from the application repository, without uninstalling it.
+
+```
+USAGE
+  $ nex store repair APP [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
+    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--demo-data] [--no-wait] [--poll-interval
+    <value>] [--timeout <value>]
+
+ARGUMENTS
+  APP  The installed application: its scope (e.g. x_acme_app) or its sys_store_app sys_id.
+
+FLAGS
+  -a, --auth=<value>           Auth alias to use.
+      --demo-data              Also load the application's demo data. Refused for an application that has none.
+      --no-wait                Start the repair and return its tracker id without waiting.
+      --poll-interval=<value>  [default: 5000] Polling interval in milliseconds.
+      --timeout=<value>        [default: 1800000] How long to wait, in milliseconds. A queued repair can wait minutes
+                               before it runs.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Repair an installed store or company application: reinstall its installed version from the application repository,
+  without uninstalling it.
+
+  This is the Repair Application link on the application's sys_store_app record. Use it when an installed application is
+  broken, or an install or update skipped files it should have applied. It waits for the repair and reports the upgrade
+  history it wrote, including every file it did not apply.
+
+  Repaired is reported only when the App Client succeeded AND wrote a new, finished upgrade history row: it also reports
+  success when it decided no reinstall was necessary. A repair is a write, so --read-only and --deny-write refuse it.
+
+EXAMPLES
+  Repair an installed application by scope and wait for it
+
+    $ nex store repair x_acme_app --auth dev
+
+  By sys_store_app sys_id, as JSON
+
+    $ nex store repair 0123456789abcdef0123456789abcdef --json --auth dev
+
+  Start it and return the tracker id
+
+    $ nex store repair x_acme_app --no-wait --auth dev
+```
+
+_See code: [src/commands/store/repair.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/store/repair.ts)_
 
 ## `nex store search`
 
@@ -4592,7 +5744,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4621,7 +5774,7 @@ EXAMPLES
     $ nex store search --tab updates --limit 10 --auth dev
 ```
 
-_See code: [src/commands/store/search.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/store/search.ts)_
+_See code: [src/commands/store/search.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/store/search.ts)_
 
 ## `nex store update`
 
@@ -4644,7 +5797,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4673,7 +5827,7 @@ EXAMPLES
     $ nex store update -a abc123 -v 2.0.0 --timeout 3600000 --auth dev
 ```
 
-_See code: [src/commands/store/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/store/update.ts)_
+_See code: [src/commands/store/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/store/update.ts)_
 
 ## `nex store validate`
 
@@ -4691,7 +5845,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4712,7 +5867,7 @@ EXAMPLES
     $ nex store validate --file ./batch-definition.json --auth dev
 ```
 
-_See code: [src/commands/store/validate.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/store/validate.ts)_
+_See code: [src/commands/store/validate.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/store/validate.ts)_
 
 ## `nex task approve`
 
@@ -4731,7 +5886,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4763,7 +5919,7 @@ EXAMPLES
     $ nex task approve -n CHG0010001 -c "Looks good, approved" --auth dev
 ```
 
-_See code: [src/commands/task/approve.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/task/approve.ts)_
+_See code: [src/commands/task/approve.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/task/approve.ts)_
 
 ## `nex task assign`
 
@@ -4785,7 +5941,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4824,7 +5981,7 @@ EXAMPLES
     $ nex task assign --number CHG0010001 --table change_request --user admin --auth dev
 ```
 
-_See code: [src/commands/task/assign.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/task/assign.ts)_
+_See code: [src/commands/task/assign.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/task/assign.ts)_
 
 ## `nex task close`
 
@@ -4845,7 +6002,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4878,7 +6036,7 @@ EXAMPLES
     $ nex task close -n INC0010001 --notes "Closed" --close-code "Solved (Permanently)" --auth dev
 ```
 
-_See code: [src/commands/task/close.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/task/close.ts)_
+_See code: [src/commands/task/close.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/task/close.ts)_
 
 ## `nex task comment`
 
@@ -4900,7 +6058,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4938,7 +6097,7 @@ EXAMPLES
     $ nex task comment --number CHG0010001 --table change_request --comment "Approved" --auth dev
 ```
 
-_See code: [src/commands/task/comment.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/task/comment.ts)_
+_See code: [src/commands/task/comment.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/task/comment.ts)_
 
 ## `nex task find`
 
@@ -4957,7 +6116,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -4994,7 +6154,7 @@ EXAMPLES
     $ nex task find -n INC0010001 --json --auth dev
 ```
 
-_See code: [src/commands/task/find.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/task/find.ts)_
+_See code: [src/commands/task/find.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/task/find.ts)_
 
 ## `nex task resolve`
 
@@ -5015,7 +6175,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -5048,7 +6209,7 @@ EXAMPLES
     $ nex task resolve -n INC0010001 --notes "Fixed" --close-code "Solved (Permanently)" --auth dev
 ```
 
-_See code: [src/commands/task/resolve.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/task/resolve.ts)_
+_See code: [src/commands/task/resolve.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/task/resolve.ts)_
 
 ## `nex transaction kill`
 
@@ -5067,7 +6228,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -5091,7 +6253,7 @@ EXAMPLES
   $ nex transaction kill --transaction-id 8f9a1234567890abcdef1234567890c1 --confirm --json --auth dev
 ```
 
-_See code: [src/commands/transaction/kill.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/transaction/kill.ts)_
+_See code: [src/commands/transaction/kill.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/transaction/kill.ts)_
 
 ## `nex transaction list`
 
@@ -5113,7 +6275,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -5138,7 +6301,7 @@ EXAMPLES
   $ nex transaction list --timeout-ms 120000 --poll-interval-ms 2000 --auth dev
 ```
 
-_See code: [src/commands/transaction/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/transaction/list.ts)_
+_See code: [src/commands/transaction/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/transaction/list.ts)_
 
 ## `nex update-set`
 
@@ -5157,7 +6320,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -5186,7 +6350,7 @@ EXAMPLES
     $ nex update-set --json --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/update-set/index.ts)_
+_See code: [src/commands/update-set/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/update-set/index.ts)_
 
 ## `nex update-set clone`
 
@@ -5205,7 +6369,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -5230,7 +6395,55 @@ EXAMPLES
     $ nex update-set clone --source us-001 --name "Cloned Set" --json --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/clone.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/update-set/clone.ts)_
+_See code: [src/commands/update-set/clone.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/update-set/clone.ts)_
+
+## `nex update-set complete SET`
+
+Complete an update set after checking what it holds, and read the state back.
+
+```
+USAGE
+  $ nex update-set complete SET --expected-captures <value> [--json] [-a <value>] [--cred-store] [--deny-execute]
+    [--deny-write] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+
+ARGUMENTS
+  SET  sys_id of the In progress, non-Default set to complete.
+
+FLAGS
+  -a, --auth=<value>               Auth alias to use.
+      --expected-captures=<value>  (required) The number of captures you reviewed in the set.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Complete an update set after checking what it holds, and read the state back.
+
+  Refused unless the set holds exactly --expected-captures captures, all of the set's own application, one per
+  record, and no other user is working in it. Complete a set as soon as its change is proven: an open set
+  that is anyone's current set keeps capturing their changes. Restore your working set afterwards with
+  nex update-set restore. For more work later, reopen the set in the UI only if neither it nor its batch base
+  has ever been retrieved by another instance or exported; if unsure, treat it as left and use a new set
+  (update-sets skill: Complete early, reopen deliberately).
+
+EXAMPLES
+  $ nex update-set complete 0123456789abcdef0123456789abcdef --expected-captures 3 --auth dev
+```
+
+_See code: [src/commands/update-set/complete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/update-set/complete.ts)_
 
 ## `nex update-set create`
 
@@ -5245,12 +6458,14 @@ FLAGS
   -a, --auth=<value>         Auth alias to use.
   -d, --description=<value>  Description for the new update set
   -n, --name=<value>         (required) Name for the new update set
-      --application=<value>  Application scope for the new update set
+      --application=<value>  Application of the new set: global, a sys_scope sys_id, or a scope name matching one active
+                             application. The set's application is verified after creation.
 
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -5277,9 +6492,13 @@ EXAMPLES
   Create within a specific application scope
 
     $ nex update-set create --name "My Feature Set" --application x_my_app --auth dev-instance
+
+  Create a set for an installed Store application, then make it current with nex update-set use
+
+    $ nex update-set create --name "STORY-123 Policy form" --application sn_compliance --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/update-set/create.ts)_
+_See code: [src/commands/update-set/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/update-set/create.ts)_
 
 ## `nex update-set current`
 
@@ -5292,12 +6511,13 @@ USAGE
 
 FLAGS
   -a, --auth=<value>  Auth alias to use.
-  -s, --set=<value>   sys_id of update set to make current
+  -s, --set=<value>   sys_id of an In progress update set to make the working set
 
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -5311,6 +6531,10 @@ GLOBAL FLAGS
 
 DESCRIPTION
   Get or set the current update set.
+
+  --set makes the set your working set for every later session: it also makes the set's application current
+  (apps.current_app), which a set of another application needs to stick. The previous working set is printed;
+  put it back with nex update-set restore.
 
 EXAMPLES
   Get the current update set
@@ -5326,7 +6550,64 @@ EXAMPLES
     $ nex update-set current --json --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/current.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/update-set/current.ts)_
+_See code: [src/commands/update-set/current.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/update-set/current.ts)_
+
+## `nex update-set export SET`
+
+Export an update set to XML, as the platform's Export to XML does, and check the file.
+
+```
+USAGE
+  $ nex update-set export SET [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
+    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--force] [--include-incomplete] [-o <value>]
+
+ARGUMENTS
+  SET  sys_id of a sys_update_set, or of a Retrieved Update Set (sys_remote_update_set).
+
+FLAGS
+  -a, --auth=<value>        Auth alias to use.
+  -o, --output=<value>      File to write, or an existing directory for update-set-<sys_id>.xml. Default: that name in
+                            the current directory.
+      --force               Replace the output file if it exists.
+      --include-incomplete  Export a set (or batch members) that is not Complete: a snapshot of unfinished work.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Export an update set to XML, as the platform's Export to XML does, and check the file.
+
+  A local set is exported with the platform's UpdateSetExport, through a temporary Retrieved Update Set copy
+  that the download deletes. nex reads the copy back and removes it if the platform did not. A batch base is
+  exported with its Complete children; a batch member is refused in favour of its base. A Loaded Retrieved
+  Update Set is a plain read.
+
+  Only Complete sets are exported unless --include-incomplete is passed. The file must hold exactly the sets
+  and records the instance counts, or nothing is written. It holds every record's full payload; the XML
+  is never printed.
+
+EXAMPLES
+  $ nex update-set export 0123456789abcdef0123456789abcdef --auth dev
+
+  $ nex update-set export 0123456789abcdef0123456789abcdef --output ./exports/ --json --auth dev
+
+  $ nex update-set export 0123456789abcdef0123456789abcdef --output STORY-123.xml --force --auth dev
+```
+
+_See code: [src/commands/update-set/export.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/update-set/export.ts)_
 
 ## `nex update-set inspect`
 
@@ -5344,7 +6625,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -5369,7 +6651,7 @@ EXAMPLES
     $ nex update-set inspect --sys-id us-001 --json --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/inspect.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/update-set/inspect.ts)_
+_See code: [src/commands/update-set/inspect.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/update-set/inspect.ts)_
 
 ## `nex update-set move`
 
@@ -5390,7 +6672,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -5419,7 +6702,564 @@ EXAMPLES
     $ nex update-set move --target us-002 --source us-001 --json --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/move.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/update-set/move.ts)_
+_See code: [src/commands/update-set/move.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/update-set/move.ts)_
+
+## `nex update-set move-capture`
+
+Move one capture (sys_update_xml) between two In progress sets of its own application, and read it back.
+
+```
+USAGE
+  $ nex update-set move-capture --capture <value> --reason <value> --source <value> --target <value> [--json] [-a <value>]
+    [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>] [--log-file] [--log-level
+    debug|warn|error|info|trace] [--read-only]
+
+FLAGS
+  -a, --auth=<value>     Auth alias to use.
+      --capture=<value>  (required) sys_update_xml sys_id.
+      --reason=<value>   (required) Why the capture moves (letters, digits and simple punctuation).
+      --source=<value>   (required) The set the capture is in now.
+      --target=<value>   (required) The In progress, non-Default set of the same application to move it to.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Move one capture (sys_update_xml) between two In progress sets of its own application, and read it back.
+
+  Refused before the move when the target belongs to another application, is a Default, already holds a capture
+  of the same record, or a newer capture of the record exists elsewhere. The reason is appended to the capture's
+  comments.
+
+EXAMPLES
+  $ nex update-set move-capture --capture 0123456789abcdef0123456789abcdef --source 0123456789abcdef0123456789abcdee --target 0123456789abcdef0123456789abcded --reason "STORY-123 belongs in the story set" --auth dev
+```
+
+_See code: [src/commands/update-set/move-capture.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/update-set/move-capture.ts)_
+
+## `nex update-set restore`
+
+Put back the working set that nex update-set use reported as "previous".
+
+```
+USAGE
+  $ nex update-set restore --application <value> --update-set <value> [--json] [-a <value>] [--cred-store]
+    [--deny-execute] [--deny-write] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace]
+    [--read-only]
+
+FLAGS
+  -a, --auth=<value>         Auth alias to use.
+      --application=<value>  (required) previous.application: global or a sys_scope sys_id.
+      --update-set=<value>   (required) previous.updateSet: the update set sys_id.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Put back the working set that nex update-set use reported as "previous".
+
+  When that set has closed since, the application's single In progress Default is made current instead.
+
+EXAMPLES
+  $ nex update-set restore --application global --update-set 0123456789abcdef0123456789abcdef --auth dev
+```
+
+_See code: [src/commands/update-set/restore.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/update-set/restore.ts)_
+
+## `nex update-set use SET`
+
+Make an update set your working set, for every later session, and read it back.
+
+```
+USAGE
+  $ nex update-set use SET [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
+    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+
+ARGUMENTS
+  SET  sys_id of an In progress, non-Default update set.
+
+FLAGS
+  -a, --auth=<value>  Auth alias to use.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Make an update set your working set, for every later session, and read it back.
+
+  Saves apps.current_app (the set's application), sys_update_set and updateSetForScope<application>, so the
+  next session, background script or Table API write captures into this set. Keep "previous" from the result
+  and pass it to nex update-set restore when the work is done. Defaults are refused.
+
+EXAMPLES
+  $ nex update-set use 0123456789abcdef0123456789abcdef --json --auth dev
+```
+
+_See code: [src/commands/update-set/use.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/update-set/use.ts)_
+
+## `nex workflow activity add`
+
+Add an activity to your checked-out draft of a legacy workflow.
+
+```
+USAGE
+  $ nex workflow activity add -n <value> -t <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--after-exit <value>]
+    [--exit <value>] [--from <value>] [--from-exit <value>] [--input <value>] [--insert-after <value> | --insert-on
+    <value>] [--stage <value>] [--to <value>] [--var <value>...] [--vars-file <value>] [-v <value>] [-w <value>] [--x
+    <value>] [--y <value>]
+
+FLAGS
+  -a, --auth=<value>          Auth alias to use.
+  -n, --name=<value>          (required) Name of the new activity
+  -t, --type=<value>          (required) Activity type name or sys_id (e.g. Timer, "Run Script", "Approval - User")
+  -v, --version=<value>       Draft version sys_id
+  -w, --workflow=<value>      Workflow name or sys_id (uses your checked-out draft)
+      --after-exit=<value>    With --insert-after: which exit's line to insert on, when the activity has several
+      --exit=<value>          The new activity's exit used for --to / the inserted line (defaults to its first exit)
+      --from=<value>          Activity (name or sys_id) to add a transition from
+      --from-exit=<value>     Exit of --from to leave by (required when it has several)
+      --input=<value>         Activity Designer input mapping as a JSON object
+      --insert-after=<value>  Insert onto the line leaving this activity (name or sys_id)
+      --insert-on=<value>     Insert onto this transition (sys_id)
+      --stage=<value>         Stage name, value or sys_id
+      --to=<value>            Activity (name or sys_id) to add a transition to
+      --var=<value>...        Variable value as element=value (repeatable)
+      --vars-file=<value>     JSON file with variable values keyed by element
+      --x=<value>             Canvas x position
+      --y=<value>             Canvas y position
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Add an activity to your checked-out draft of a legacy workflow.
+
+  The activity is created through the Workflow Editor's activity form, so its variables are saved and its default exits
+  are created exactly as in the UI. Use "workflow definitions <type>" to see the variables a type accepts.
+
+  Wiring:
+  --insert-after / --insert-on  drop the activity onto an existing line, as the editor does
+  --from / --to                 add transitions into and out of the new activity
+
+EXAMPLES
+  Insert a one-day timer right after Begin
+
+    $ nex workflow activity add -w "Laptop Request" --type Timer --name "Wait 1 day" --insert-after Begin --var \
+      duration=86400 --auth dev
+
+  Add an approval wired from the timer, Approved → End
+
+    $ nex workflow activity add -w "Laptop Request" --type "Approval - User" --name "Manager approval" --from "Wait \
+      1 day" --to End --exit Approved --vars-file approval.json --auth dev
+```
+
+_See code: [src/commands/workflow/activity/add.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/activity/add.ts)_
+
+## `nex workflow activity remove`
+
+Remove an activity, with its exits and variables, from your checked-out draft of a legacy workflow.
+
+```
+USAGE
+  $ nex workflow activity remove -a <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
+    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--reconnect] [-v <value>] [-w
+    <value>]
+
+FLAGS
+  -a, --activity=<value>  (required) Activity name or sys_id
+  -a, --auth=<value>      Auth alias to use.
+  -v, --version=<value>   Draft version sys_id
+  -w, --workflow=<value>  Workflow name or sys_id (uses your checked-out draft)
+      --reconnect         Join its single incoming and outgoing transitions so the flow stays connected
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Remove an activity, with its exits and variables, from your checked-out draft of a legacy workflow.
+
+EXAMPLES
+  Remove an activity and join the line it sat on
+
+    $ nex workflow activity remove -w "Laptop Request" --activity "Wait 1 day" --reconnect --auth dev
+```
+
+_See code: [src/commands/workflow/activity/remove.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/activity/remove.ts)_
+
+## `nex workflow activity update`
+
+Change an activity on your checked-out draft of a legacy workflow. Variables you do not pass keep their values.
+
+```
+USAGE
+  $ nex workflow activity update -a <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
+    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--input <value>] [--rename <value>]
+    [--stage <value>] [--var <value>...] [--vars-file <value>] [-v <value>] [-w <value>] [--x <value>] [--y <value>]
+
+FLAGS
+  -a, --activity=<value>   (required) Activity name or sys_id
+  -a, --auth=<value>       Auth alias to use.
+  -v, --version=<value>    Draft version sys_id
+  -w, --workflow=<value>   Workflow name or sys_id (uses your checked-out draft)
+      --input=<value>      Activity Designer input mapping as a JSON object
+      --rename=<value>     New activity name
+      --stage=<value>      Stage name, value or sys_id ("" clears it)
+      --var=<value>...     Variable value as element=value (repeatable)
+      --vars-file=<value>  JSON file with variable values keyed by element
+      --x=<value>          Canvas x position
+      --y=<value>          Canvas y position
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Change an activity on your checked-out draft of a legacy workflow. Variables you do not pass keep their values.
+
+EXAMPLES
+  Change a timer's duration and rename it
+
+    $ nex workflow activity update -w "Laptop Request" --activity "Wait 1 day" --var duration=172800 --rename "Wait \
+      2 days" --auth dev
+
+  Move an activity on the canvas
+
+    $ nex workflow activity update -w "Laptop Request" --activity "Notify" --x 400 --y 200 --auth dev
+```
+
+_See code: [src/commands/workflow/activity/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/activity/update.ts)_
+
+## `nex workflow checkout WORKFLOW`
+
+Check out a legacy workflow for editing. Like the Workflow Editor, this creates a draft version — a full copy of the published one — checked out to you. If you already have a draft, it is reused.
+
+```
+USAGE
+  $ nex workflow checkout WORKFLOW [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
+    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--force]
+
+ARGUMENTS
+  WORKFLOW  Workflow name or sys_id
+
+FLAGS
+  -a, --auth=<value>  Auth alias to use.
+      --force         Take over a checkout held by another user
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Check out a legacy workflow for editing. Like the Workflow Editor, this creates a draft version — a full copy of the
+  published one — checked out to you. If you already have a draft, it is reused.
+
+EXAMPLES
+  Check out a workflow
+
+    $ nex workflow checkout "Laptop Request" --auth dev
+
+  Take over a checkout held by another user
+
+    $ nex workflow checkout "Laptop Request" --force --auth dev
+```
+
+_See code: [src/commands/workflow/checkout.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/checkout.ts)_
+
+## `nex workflow condition add`
+
+Add an exit (condition) to an activity on your checked-out draft of a legacy workflow.
+
+```
+USAGE
+  $ nex workflow condition add -a <value> -c <value> -n <value> [--json] [-a <value>] [--cred-store] [--deny-execute]
+    [--deny-write] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--else]
+    [--error] [--order <value>] [-v <value>] [-w <value>]
+
+FLAGS
+  -a, --activity=<value>   (required) Activity name or sys_id
+  -a, --auth=<value>       Auth alias to use.
+  -c, --condition=<value>  (required) JavaScript condition, e.g. activity.result == 'skipped'
+  -n, --name=<value>       (required) Exit name
+  -v, --version=<value>    Draft version sys_id
+  -w, --workflow=<value>   Workflow name or sys_id (uses your checked-out draft)
+      --else               Taken when no other exit matches
+      --error              Taken when the activity faults
+      --order=<value>      Evaluation order
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Add an exit (condition) to an activity on your checked-out draft of a legacy workflow.
+
+  An exit is a JavaScript condition evaluated when the activity finishes, usually against activity.result (core
+  activities) or activityOutput.<name> (Activity Designer activities). Connect it with "workflow transition add".
+
+EXAMPLES
+  Add a custom exit that a Run Script activity can take by setting activity.result
+
+    $ nex workflow condition add -w "Laptop Request" --activity "Check stock" --name Backordered --condition \
+      "activity.result == 'backordered'" --auth dev
+```
+
+_See code: [src/commands/workflow/condition/add.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/condition/add.ts)_
+
+## `nex workflow condition remove`
+
+Remove an exit (condition), and the transitions leaving from it, from an activity on your checked-out draft.
+
+```
+USAGE
+  $ nex workflow condition remove -a <value> -e <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-v <value>] [-w <value>]
+
+FLAGS
+  -a, --activity=<value>  (required) Activity name or sys_id
+  -a, --auth=<value>      Auth alias to use.
+  -e, --exit=<value>      (required) Exit name or sys_id
+  -v, --version=<value>   Draft version sys_id
+  -w, --workflow=<value>  Workflow name or sys_id (uses your checked-out draft)
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Remove an exit (condition), and the transitions leaving from it, from an activity on your checked-out draft.
+
+EXAMPLES
+  Remove an approval's Skipped exit
+
+    $ nex workflow condition remove -w "Laptop Request" --activity "Manager approval" --exit Skipped --auth dev
+```
+
+_See code: [src/commands/workflow/condition/remove.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/condition/remove.ts)_
+
+## `nex workflow condition update`
+
+Change an exit (condition) of an activity on your checked-out draft of a legacy workflow.
+
+```
+USAGE
+  $ nex workflow condition update -a <value> -e <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-c <value>] [--order
+    <value>] [--rename <value>] [-v <value>] [-w <value>]
+
+FLAGS
+  -a, --activity=<value>   (required) Activity name or sys_id
+  -a, --auth=<value>       Auth alias to use.
+  -c, --condition=<value>  New JavaScript condition
+  -e, --exit=<value>       (required) Exit name or sys_id
+  -v, --version=<value>    Draft version sys_id
+  -w, --workflow=<value>   Workflow name or sys_id (uses your checked-out draft)
+      --order=<value>      New evaluation order
+      --rename=<value>     New exit name
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Change an exit (condition) of an activity on your checked-out draft of a legacy workflow.
+
+EXAMPLES
+  Change an exit's condition
+
+    $ nex workflow condition update -w "Laptop Request" --activity "Check stock" --exit Backordered --condition \
+      "activity.result == 'backorder'" --auth dev
+```
+
+_See code: [src/commands/workflow/condition/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/condition/update.ts)_
+
+## `nex workflow convert [WORKFLOW]`
+
+Plan the move of a legacy workflow to Flow Designer, and write a Fluent (now-sdk) skeleton for it. Read-only.
+
+```
+USAGE
+  $ nex workflow convert [WORKFLOW] [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
+    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--directory <value>] [-f <value>]
+    [--fluent <value>] [--force] [--plan <value>] [--version current|published|draft]
+
+ARGUMENTS
+  [WORKFLOW]  Workflow name or sys_id, or a version sys_id (or use --file)
+
+FLAGS
+  -a, --auth=<value>       Auth alias to use.
+  -f, --file=<value>       Read a `nex workflow export` JSON file instead of the instance
+      --directory=<value>  [default: src/fluent/flows] Folder inside the app for the flow file (with --fluent)
+      --fluent=<value>     Write the Fluent skeleton into this now-sdk app folder
+      --force              Overwrite an existing flow file (with --fluent)
+      --plan=<value>       Save the plan as JSON to this file
+      --version=<option>   [default: current] current: your draft if you have one, else published
+                           <options: current|published|draft>
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Plan the move of a legacy workflow to Flow Designer, and write a Fluent (now-sdk) skeleton for it. Read-only.
+
+  The plan maps each activity to its Flow Designer equivalent (approvals to Ask For Approval with branches on its state,
+  If/Switch to if/else, tasks, timers, waits, parallel lines), turns scratchpad values into flow variables, and lists
+  what needs a person: scripts to port, loops, steps shared by several paths, catalog variables, subflows, spoke
+  activities. It is printed as text (or --json); --plan saves it as JSON.
+
+  --fluent writes the skeleton into a now-sdk app (default src/fluent/flows/<name>.now.ts): it builds as generated, with
+  TODO(convert) comments and the legacy scripts where design work remains. Works on the instance or offline on a `nex
+  workflow export` file.
+
+EXAMPLES
+  Print the conversion plan
+
+    $ nex workflow convert "Laptop Request" --auth dev
+
+  From a saved export: save the plan and write the Fluent skeleton into a now-sdk app
+
+    $ nex workflow convert --file laptop.json --plan laptop.plan.json --fluent ./my-app
+```
+
+_See code: [src/commands/workflow/convert.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/convert.ts)_
 
 ## `nex workflow create`
 
@@ -5437,7 +7277,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -5462,7 +7303,335 @@ EXAMPLES
     $ nex workflow create -s ./workflow.json --json --auth dev
 ```
 
-_See code: [src/commands/workflow/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/workflow/create.ts)_
+_See code: [src/commands/workflow/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/create.ts)_
+
+## `nex workflow definitions [TYPE]`
+
+List workflow activity types, or describe one as this instance defines it.
+
+```
+USAGE
+  $ nex workflow definitions [TYPE] [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
+    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-c <value>] [--core-only] [-n
+    <value>] [--sample <value> --usage] [--script]
+
+ARGUMENTS
+  [TYPE]  Activity type name or sys_id to describe (omit to list types)
+
+FLAGS
+  -a, --auth=<value>      Auth alias to use.
+  -c, --category=<value>  Category (e.g. Approvals, Timers, Utilities)
+  -n, --name=<value>      Name contains this text
+      --core-only         Exclude Activity Designer / Orchestration activities
+      --sample=<value>    [default: 100] With --usage: activities to sample
+      --script            With a type: include its implementation script
+      --usage             With a type: show how published workflows on this instance configure it
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  List workflow activity types, or describe one as this instance defines it.
+
+  Describing a type shows its own description, its exits, and the variables it accepts (types, choices, defaults, hints)
+  — or, for Activity Designer types, its inputs and outputs. Add --script for its implementation (how each variable is
+  used and which results drive the exits) and --usage to see how published workflows on this instance configure it.
+
+EXAMPLES
+  List approval activity types
+
+    $ nex workflow definitions --category Approvals --auth dev
+
+  Describe the Timer activity type and its variables
+
+    $ nex workflow definitions Timer --auth dev
+
+  See how this instance's published workflows configure user approvals
+
+    $ nex workflow definitions "Approval - User" --usage --auth dev
+
+  Read the If activity's implementation
+
+    $ nex workflow definitions If --script --auth dev
+```
+
+_See code: [src/commands/workflow/definitions.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/definitions.ts)_
+
+## `nex workflow discard [WORKFLOW]`
+
+Discard your checked-out draft of a legacy workflow, keeping the published version.
+
+```
+USAGE
+  $ nex workflow discard [WORKFLOW] [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
+    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-v <value>]
+
+ARGUMENTS
+  [WORKFLOW]  Workflow name or sys_id (omit when using --version)
+
+FLAGS
+  -a, --auth=<value>     Auth alias to use.
+  -v, --version=<value>  Draft version sys_id
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Discard your checked-out draft of a legacy workflow, keeping the published version.
+
+EXAMPLES
+  Throw away your draft
+
+    $ nex workflow discard "Laptop Request" --auth dev
+```
+
+_See code: [src/commands/workflow/discard.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/discard.ts)_
+
+## `nex workflow export WORKFLOW`
+
+Export a legacy workflow version as one complete JSON definition. Read-only.
+
+```
+USAGE
+  $ nex workflow export WORKFLOW [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
+    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-o <value>] [--version
+    current|published|draft]
+
+ARGUMENTS
+  WORKFLOW  Workflow name or sys_id, or a version sys_id
+
+FLAGS
+  -a, --auth=<value>      Auth alias to use.
+  -o, --output=<value>    Write the JSON to this file instead of stdout
+      --version=<option>  [default: current] current: your draft if you have one, else published
+                          <options: current|published|draft>
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Export a legacy workflow version as one complete JSON definition. Read-only.
+
+  Includes the workflow and version properties (trigger condition, stages, inputs), every activity with its type,
+  labelled variable values (defaults marked) and exits, the transitions, the activity types used (described from the
+  instance, including whether they pause the workflow), display names for referenced records, the subflows it calls, and
+  the catalog items and workflows that use it.
+
+  Exports your checked-out draft when you have one, otherwise the published version; --version chooses. The JSON goes to
+  stdout (or --output). Read it with `nex workflow outline --file` (outline, analysis, Mermaid) and plan its move to
+  Flow Designer with `nex workflow convert --file`.
+
+EXAMPLES
+  Export a workflow
+
+    $ nex workflow export "Laptop Request" --auth dev > laptop-request.json
+
+  Export the published version to a file
+
+    $ nex workflow export "Laptop Request" --version published -o laptop.json --auth dev
+```
+
+_See code: [src/commands/workflow/export.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/export.ts)_
+
+## `nex workflow list`
+
+List legacy workflows with the state of their published and checked-out versions.
+
+```
+USAGE
+  $ nex workflow list [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
+    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--limit <value>] [-n <value>] [-q <value>] [-t
+    <value>]
+
+FLAGS
+  -a, --auth=<value>   Auth alias to use.
+  -n, --name=<value>   Name contains this text
+  -q, --query=<value>  Additional encoded query on wf_workflow
+  -t, --table=<value>  Workflow table (e.g. incident, sc_req_item)
+      --limit=<value>  [default: 50] Maximum number of workflows to list
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  List legacy workflows with the state of their published and checked-out versions.
+
+EXAMPLES
+  List workflows whose name contains "Hardware"
+
+    $ nex workflow list --name "Hardware" --auth dev
+
+  List catalog item workflows as JSON
+
+    $ nex workflow list --table sc_req_item --json --auth dev
+```
+
+_See code: [src/commands/workflow/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/list.ts)_
+
+## `nex workflow new`
+
+Create a legacy workflow the way the Workflow Editor does: Begin and End joined by a transition, checked out to you for editing.
+
+```
+USAGE
+  $ nex workflow new -n <value> -t <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--condition <value>]
+    [--condition-type <value>] [-d <value>]
+
+FLAGS
+  -a, --auth=<value>            Auth alias to use.
+  -d, --description=<value>     Workflow description
+  -n, --name=<value>            (required) Workflow name (must be unique)
+  -t, --table=<value>           (required) Table the workflow runs on
+      --condition=<value>       Trigger condition (encoded query)
+      --condition-type=<value>  Trigger condition type (e.g. run_match)
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Create a legacy workflow the way the Workflow Editor does: Begin and End joined by a transition, checked out to you
+  for editing.
+
+EXAMPLES
+  Create a catalog item workflow
+
+    $ nex workflow new --name "Laptop Request" --table sc_req_item --auth dev
+```
+
+_See code: [src/commands/workflow/new.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/new.ts)_
+
+## `nex workflow outline [WORKFLOW]`
+
+Show a legacy workflow as a readable outline, a node list, a structural analysis or a Mermaid graph. Read-only.
+
+```
+USAGE
+  $ nex workflow outline [WORKFLOW] [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
+    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--all-values] [--analysis | --nodes |
+    --mermaid] [-f <value>] [--flow-hints] [--full-scripts] [--version current|published|draft]
+
+ARGUMENTS
+  [WORKFLOW]  Workflow name or sys_id, or a version sys_id (or use --file)
+
+FLAGS
+  -a, --auth=<value>      Auth alias to use.
+  -f, --file=<value>      Read a `nex workflow export` JSON file instead of the instance
+      --all-values        Include settings left at their defaults
+      --analysis          Structural analysis instead of the outline
+      --flow-hints        Annotate steps with the likely Flow Designer construct
+      --full-scripts      Print scripts in full (default: the first 25 lines)
+      --mermaid           A Mermaid flowchart instead of the outline
+      --nodes             Every activity with its exits and where it is reached from
+      --version=<option>  [default: current] current: your draft if you have one, else published
+                          <options: current|published|draft>
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Show a legacy workflow as a readable outline, a node list, a structural analysis or a Mermaid graph. Read-only.
+
+  The outline nests the workflow the way it runs: numbered steps in reading order, decisions with a block per exit
+  (short exits as guard clauses), parallel lines closed at their Join, loops (↻), waits ([WAIT]), steps shared by
+  several paths, dead exits and unreachable activities. Settings show only what differs from the defaults.
+
+  --analysis lists paths, decisions, parallel splits, loops, dead exits, scratchpad and catalog-variable use, scripts
+  and subflows. Works on the instance (exporting the workflow) or offline on a `nex workflow export` file.
+
+EXAMPLES
+  Outline a workflow
+
+    $ nex workflow outline "Laptop Request" --auth dev
+
+  Analyse a saved export (no instance needed)
+
+    $ nex workflow outline --file laptop.json --analysis
+
+  Annotate steps with likely Flow Designer constructs
+
+    $ nex workflow outline --file laptop.json --flow-hints
+```
+
+_See code: [src/commands/workflow/outline.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/outline.ts)_
 
 ## `nex workflow publish`
 
@@ -5470,18 +7639,22 @@ Publish a workflow version.
 
 ```
 USAGE
-  $ nex workflow publish -s <value> -v <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
-    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+  $ nex workflow publish [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
+    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--allow-warnings] [-s <value> -v <value>] [-w
+    <value> | ]
 
 FLAGS
   -a, --auth=<value>            Auth alias to use.
-  -s, --start-activity=<value>  (required) Sys ID of the start activity
-  -v, --version-id=<value>      (required) Sys ID of the workflow version to publish
+  -s, --start-activity=<value>  Sys ID of the start activity (sets it and publishes without validation)
+  -v, --version-id=<value>      Sys ID of the workflow version to publish
+  -w, --workflow=<value>        Workflow name or sys_id; publishes your checked-out draft
+      --allow-warnings          Publish even when validation reports warnings
 
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
@@ -5496,17 +7669,218 @@ GLOBAL FLAGS
 DESCRIPTION
   Publish a workflow version.
 
+  Publishes your checked-out draft the way the Workflow Editor does: it is validated first, and warnings stop the
+  publish unless --allow-warnings is given. Critical findings always stop it. The instance records the workflow in your
+  current update set.
+
+  With --start-activity, the version's start activity is set and it is published without validation (the original
+  behaviour of this command).
+
 EXAMPLES
-  Publish a workflow version
+  Validate and publish your draft
+
+    $ nex workflow publish --workflow "Laptop Request" --auth dev
+
+  Publish even if validation reports warnings
+
+    $ nex workflow publish -w "Laptop Request" --allow-warnings --auth dev
+
+  Set the start activity and publish a version without validation
 
     $ nex workflow publish --version-id wfv-001 --start-activity act-001 --auth dev
-
-  Publish a workflow version and output as JSON
-
-    $ nex workflow publish -v wfv-001 -s act-001 --json --auth dev
 ```
 
-_See code: [src/commands/workflow/publish.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/workflow/publish.ts)_
+_See code: [src/commands/workflow/publish.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/publish.ts)_
+
+## `nex workflow show [WORKFLOW]`
+
+Show a legacy workflow: its activities with their exits and variable values, and its transitions.
+
+```
+USAGE
+  $ nex workflow show [WORKFLOW] [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
+    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--vars] [-v <value>]
+
+ARGUMENTS
+  [WORKFLOW]  Workflow name or sys_id (omit when using --version)
+
+FLAGS
+  -a, --auth=<value>     Auth alias to use.
+  -v, --version=<value>  Workflow version sys_id
+      --[no-]vars        Include activity variable values
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Show a legacy workflow: its activities with their exits and variable values, and its transitions.
+
+  Shows your checked-out draft when you have one, otherwise the published version. Use --version for any other version.
+
+EXAMPLES
+  Show a workflow
+
+    $ nex workflow show "Hardware Request" --auth dev
+
+  Show a specific version without variable values
+
+    $ nex workflow show --version <version_sys_id> --no-vars --auth dev
+```
+
+_See code: [src/commands/workflow/show.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/show.ts)_
+
+## `nex workflow transition add`
+
+Add a transition between two activities on your checked-out draft of a legacy workflow.
+
+```
+USAGE
+  $ nex workflow transition add --from <value> --to <value> [--json] [-a <value>] [--cred-store] [--deny-execute]
+    [--deny-write] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--exit
+    <value>] [-v <value>] [-w <value>]
+
+FLAGS
+  -a, --auth=<value>      Auth alias to use.
+  -v, --version=<value>   Draft version sys_id
+  -w, --workflow=<value>  Workflow name or sys_id (uses your checked-out draft)
+      --exit=<value>      Exit of --from to leave by (required when it has several)
+      --from=<value>      (required) Source activity (name or sys_id)
+      --to=<value>        (required) Target activity (name or sys_id)
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Add a transition between two activities on your checked-out draft of a legacy workflow.
+
+EXAMPLES
+  Send the Rejected exit to End
+
+    $ nex workflow transition add -w "Laptop Request" --from "Manager approval" --exit Rejected --to End --auth dev
+```
+
+_See code: [src/commands/workflow/transition/add.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/transition/add.ts)_
+
+## `nex workflow transition remove`
+
+Remove a transition from your checked-out draft of a legacy workflow, by sys_id or by its ends.
+
+```
+USAGE
+  $ nex workflow transition remove [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
+    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--exit <value>] [--from <value> | --transition
+    <value>] [--to <value> | ] [-v <value>] [-w <value>]
+
+FLAGS
+  -a, --auth=<value>        Auth alias to use.
+  -v, --version=<value>     Draft version sys_id
+  -w, --workflow=<value>    Workflow name or sys_id (uses your checked-out draft)
+      --exit=<value>        With --from/--to: the exit, when several lines join the two activities
+      --from=<value>        Source activity (name or sys_id)
+      --to=<value>          Target activity (name or sys_id)
+      --transition=<value>  Transition sys_id
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Remove a transition from your checked-out draft of a legacy workflow, by sys_id or by its ends.
+
+EXAMPLES
+  Remove the transition between two activities
+
+    $ nex workflow transition remove -w "Laptop Request" --from "Manager approval" --to End --auth dev
+
+  Remove a transition by sys_id
+
+    $ nex workflow transition remove -w "Laptop Request" --transition <transition_sys_id> --auth dev
+```
+
+_See code: [src/commands/workflow/transition/remove.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/transition/remove.ts)_
+
+## `nex workflow validate [WORKFLOW]`
+
+Run the Workflow Editor's validation on a workflow without publishing it.
+
+```
+USAGE
+  $ nex workflow validate [WORKFLOW] [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
+    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-v <value>]
+
+ARGUMENTS
+  [WORKFLOW]  Workflow name or sys_id (omit when using --version)
+
+FLAGS
+  -a, --auth=<value>     Auth alias to use.
+  -v, --version=<value>  Workflow version sys_id
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Run the Workflow Editor's validation on a workflow without publishing it.
+
+  Validates your checked-out draft when you have one, otherwise the published version.
+
+EXAMPLES
+  Validate your draft of a workflow
+
+    $ nex workflow validate "Hardware Request" --auth dev
+```
+
+_See code: [src/commands/workflow/validate.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/validate.ts)_
 
 ## `nex xml export`
 
@@ -5527,7 +7901,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -5564,7 +7939,7 @@ EXAMPLES
     $ nex xml export --table sys_script --sys-id abc123 --json --auth dev
 ```
 
-_See code: [src/commands/xml/export.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/xml/export.ts)_
+_See code: [src/commands/xml/export.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/xml/export.ts)_
 
 ## `nex xml import`
 
@@ -5584,7 +7959,8 @@ FLAGS
 GLOBAL FLAGS
   --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
                         sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
-  --deny-execute        Refuse background scripts, scheduling or changing scheduled jobs, flow runs and ATF runs for this invocation.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -5616,7 +7992,7 @@ EXAMPLES
     $ nex xml import --file ./records.xml --table incident --json --auth dev
 ```
 
-_See code: [src/commands/xml/import.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.6.0/src/commands/xml/import.ts)_
+_See code: [src/commands/xml/import.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/xml/import.ts)_
 <!-- commandsstop -->
 
 ---
