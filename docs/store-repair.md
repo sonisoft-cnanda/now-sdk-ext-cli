@@ -33,8 +33,15 @@ Upgrade history e48541245318df10b6d61901a0490e82: complete, finished 2026-10-29 
 - **Repaired** is reported only when the App Client succeeded **and** wrote a new, finished
   upgrade history row (`sys_upgrade_history`, `to_version` = the scope). The App Client also
   reports success when it decided nothing needed reinstalling, so success alone proves nothing.
-  When the history does not confirm the repair, nex exits 1 with `not_confirmed`, or with
-  `repair_failed` when the tracker failed.
+  When the repair is not confirmed, nex exits 1 with one of these codes:
+  - `not_confirmed`: the tracker succeeded, but no finished history shows the reinstall.
+  - `repair_failed`: the tracker failed.
+  - `timed_out`: the tracker was still going when `--timeout` ended. The repair may still be
+    queued or running, so **don't repair again** until its tracker has ended. Follow it with
+    `nex query -t sys_execution_tracker -q sys_id=<tracker>`.
+  - `wait_failed`: reading progress failed after the repair started (a 5xx, an expired
+    session). The same caution applies, and the JSON error carries the started repair and its
+    tracker.
 - **Not applied** lists up to 50 files the repair did not apply, problem files first:
   - files *skipped* because they are customized on the instance;
   - errors, manual merges, table not found, fatal errors and files not loaded;
@@ -47,7 +54,7 @@ Upgrade history e48541245318df10b6d61901a0490e82: complete, finished 2026-10-29 
 
 ## What it refuses
 
-It refuses these before anything is sent, as the platform does:
+It refuses these before anything is sent, as the platform does. The last one is the exception:
 
 | Code | Means |
 | --- | --- |
@@ -57,7 +64,7 @@ It refuses these before anything is sent, as the platform does:
 | `app_inactive` | The app is not active |
 | `contains_plugins` | The app contains plugins; repair it from the UI, which sends the plugin list |
 | `no_demo_data` | `--demo-data` for an app without demo data |
-| `start_failed` | The App Client did not start it (the HTTP status and its message are shown) |
+| `start_failed` | **Sent**, but the App Client did not confirm a start (the HTTP status and its message are shown). Check `sys_execution_tracker` for a running "Install from the App Repository" before retrying |
 
 ## Underneath
 

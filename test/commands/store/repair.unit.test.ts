@@ -1,6 +1,7 @@
 import {afterEach, describe, expect, it, jest} from '@jest/globals'
 import {
   ApplicationManager,
+  refusalFor,
   ServiceNowInstance,
   StoreAppRepairError,
   type StoreAppRepairResult,
@@ -71,18 +72,56 @@ describe('nex store repair', () => {
     await expect(target.run()).resolves.toBe(started)
     expect(wait).not.toHaveBeenCalled()
     expect(lines.at(-1)).toBe('Follow it: nex query -t sys_execution_tracker -q sys_id=TRK1 -f state,message,percent_complete')
+    const withAuth = command({app: APP}, {auth: 'dev', 'no-wait': true}, false)
+    await withAuth.target.run()
+    expect(withAuth.lines.at(-1)).toMatch(/ --auth dev$/)
   })
 
   it.each([
-    ['not_confirmed', {...repaired, history: undefined, repaired: false, warnings: ['no history']}],
-    ['repair_failed', {...repaired, error: 'Unable to install', repaired: false, status: '3', success: false}],
-  ])('exits non-zero with code %s and the result when the repair is not confirmed', async (code, result) => {
+    ['not_confirmed', {...repaired, history: undefined, repaired: false, warnings: ['no history']}, 'no finished upgrade history'],
+    ['repair_failed', {...repaired, error: 'Unable to install', percent_complete: 100, repaired: false, status: '3', success: false}, 'did not succeed: Unable to install'],
+    ['timed_out', {...repaired, error: 'Installation timed out', history: undefined, percent_complete: 40, repaired: false, status: '1', success: false},
+      'Do not repair again until tracker TRK1 has ended'],
+  ])('exits non-zero with code %s and the result when the repair is not confirmed', async (code, result, reason) => {
     jest.spyOn(ApplicationManager.prototype, 'repairStoreApplication').mockResolvedValue(started)
     jest.spyOn(ApplicationManager.prototype, 'waitForStoreApplicationRepair').mockResolvedValue(result as StoreAppRepairResult)
     const error = await command({app: APP}, {}).target.run().catch((error_: unknown) => error_) as any
     expect(error.code).toBe(code)
     expect(error.oclif.exit).toBe(1)
     expect(error.storeAppRepair).toBe(result)
+    const text = await command({app: APP}, {}, false).target.run().catch((error_: unknown) => error_) as any
+    expect(text.message).toContain(reason)
+  })
+
+  it('keeps the started repair and its tracker when waiting for it fails, so nobody starts another', async () => {
+    jest.spyOn(ApplicationManager.prototype, 'repairStoreApplication').mockResolvedValue(started)
+    jest.spyOn(ApplicationManager.prototype, 'waitForStoreApplicationRepair').mockRejectedValue(new Error('Error during request. Status: 502 Body: <html>'))
+    const error = await command({app: APP}, {auth: 'dev'}).target.run().catch((error_: unknown) => error_) as any
+    expect(error.code).toBe('wait_failed')
+    expect(error.storeAppRepair).toBe(started)
+    expect(error.message).toContain('tracker TRK1')
+    expect(error.message).toContain('--auth dev')
+    expect(error.message).not.toContain('<html>')
+  })
+
+  it('passes a policy refusal while waiting through unchanged', async () => {
+    jest.spyOn(ApplicationManager.prototype, 'repairStoreApplication').mockResolvedValue(started)
+    const refusal = refusalFor('write', 'flag')
+    jest.spyOn(ApplicationManager.prototype, 'waitForStoreApplicationRepair').mockRejectedValue(refusal)
+    await expect(command({app: APP}, {}).target.run()).rejects.toBe(refusal)
+  })
+
+  it('strips control characters from progress and failure text from the instance', async () => {
+    jest.spyOn(ApplicationManager.prototype, 'repairStoreApplication').mockResolvedValue(started)
+    jest.spyOn(ApplicationManager.prototype, 'waitForStoreApplicationRepair').mockImplementation(async (_s, _p, _t, onProgress) => {
+      onProgress?.({message: 'Queued\u001B]0;owned\u0007\r', percentComplete: 0})
+      return {...repaired, error: 'bad\u001B[2Jthing', percent_complete: 100, repaired: false, status: '3', success: false}
+    })
+    const {lines, target} = command({app: APP}, {}, false)
+    const error = await target.run().catch((error_: unknown) => error_) as Error
+    const printed = [...lines, error.message].join('\n')
+    expect(printed).not.toMatch(/[\u0000-\u0009\u000B-\u001F\u007F]/)
+    expect(lines).toContain('  Queued ]0;owned   (0%)')
   })
 
   it('renders a refusal as its code, detail and remediation, and passes anything else on', async () => {
@@ -143,7 +182,7 @@ describe('store app repair display', () => {
   it('projects every refusal code to a remediation', () => {
     for (const code of ['app_inactive', 'app_not_found', 'contains_plugins', 'invalid_app', 'no_demo_data', 'not_a_store_app', 'start_failed'] as const) {
       const failure = projectStoreAppRepairError({code, detail: undefined})
-      expect(failure.remediation[0]).not.toContain('before retrying')
+      expect(failure.remediation[0]).not.toContain('Read the application back')
       expect(failure.message).toBe(`Store application repair refused: ${code}.`)
     }
   })

@@ -2,13 +2,14 @@ import {Args, Errors, Flags} from '@oclif/core'
 import {
   ApplicationManager,
   flushLogs,
+  isPolicyRefusal,
   StoreAppRepairError,
   type StoreAppRepairResult,
   type StoreAppRepairStart,
 } from '@sonisoft/now-sdk-ext-core'
 
 import {AuthenticatedCommand} from '../../common/authenticated-command.js'
-import {projectStoreAppRepairError, StoreAppRepairDisplayService} from '../../services/store-app-repair-display.service.js'
+import {projectStoreAppRepairError, repairOutcome, StoreAppRepairDisplayService} from '../../services/store-app-repair-display.service.js'
 
 export default class StoreRepair extends AuthenticatedCommand<typeof StoreRepair> {
   static args = {
@@ -54,20 +55,30 @@ Repaired is reported only when the App Client succeeded AND wrote a new, finishe
     const started = await manager.repairStoreApplication({app: this.args.app, loadDemoData: this.flags['demo-data']})
     if (text) for (const line of display.started(started)) this.log(line)
     if (this.flags['no-wait']) {
-      if (text) this.log(`Follow it: nex query -t sys_execution_tracker -q sys_id=${started.trackerId} -f state,message,percent_complete`)
+      if (text) this.log(display.follow(started.trackerId, this.flags.auth))
       return started
     }
 
-    const result = await manager.waitForStoreApplicationRepair(started, this.flags['poll-interval'], this.flags.timeout, progress => {
-      if (text) this.log(`  ${progress.message}${progress.percentComplete === undefined ? '' : ` (${progress.percentComplete}%)`}`)
-    })
+    let result: StoreAppRepairResult
+    try {
+      result = await manager.waitForStoreApplicationRepair(started, this.flags['poll-interval'], this.flags.timeout, progress => {
+        if (text) this.log(display.progress(progress))
+      })
+    } catch (error) {
+      if (isPolicyRefusal(error)) throw error
+      // The repair is on the instance by now: say so, with its tracker, so nobody starts a second one.
+      const failure = new Errors.CLIError(
+        `The repair started (tracker ${started.trackerId}) but waiting for it failed, so it may still be running. ${display.follow(started.trackerId, this.flags.auth)}`,
+        {code: 'wait_failed', exit: 1},
+      )
+      Object.assign(failure, {storeAppRepair: started})
+      throw failure
+    }
+
     if (text) for (const line of display.result(result)) this.log(line)
     if (!result.repaired) {
-      const code = result.success ? 'not_confirmed' : 'repair_failed'
-      const reason = result.success
-        ? 'The App Client reported success, but no finished upgrade history shows the reinstall.'
-        : `The repair did not succeed: ${result.error ?? result.status_label}.`
-      const failure = new Errors.CLIError(text ? reason : `Store application repair ${code}.`, {code, exit: 1})
+      const code = repairOutcome(result)
+      const failure = new Errors.CLIError(text ? display.outcome(result) : `Store application repair ${code}.`, {code, exit: 1})
       Object.assign(failure, {storeAppRepair: result})
       throw failure
     }

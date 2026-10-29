@@ -50,7 +50,8 @@ function nex(args: string[], extra: string[] = []): Result {
   }, 5 * MINUTE)
 
   it('repairs an installed store app and reports the finished upgrade history', () => {
-    const result = nex(['store', 'repair', APP])
+    // Below the spawn limit, so a slow queue ends as timed_out rather than a killed process.
+    const result = nex(['store', 'repair', APP, '--timeout', String(20 * MINUTE)])
     if (result.status !== 0) throw new Error(`nex failed (${result.status}): ${JSON.stringify(result.json?.error ?? result.stderr)}`)
     expect(result.json).toMatchObject({app: {scope: 'sn_bubble_trend', sysId: APP, version: '1.0.0'}, repaired: true, success: true, warnings: []})
     expect(result.json.history.status).toBe('complete')
