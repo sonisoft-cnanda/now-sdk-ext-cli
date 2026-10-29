@@ -31,7 +31,7 @@ const command = (args: object, flags: object, json = true) => {
   const lines: string[] = []
   const target = Object.assign(Object.create(StoreRepair.prototype), {
     args, flags: {'demo-data': false, 'no-wait': false, 'poll-interval': 5000, timeout: 1_800_000, ...flags},
-    instance: new ServiceNowInstance({alias: 'unit-test'}), jsonEnabled: () => json, log: (line: string) => lines.push(line),
+    _logger: {error: jest.fn()}, instance: new ServiceNowInstance({alias: 'unit-test'}), jsonEnabled: () => json, log: (line: string) => lines.push(line),
   })
   return {lines, target}
 }
@@ -95,13 +95,34 @@ describe('nex store repair', () => {
 
   it('keeps the started repair and its tracker when waiting for it fails, so nobody starts another', async () => {
     jest.spyOn(ApplicationManager.prototype, 'repairStoreApplication').mockResolvedValue(started)
-    jest.spyOn(ApplicationManager.prototype, 'waitForStoreApplicationRepair').mockRejectedValue(new Error('Error during request. Status: 502 Body: <html>'))
-    const error = await command({app: APP}, {auth: 'dev'}).target.run().catch((error_: unknown) => error_) as any
+    const cause = new Error('Error during request. Status: 502 Body: <html>')
+    jest.spyOn(ApplicationManager.prototype, 'waitForStoreApplicationRepair').mockRejectedValue(cause)
+    const {target} = command({app: APP}, {auth: 'dev'})
+    const error = await target.run().catch((error_: unknown) => error_) as any
+    expect(target._logger.error).toHaveBeenCalledWith(expect.any(String), cause)
     expect(error.code).toBe('wait_failed')
     expect(error.storeAppRepair).toBe(started)
     expect(error.message).toContain('tracker TRK1')
     expect(error.message).toContain('--auth dev')
+    expect(error.message).toContain('(HTTP 502)')
     expect(error.message).not.toContain('<html>')
+  })
+
+  it('names a failed tracker by its own status, not core\'s timeout, when it stopped below 100%', async () => {
+    jest.spyOn(ApplicationManager.prototype, 'repairStoreApplication').mockResolvedValue(started)
+    jest.spyOn(ApplicationManager.prototype, 'waitForStoreApplicationRepair').mockResolvedValue({...repaired, error: 'Installation timed out',
+      percent_complete: 40, repaired: false, status: '3', status_label: 'Failed', status_message: 'Unable to download', success: false})
+    const error = await command({app: APP}, {}, false).target.run().catch((error_: unknown) => error_) as any
+    expect(error.code).toBe('repair_failed')
+    expect(error.message).toBe('The repair did not succeed: Failed: Unable to download.')
+  })
+
+  it('tells a timed-out run how to follow the tracker with the same credentials', async () => {
+    jest.spyOn(ApplicationManager.prototype, 'repairStoreApplication').mockResolvedValue(started)
+    jest.spyOn(ApplicationManager.prototype, 'waitForStoreApplicationRepair').mockResolvedValue({...repaired, error: 'Installation timed out',
+      percent_complete: 40, repaired: false, status: '1', success: false})
+    const error = await command({app: APP}, {auth: 'dev', 'cred-store': true}, false).target.run().catch((error_: unknown) => error_) as any
+    expect(error.message).toMatch(/Follow it: nex query .* --auth dev --cred-store$/)
   })
 
   it('passes a policy refusal while waiting through unchanged', async () => {
@@ -173,6 +194,11 @@ describe('store app repair display', () => {
     expect(display.result({...repaired, error: 'Unable to install', repaired: false, success: false})[0])
       .toBe('Repair failed: Bubble trend (sn_bubble_trend) 1.0.0: Unable to install')
     expect(display.result({...repaired, repaired: false})[0]).toBe('Not confirmed as repaired: Bubble trend (sn_bubble_trend) 1.0.0')
+  })
+
+  it('quotes an alias that is not a plain word in the follow command, rather than dropping it', () => {
+    expect(display.follow('TRK1', {auth: "me@dev's"})).toBe(String.raw`Follow it: nex query -t sys_execution_tracker -q sys_id=TRK1 -f state,message,percent_complete --auth 'me@dev'\''s'`)
+    expect(display.follow('TRK1')).toBe('Follow it: nex query -t sys_execution_tracker -q sys_id=TRK1 -f state,message,percent_complete')
   })
 
   it('names the endpoint a repair started through', () => {

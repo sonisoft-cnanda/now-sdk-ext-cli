@@ -11,6 +11,15 @@ import {
 import {AuthenticatedCommand} from '../../common/authenticated-command.js'
 import {projectStoreAppRepairError, repairOutcome, StoreAppRepairDisplayService} from '../../services/store-app-repair-display.service.js'
 
+/** What kind of failure ended the wait, without any of its response body. */
+function waitFailure(error: unknown): string {
+  const message = error instanceof Error ? error.message : ''
+  const status = /\bstatus:? (\d{3})\b/i.exec(message)?.[1]
+  if (status) return `HTTP ${status}`
+  const name = error instanceof Error ? error.name : ''
+  return /^[A-Z]\w{0,40}$/.test(name) && name !== 'Error' ? name : 'see the log'
+}
+
 export default class StoreRepair extends AuthenticatedCommand<typeof StoreRepair> {
   static args = {
     app: Args.string({description: 'The installed application: its scope (e.g. x_acme_app) or its sys_store_app sys_id.', required: true}),
@@ -54,8 +63,9 @@ Repaired is reported only when the App Client succeeded AND wrote a new, finishe
 
     const started = await manager.repairStoreApplication({app: this.args.app, loadDemoData: this.flags['demo-data']})
     if (text) for (const line of display.started(started)) this.log(line)
+    const auth = {auth: this.flags.auth, credStore: this.flags['cred-store']}
     if (this.flags['no-wait']) {
-      if (text) this.log(display.follow(started.trackerId, this.flags.auth))
+      if (text) this.log(display.follow(started.trackerId, auth))
       return started
     }
 
@@ -67,8 +77,10 @@ Repaired is reported only when the App Client succeeded AND wrote a new, finishe
     } catch (error) {
       if (isPolicyRefusal(error)) throw error
       // The repair is on the instance by now: say so, with its tracker, so nobody starts a second one.
+      // The full error goes to the log; the message names only its kind, never a response body.
+      this._logger.error('Waiting for the store application repair failed.', error as Error)
       const failure = new Errors.CLIError(
-        `The repair started (tracker ${started.trackerId}) but waiting for it failed, so it may still be running. ${display.follow(started.trackerId, this.flags.auth)}`,
+        `The repair started (tracker ${display.clean(started.trackerId)}) but waiting for it failed (${waitFailure(error)}), so it may still be running. ${display.follow(started.trackerId, auth)}`,
         {code: 'wait_failed', exit: 1},
       )
       Object.assign(failure, {storeAppRepair: started})
@@ -78,7 +90,7 @@ Repaired is reported only when the App Client succeeded AND wrote a new, finishe
     if (text) for (const line of display.result(result)) this.log(line)
     if (!result.repaired) {
       const code = repairOutcome(result)
-      const failure = new Errors.CLIError(text ? display.outcome(result) : `Store application repair ${code}.`, {code, exit: 1})
+      const failure = new Errors.CLIError(text ? display.outcome(result, auth) : `Store application repair ${code}.`, {code, exit: 1})
       Object.assign(failure, {storeAppRepair: result})
       throw failure
     }

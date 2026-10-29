@@ -39,6 +39,12 @@ export function projectStoreAppRepairError(error: Pick<StoreAppRepairError, 'cod
 
 // Names and reasons come from the instance: keep them on one line.
 const clean = (text: string | undefined): string => (text ?? '').replaceAll(/\p{Cc}/gu, ' ')
+/** The credential flags a follow-up command needs to reach the same instance the same way. */
+export interface StoreAppRepairAuth {
+  auth?: string
+  credStore?: boolean
+}
+
 /** How a repair that was not confirmed ended, as the exit code nex reports. */
 export type StoreAppRepairOutcome = 'not_confirmed' | 'repair_failed' | 'timed_out'
 
@@ -52,6 +58,10 @@ const appLine = (app: StoreAppRepairTarget): string =>
   `${clean(app.name)} (${clean(app.scope)}) ${clean(app.version)}${app.customizationVersion ? `, customization ${clean(app.customizationVersion)}` : ''}`
 
 export class StoreAppRepairDisplayService {
+  clean(text: string | undefined): string {
+    return clean(text)
+  }
+
   failure(failure: StoreAppRepairFailure): string[] {
     const lines = [failure.message]
     if (failure.detail?.serverMessage) lines.push(`App Client: ${clean(failure.detail.serverMessage)}`)
@@ -59,14 +69,14 @@ export class StoreAppRepairDisplayService {
     return [...lines, ...failure.remediation]
   }
 
-  /** How to look the tracker up afterwards, on the same instance. */
-  follow(trackerId: string, auth: string | undefined): string {
-    const alias = auth && /^[\w.-]+$/.test(auth) ? ` --auth ${auth}` : ''
-    return `Follow it: nex query -t sys_execution_tracker -q sys_id=${clean(trackerId)} -f state,message,percent_complete${alias}`
+  /** How to look the tracker up afterwards, on the same instance, with the same credentials. */
+  follow(trackerId: string, {auth, credStore}: StoreAppRepairAuth = {}): string {
+    const alias = auth ? ` --auth ${/^[\w.-]+$/.test(auth) ? auth : `'${clean(auth).replaceAll("'", String.raw`'\''`)}'`}` : ''
+    return `Follow it: nex query -t sys_execution_tracker -q sys_id=${clean(trackerId)} -f state,message,percent_complete${alias}${credStore ? ' --cred-store' : ''}`
   }
 
   /** Why the command exits non-zero, for a result that is not repaired. */
-  outcome(result: StoreAppRepairResult): string {
+  outcome(result: StoreAppRepairResult, auth: StoreAppRepairAuth = {}): string {
     const tracker = clean(result.trackerId)
     switch (repairOutcome(result)) {
       case 'not_confirmed': {
@@ -74,11 +84,17 @@ export class StoreAppRepairDisplayService {
       }
 
       case 'timed_out': {
-        return `The repair was still running when the wait ended. Do not repair again until tracker ${tracker} has ended.`
+        return `The repair was still running when the wait ended. Do not repair again until tracker ${tracker} has ended. ${this.follow(result.trackerId, auth)}`
       }
 
       default: {
-        return `The repair did not succeed: ${clean(result.error ?? result.status_label)}.`
+        // A tracker that failed below 100% is only noticed when the wait times out, so its own
+        // status says more than core's "Installation timed out".
+        const failed = result.status === '3' || result.status === '4'
+        const reason = failed && result.percent_complete < 100
+          ? [result.status_label, result.status_message].filter(Boolean).join(': ')
+          : result.error ?? result.status_label
+        return `The repair did not succeed: ${clean(reason)}.`
       }
     }
   }
