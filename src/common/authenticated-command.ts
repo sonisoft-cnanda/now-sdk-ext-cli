@@ -114,7 +114,9 @@ protected instance!:ServiceNowInstance;
       await flushLogs();
       // Through oclif's own catch, as a CLIError: that is what writes the --json error document.
       const failure = new Errors.CLIError(err.message, {code: err.code, exit: 1, suggestions: elevationRemedy(err)});
-      Object.assign(failure, {elevation: {available: [...err.available], code: err.code, roles: [...err.roles],
+      // Recognised by name, so another core's error may lack the arrays: never throw from here.
+      const list = (value: unknown): string[] => (Array.isArray(value) ? value.filter(item => typeof item === 'string') : []);
+      Object.assign(failure, {elevation: {available: list(err.available), code: err.code, roles: list(err.roles),
         ...(err.status === undefined ? {} : {status: err.status})}});
       return super.catch(failure);
     }
@@ -337,7 +339,7 @@ export function elevationRemedy(error: RoleElevationError): string[] {
     }
 
     case 'not_elevatable': {
-      return [error.available.length > 0
+      return [Array.isArray(error.available) && error.available.length > 0
         ? `This user may elevate to: ${error.available.join(', ')}. Run nex elevation to see them.`
         : 'This user may not elevate to any role. Only a user assigned an elevated privilege role (security_admin is assigned to the base admin) can elevate.']
     }

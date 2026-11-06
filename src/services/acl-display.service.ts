@@ -75,7 +75,7 @@ export function projectAclError(error: unknown, context: {action: string; sysId?
     const partial = error as AclError & {aclSysId?: string; cause?: unknown; state?: string}
     const failure: MetadataFailure = {action: context.action, code: error.code, message: cleanMessage(error.message),
       messages: [], remediation: [ACL_REMEDIATION[error.code] ?? 'Check the command help.'], table: 'sys_security_acl', type: error.name,
-      writeAttempted: error.code === 'partially_applied'}
+      ...(READS.has(context.action) ? {} : {writeAttempted: error.code === 'partially_applied'})}
     if (error.detail) failure.detail = {field: error.detail}
     const sysId = partial.aclSysId ?? context.sysId
     if (typeof sysId === 'string' && /^[a-f\d]{32}$/i.test(sysId)) failure.sysId = sysId
@@ -83,6 +83,8 @@ export function projectAclError(error: unknown, context: {action: string; sysId?
       // The step that failed, as its own projection: its code and the platform's messages.
       const cause = projectAclError(partial.cause, context)
       failure.messages.push(`Failed step: ${cause.code}`, ...cause.messages)
+      // Why it failed matters as much as reading it back: keep an elevation failure's own advice.
+      if (isRoleElevationError(partial.cause)) failure.remediation.push(...cause.remediation)
       if (cause.capture) failure.capture = cause.capture
     }
 

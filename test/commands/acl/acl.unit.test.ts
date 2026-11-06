@@ -201,6 +201,8 @@ describe('nex acl failures', () => {
   it('projects an elevation failure that was the failed step of a partial change', () => {
     const failure = projectAclError(new AclPartialError(ACL, 'create', 'inactive', new RoleElevationError('not_applied', ['security_admin'])), {action: 'acl create'})
     expect(failure.messages).toContain('Failed step: not_applied')
+    expect(failure.remediation.join(' ')).toContain('strict_elevate_privilege')
+    expect(projectAclError(new AclError('acl_not_found'), {action: 'acl show'}).writeAttempted).toBeUndefined()
   })
 
   it('calls a refused read a read, with read advice', () => {
