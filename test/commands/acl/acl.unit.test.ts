@@ -131,6 +131,13 @@ describe('nex acl commands', () => {
     await expect(command(AclShow, {sys_id: ACL}, {}).target.run()).resolves.toMatchObject({script: 'answer = true;\nanswer = false;'})
   })
 
+  it('show says a script with advanced off still runs', async () => {
+    jest.spyOn(AclManager.prototype, 'get').mockResolvedValue({...record, advanced: false, script: 'answer = false;'})
+    const text = command(AclShow, {sys_id: ACL}, {}, false)
+    await text.target.run()
+    expect(text.lines).toContain('Script: 1 line(s) (advanced off: hidden on the form, still runs)')
+  })
+
   it('elevation shows what the user may elevate to and what is elevated', async () => {
     jest.spyOn(RoleElevation.prototype, 'status').mockResolvedValue({available: [{description: 'High Security', name: 'security_admin'}], elevated: ['security_admin']})
     const {lines, target} = command(Elevation, {}, {}, false)

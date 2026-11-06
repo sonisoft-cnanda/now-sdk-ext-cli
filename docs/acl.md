@@ -46,13 +46,13 @@ an In progress set of that application. The set does not have to be your current
 left as they are. A Store application also needs `--acknowledge-upgrade-skip` and `--update-set`, as with
 `nex metadata`.
 
-**An ACL on another application's table or field is outside the documented limits, and nex does not check it.** The
-docs ("Creation restrictions across application scopes") allow only role-based field ACLs on a table of another
-scope: no table-level ACL, no `.*`, no condition or script. What was seen on Australia, from a scoped application on
-Global tables: a table ACL on `cmn_location` saved; a field ACL on `sys_user.mobile_phone` was refused ("outside
-field"). `nex acl create` inserts an ACL before adding its roles, so that field ACL was not yet role-based when the
-platform judged it. Whatever saves today may be refused or behave differently on a later release, so put an ACL in its
-table's application unless the user accepts that risk.
+**An ACL on another application's table or field is outside the documented limits, and nex does not check it.**
+ServiceNow's documentation ("Creation restrictions across application scopes") allows only role-based field ACLs on a
+table of another scope: no table-level ACL, no `.*`, no condition or script. What was seen on Australia, from a scoped
+application on Global tables: a table ACL on `cmn_location` saved; a field ACL on `sys_user.mobile_phone` was refused
+("outside field"). `nex acl create` inserts an ACL before adding its roles, so the platform judged it without roles;
+whether a role-based one would save was not tested. Whatever saves today may be refused or behave differently on a later
+release, so put an ACL in its table's application unless you accept that risk.
 
 `nex metadata insert|update|delete` refuses the ACL tables, even with `--elevate`. Use `nex acl`, which applies the
 platform's rules below.
