@@ -4,7 +4,7 @@ import {flushLogs, isPolicyRefusal, type MetadataDeleteOptions, MetadataFormWrit
 import {readFile} from 'node:fs/promises'
 
 import {ID, MetadataDisplayService, MetadataInputError, NAME, projectMetadataError} from '../services/metadata-display.service.js'
-import {AuthenticatedCommand} from './authenticated-command.js'
+import {AuthenticatedCommand, isRoleElevationError} from './authenticated-command.js'
 
 export const scopeFlags = {
   'acknowledge-upgrade-skip': Flags.boolean({description: 'Required to change a file of an installed Store application. '
@@ -154,7 +154,8 @@ export abstract class MetadataBaseCommand<T extends typeof Command> extends Auth
 
   protected async catch(error: Error & {exitCode?: number}): Promise<void> {
     // Parse errors, missing flags and failAuth are raised in init(): oclif and failAuth already say what is wrong.
-    if (!this.executing) return super.catch(error)
+    // An elevation failure (--elevate, at login) keeps its own code and remediation.
+    if (!this.executing || isRoleElevationError(error)) return super.catch(error)
     const refused = isPolicyRefusal(error)
     // A refusal is a decision, not a crash: log it at warn, as every other command does.
     if (refused) this.authLogger?.warn('Refused by policy.', {message: error.message})

@@ -673,7 +673,7 @@ $ npm install -g @sonisoft/now-sdk-ext-cli
 $ nex COMMAND
 running command...
 $ nex (--version)
-@sonisoft/now-sdk-ext-cli/5.16.0 linux-x64 node-v26.8.1
+@sonisoft/now-sdk-ext-cli/5.16.1 linux-x64 node-v26.8.1
 $ nex --help [COMMAND]
 USAGE
   $ nex COMMAND
@@ -708,6 +708,13 @@ rather than silently denying nothing.
 
 # Commands
 <!-- commands -->
+* [`nex acl add-role ACL ROLE`](#nex-acl-add-role-acl-role)
+* [`nex acl create`](#nex-acl-create)
+* [`nex acl delete SYS_ID`](#nex-acl-delete-sys_id)
+* [`nex acl list`](#nex-acl-list)
+* [`nex acl remove-role ACL ROLE`](#nex-acl-remove-role-acl-role)
+* [`nex acl show SYS_ID`](#nex-acl-show-sys_id)
+* [`nex acl update SYS_ID`](#nex-acl-update-sys_id)
 * [`nex aggregate count`](#nex-aggregate-count)
 * [`nex aggregate group`](#nex-aggregate-group)
 * [`nex aggregate query`](#nex-aggregate-query)
@@ -733,6 +740,7 @@ rather than silently denying nothing.
 * [`nex behavior details`](#nex-behavior-details)
 * [`nex bulk delete`](#nex-bulk-delete)
 * [`nex bulk update`](#nex-bulk-update)
+* [`nex elevation`](#nex-elevation)
 * [`nex exec SCOPE [FILE]`](#nex-exec-scope-file)
 * [`nex flow action`](#nex-flow-action)
 * [`nex flow cancel`](#nex-flow-cancel)
@@ -846,14 +854,334 @@ rather than silently denying nothing.
 * [`nex xml export`](#nex-xml-export)
 * [`nex xml import`](#nex-xml-import)
 
+## `nex acl add-role ACL ROLE`
+
+Add a role to an access control, captured in an update set of the ACL's own application. Elevates to security_admin for the run. Any one of an ACL's roles passes it.
+
+```
+USAGE
+  $ nex acl add-role ACL ROLE [--json] [--acknowledge-upgrade-skip] [--scope <value> | --scope-id <value>]
+    [--update-set <value>]
+
+ARGUMENTS
+  ACL   The ACL's sys_id.
+  ROLE  Role name.
+
+FLAGS
+  --acknowledge-upgrade-skip  Required to change a file of an installed Store application. Upgrades of that application
+                              then skip the file until the customization is reviewed. Use only after review; requires
+                              --update-set.
+  --scope=<value>             Explicit application scope name, or literal global.
+  --scope-id=<value>          Explicit application scope sys_id.
+  --update-set=<value>        In progress update set in the requested scope. Required for a Store application.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  Add a role to an access control, captured in an update set of the ACL's own application. Elevates to security_admin
+  for the run. Any one of an ACL's roles passes it.
+
+EXAMPLES
+  Add itil
+
+    $ nex acl add-role 0123456789abcdef0123456789abcdef itil --scope x_acme_app --auth dev
+```
+
+_See code: [src/commands/acl/add-role.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/acl/add-role.ts)_
+
+## `nex acl create`
+
+Create an access control in an application and update set, with its roles. Elevates to security_admin for the run.
+
+```
+USAGE
+  $ nex acl create --operation <value> [--json] [--acknowledge-upgrade-skip] [--scope <value> | --scope-id
+    <value>] [--update-set <value>] [--admin-overrides] [--condition <value>] [--decision-type allow|deny]
+    [--description <value>] [--script <value> | --script-file <value>] [--field <value>] [--inactive] [--name <value>]
+    [--role <value>...] [--table <value>] [--type <value>]
+
+FLAGS
+  --acknowledge-upgrade-skip  Required to change a file of an installed Store application. Upgrades of that application
+                              then skip the file until the customization is reviewed. Use only after review; requires
+                              --update-set.
+  --[no-]admin-overrides      Whether admin passes regardless (the form's Admin overrides). Default on create: yes.
+  --condition=<value>         Encoded query condition on the record.
+  --decision-type=<option>    allow (default) or deny, on a release with deny ACLs.
+                              <options: allow|deny>
+  --description=<value>       Description. The platform may write its own on first save.
+  --field=<value>             Record ACLs: the field, or * for every field. Omit for the table.
+  --inactive                  Create it inactive.
+  --name=<value>              Non-record types: the resource name (UI page, REST endpoint, script include, …).
+  --operation=<value>         (required) Operation name: read, write, create, delete, execute, …
+  --role=<value>...           A role that passes the ACL. Repeatable: any one of them passes.
+  --scope=<value>             Explicit application scope name, or literal global.
+  --scope-id=<value>          Explicit application scope sys_id.
+  --script=<value>            Script that sets answer. Turns on advanced, which the script needs to run.
+  --script-file=<value>       Read the script from a file.
+  --table=<value>             Record ACLs: the table.
+  --type=<value>              [default: record] ACL type (sys_security_type name).
+  --update-set=<value>        In progress update set in the requested scope. Required for a Store application.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  Create an access control in an application and update set, with its roles. Elevates to security_admin for the run.
+
+  A record ACL is named from --table and optional --field ('*' for every field); other types take --name. With roles,
+  the ACL is inserted inactive, given the roles, cleared of the snc_internal role the platform adds to a role-less ACL,
+  checked, and only then activated. Every write is verified by reading back the record and its capture.
+
+EXAMPLES
+  A field read ACL for one role
+
+    $ nex acl create --scope x_acme_app --update-set <set> --operation read --table x_acme_app_request --field cost \
+      --role x_acme_app.manager --auth dev
+
+  A UI page ACL
+
+    $ nex acl create --scope x_acme_app --operation read --type ui_page --name x_acme_app_dashboard --role itil \
+      --auth dev
+```
+
+_See code: [src/commands/acl/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/acl/create.ts)_
+
+## `nex acl delete SYS_ID`
+
+Delete an access control, captured in an update set. Elevates to security_admin for the run.
+
+```
+USAGE
+  $ nex acl delete SYS_ID --confirm <value> [--json] [--acknowledge-upgrade-skip] [--scope <value> | --scope-id
+    <value>] [--update-set <value>]
+
+ARGUMENTS
+  SYS_ID  The ACL's sys_id.
+
+FLAGS
+  --acknowledge-upgrade-skip  Required to change a file of an installed Store application. Upgrades of that application
+                              then skip the file until the customization is reviewed. Use only after review; requires
+                              --update-set.
+  --confirm=<value>           (required) Repeat the ACL's sys_id exactly.
+  --scope=<value>             Explicit application scope name, or literal global.
+  --scope-id=<value>          Explicit application scope sys_id.
+  --update-set=<value>        In progress update set in the requested scope. Required for a Store application.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  Delete an access control, captured in an update set. Elevates to security_admin for the run.
+
+  The platform deletes its role rows with it. It offers Delete on an active record ACL only once inactive, so one is
+  deactivated first (a separate captured update); if anything fails after that, the ACL is reactivated.
+
+EXAMPLES
+  Delete, confirming the sys_id
+
+    $ nex acl delete 0123456789abcdef0123456789abcdef --confirm 0123456789abcdef0123456789abcdef --scope x_acme_app \
+      --auth dev
+```
+
+_See code: [src/commands/acl/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/acl/delete.ts)_
+
+## `nex acl list`
+
+List access controls (sys_security_acl) with their roles. Needs at least one of --table, --name, --scope or --scope-id. Reading needs no elevation; a security_admin role row shows its sys_id until the session is elevated.
+
+```
+USAGE
+  $ nex acl list [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--active] [--name <value>]
+    [--operation <value>] [--scope <value> | --scope-id <value>] [--table <value>] [--type <value>]
+
+FLAGS
+  -a, --auth=<value>       Auth alias to use.
+      --[no-]active        Only active (--active) or inactive (--no-active) ACLs.
+      --name=<value>       Exact ACL name, e.g. incident.short_description or a UI page name.
+      --operation=<value>  Operation name: read, write, create, delete, execute, …
+      --scope=<value>      Only this application's ACLs: its scope name, or global.
+      --scope-id=<value>   Only this application's ACLs, by sys_scope sys_id.
+      --table=<value>      ACLs of this table: the table, table.* and table.<field>.
+      --type=<value>       ACL type: record, ui_page, rest_endpoint, client_callable_script_include, …
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  List access controls (sys_security_acl) with their roles. Needs at least one of --table, --name, --scope or
+  --scope-id. Reading needs no elevation; a security_admin role row shows its sys_id until the session is elevated.
+
+EXAMPLES
+  ACLs of a table and its fields
+
+    $ nex acl list --table incident --auth dev
+
+  An application's write ACLs, as JSON
+
+    $ nex acl list --scope x_acme_app --operation write --json --auth dev
+```
+
+_See code: [src/commands/acl/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/acl/list.ts)_
+
+## `nex acl remove-role ACL ROLE`
+
+Remove a role from an access control, captured in an update set of the ACL's own application. Elevates to security_admin for the run.
+
+```
+USAGE
+  $ nex acl remove-role ACL ROLE [--json] [--acknowledge-upgrade-skip] [--scope <value> | --scope-id <value>]
+    [--update-set <value>]
+
+ARGUMENTS
+  ACL   The ACL's sys_id.
+  ROLE  Role name.
+
+FLAGS
+  --acknowledge-upgrade-skip  Required to change a file of an installed Store application. Upgrades of that application
+                              then skip the file until the customization is reviewed. Use only after review; requires
+                              --update-set.
+  --scope=<value>             Explicit application scope name, or literal global.
+  --scope-id=<value>          Explicit application scope sys_id.
+  --update-set=<value>        In progress update set in the requested scope. Required for a Store application.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  Remove a role from an access control, captured in an update set of the ACL's own application. Elevates to
+  security_admin for the run.
+
+  Removing the last role makes the platform add snc_internal back (every internal user then passes); the result warns.
+  Add the role the ACL should have first.
+
+EXAMPLES
+  Remove snc_internal
+
+    $ nex acl remove-role 0123456789abcdef0123456789abcdef snc_internal --scope x_acme_app --auth dev
+```
+
+_See code: [src/commands/acl/remove-role.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/acl/remove-role.ts)_
+
+## `nex acl show SYS_ID`
+
+Show one access control with its roles. --json includes its script.
+
+```
+USAGE
+  $ nex acl show SYS_ID [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+
+ARGUMENTS
+  SYS_ID  The ACL's sys_id.
+
+FLAGS
+  -a, --auth=<value>  Auth alias to use.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Show one access control with its roles. --json includes its script.
+
+EXAMPLES
+  One ACL
+
+    $ nex acl show 0123456789abcdef0123456789abcdef --auth dev
+```
+
+_See code: [src/commands/acl/show.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/acl/show.ts)_
+
+## `nex acl update SYS_ID`
+
+Change an access control's fields in its application and an update set. Elevates to security_admin for the run. Roles change with nex acl add-role and remove-role.
+
+```
+USAGE
+  $ nex acl update SYS_ID [--json] [--acknowledge-upgrade-skip] [--scope <value> | --scope-id <value>]
+    [--update-set <value>] [--admin-overrides] [--condition <value>] [--decision-type allow|deny] [--description
+    <value>] [--script <value> | --script-file <value>] [--active] [--operation <value>]
+
+ARGUMENTS
+  SYS_ID  The ACL's sys_id.
+
+FLAGS
+  --acknowledge-upgrade-skip  Required to change a file of an installed Store application. Upgrades of that application
+                              then skip the file until the customization is reviewed. Use only after review; requires
+                              --update-set.
+  --[no-]active               Activate (--active) or deactivate (--no-active).
+  --[no-]admin-overrides      Whether admin passes regardless (the form's Admin overrides). Default on create: yes.
+  --condition=<value>         Encoded query condition on the record.
+  --decision-type=<option>    allow (default) or deny, on a release with deny ACLs.
+                              <options: allow|deny>
+  --description=<value>       Description. The platform may write its own on first save.
+  --operation=<value>         Operation name: read, write, create, delete, execute, …
+  --scope=<value>             Explicit application scope name, or literal global.
+  --scope-id=<value>          Explicit application scope sys_id.
+  --script=<value>            Script that sets answer. Turns on advanced, which the script needs to run.
+  --script-file=<value>       Read the script from a file.
+  --update-set=<value>        In progress update set in the requested scope. Required for a Store application.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  Change an access control's fields in its application and an update set. Elevates to security_admin for the run. Roles
+  change with nex acl add-role and remove-role.
+
+EXAMPLES
+  Add a condition
+
+    $ nex acl update 0123456789abcdef0123456789abcdef --scope x_acme_app --condition active=true --auth dev
+
+  Deactivate
+
+    $ nex acl update 0123456789abcdef0123456789abcdef --scope x_acme_app --no-active --auth dev
+```
+
+_See code: [src/commands/acl/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/acl/update.ts)_
+
 ## `nex aggregate count`
 
 Count records in a ServiceNow table.
 
 ```
 USAGE
-  $ nex aggregate count -t <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-q <value>]
+  $ nex aggregate count -t <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-q <value>]
 
 FLAGS
   -a, --auth=<value>   Auth alias to use.
@@ -867,6 +1195,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -900,7 +1231,7 @@ EXAMPLES
     $ nex aggregate count --table incident --query "active=true" --json --auth dev
 ```
 
-_See code: [src/commands/aggregate/count.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/aggregate/count.ts)_
+_See code: [src/commands/aggregate/count.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/aggregate/count.ts)_
 
 ## `nex aggregate group`
 
@@ -909,8 +1240,8 @@ Run a grouped aggregate query on a ServiceNow table.
 ```
 USAGE
   $ nex aggregate group -t <value> -g <value>... [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
-    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-q <value>] [-c] [--avg
-    <value>...] [--min <value>...] [--max <value>...] [--sum <value>...] [--having <value>] [-d]
+    [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-q
+    <value>] [-c] [--avg <value>...] [--min <value>...] [--max <value>...] [--sum <value>...] [--having <value>] [-d]
 
 FLAGS
   -a, --auth=<value>         Auth alias to use.
@@ -932,6 +1263,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -969,7 +1303,7 @@ EXAMPLES
     $ nex aggregate group --table incident --group-by priority --count --having "count>10" --auth dev
 ```
 
-_See code: [src/commands/aggregate/group.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/aggregate/group.ts)_
+_See code: [src/commands/aggregate/group.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/aggregate/group.ts)_
 
 ## `nex aggregate query`
 
@@ -977,9 +1311,9 @@ Run aggregate statistics on a ServiceNow table.
 
 ```
 USAGE
-  $ nex aggregate query -t <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-q <value>] [-c] [--avg <value>...]
-    [--min <value>...] [--max <value>...] [--sum <value>...]
+  $ nex aggregate query -t <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-q <value>]
+    [-c] [--avg <value>...] [--min <value>...] [--max <value>...] [--sum <value>...]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
@@ -998,6 +1332,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -1033,7 +1370,7 @@ EXAMPLES
     $ nex aggregate query --table incident --sum reassignment_count --json --auth dev
 ```
 
-_See code: [src/commands/aggregate/query.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/aggregate/query.ts)_
+_See code: [src/commands/aggregate/query.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/aggregate/query.ts)_
 
 ## `nex app`
 
@@ -1041,8 +1378,9 @@ Manage ServiceNow applications: uninstall applications from your instance.
 
 ```
 USAGE
-  $ nex app [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
-    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-u] [-i <value>] [-s <value>]
+  $ nex app [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-u] [-i <value>] [-s
+    <value>]
 
 FLAGS
   -a, --auth=<value>           Auth alias to use.
@@ -1056,6 +1394,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -1097,7 +1438,7 @@ EXAMPLES
     $ nex app -u -i a1b2c3d4e5f6 -s x_my_custom_app -a dev-instance
 ```
 
-_See code: [src/commands/app/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/app/index.ts)_
+_See code: [src/commands/app/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/app/index.ts)_
 
 ## `nex app install`
 
@@ -1105,8 +1446,8 @@ Install or upgrade multiple ServiceNow applications from a batch definition file
 
 ```
 USAGE
-  $ nex app install [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
-    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-b] [-d <value>]
+  $ nex app install [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-b] [-d <value>]
 
 FLAGS
   -a, --auth=<value>            Auth alias to use.
@@ -1119,6 +1460,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -1166,7 +1510,7 @@ EXAMPLES
     $ nex app install -b -d ./apps.json -a dev-instance --log-level debug
 ```
 
-_See code: [src/commands/app/install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/app/install.ts)_
+_See code: [src/commands/app/install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/app/install.ts)_
 
 ## `nex app repo-install`
 
@@ -1174,9 +1518,9 @@ Install an application from your ServiceNow company repository.
 
 ```
 USAGE
-  $ nex app repo-install -s <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-w] [--poll-interval <value>] [-t
-    <value>] [-v <value>]
+  $ nex app repo-install -s <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-w]
+    [--poll-interval <value>] [-t <value>] [-v <value>]
 
 FLAGS
   -a, --auth=<value>           Auth alias to use.
@@ -1192,6 +1536,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -1252,7 +1599,7 @@ EXAMPLES
     $ nex app repo-install -s x_my_app -a dev-instance --log-level debug
 ```
 
-_See code: [src/commands/app/repo-install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/app/repo-install.ts)_
+_See code: [src/commands/app/repo-install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/app/repo-install.ts)_
 
 ## `nex app repo-list`
 
@@ -1260,8 +1607,8 @@ List applications available in your ServiceNow company repository.
 
 ```
 USAGE
-  $ nex app repo-list [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
-    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-n] [-i]
+  $ nex app repo-list [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-n] [-i]
 
 FLAGS
   -a, --auth=<value>  Auth alias to use.
@@ -1275,6 +1622,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -1328,7 +1678,7 @@ EXAMPLES
     $ nex app repo-list -a dev-instance
 ```
 
-_See code: [src/commands/app/repo-list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/app/repo-list.ts)_
+_See code: [src/commands/app/repo-list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/app/repo-list.ts)_
 
 ## `nex app uninstall`
 
@@ -1337,7 +1687,7 @@ Uninstall a ServiceNow application from your instance.
 ```
 USAGE
   $ nex app uninstall -i <value> -s <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
-    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
 
 FLAGS
   -a, --auth=<value>           Auth alias to use.
@@ -1350,6 +1700,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -1391,7 +1744,7 @@ EXAMPLES
     $ nex app uninstall -i a1b2c3d4e5f6 -s x_my_custom_app -a dev-instance
 ```
 
-_See code: [src/commands/app/uninstall.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/app/uninstall.ts)_
+_See code: [src/commands/app/uninstall.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/app/uninstall.ts)_
 
 ## `nex atf`
 
@@ -1399,10 +1752,10 @@ Execute ATF (Automated Test Framework) tests or test suites on a ServiceNow inst
 
 ```
 USAGE
-  $ nex atf [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
-    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-t <value> | -s <value> | -n <value>] [-w] [-p
-    <value>] [-b <value>] [--browser-version <value>] [--os-name <value>] [--os-version <value>] [--performance]
-    [--cloud]
+  $ nex atf [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-t <value> | -s <value> |
+    -n <value>] [-w] [-p <value>] [-b <value>] [--browser-version <value>] [--os-name <value>] [--os-version <value>]
+    [--performance] [--cloud]
 
 FLAGS
   -a, --auth=<value>             Auth alias to use.
@@ -1425,6 +1778,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -1475,7 +1831,7 @@ EXAMPLES
     $ nex atf --suite-id e077e00b83103210621e78c6feaad383 --poll-interval 10000 --auth dev-instance
 ```
 
-_See code: [src/commands/atf/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/atf/index.ts)_
+_See code: [src/commands/atf/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/atf/index.ts)_
 
 ## `nex attachment get`
 
@@ -1483,8 +1839,8 @@ Get metadata for a specific attachment.
 
 ```
 USAGE
-  $ nex attachment get -s <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+  $ nex attachment get -s <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
@@ -1496,6 +1852,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -1519,7 +1878,7 @@ EXAMPLES
     $ nex attachment get -s att123 --json --auth dev
 ```
 
-_See code: [src/commands/attachment/get.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/attachment/get.ts)_
+_See code: [src/commands/attachment/get.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/attachment/get.ts)_
 
 ## `nex attachment list`
 
@@ -1528,7 +1887,8 @@ List attachments on a ServiceNow record.
 ```
 USAGE
   $ nex attachment list -r <value> -t <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
-    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--limit <value>]
+    [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--limit <value>]
 
 FLAGS
   -a, --auth=<value>       Auth alias to use.
@@ -1542,6 +1902,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -1565,7 +1928,7 @@ EXAMPLES
     $ nex attachment list -t incident -r abc123 --limit 50 --json --auth dev
 ```
 
-_See code: [src/commands/attachment/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/attachment/list.ts)_
+_See code: [src/commands/attachment/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/attachment/list.ts)_
 
 ## `nex attachment upload`
 
@@ -1574,8 +1937,8 @@ Upload a file as an attachment to a ServiceNow record.
 ```
 USAGE
   $ nex attachment upload -f <value> -r <value> -t <value> [--json] [-a <value>] [--cred-store] [--deny-execute]
-    [--deny-write] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
-    [--content-type <value>]
+    [--deny-write] [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace]
+    [--read-only] [--content-type <value>]
 
 FLAGS
   -a, --auth=<value>          Auth alias to use.
@@ -1590,6 +1953,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -1613,7 +1979,7 @@ EXAMPLES
     $ nex attachment upload -t incident -r abc123 -f ./data.csv --content-type text/csv --auth dev
 ```
 
-_See code: [src/commands/attachment/upload.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/attachment/upload.ts)_
+_See code: [src/commands/attachment/upload.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/attachment/upload.ts)_
 
 ## `nex auth browser-session`
 
@@ -1636,7 +2002,7 @@ DESCRIPTION
   Create a verified Playwright cookie session using a stored SDK alias.
 ```
 
-_See code: [src/commands/auth/browser-session.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/auth/browser-session.ts)_
+_See code: [src/commands/auth/browser-session.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/auth/browser-session.ts)_
 
 ## `nex auth delete [ALIAS]`
 
@@ -1671,7 +2037,7 @@ EXAMPLES
     $ nex auth delete --all
 ```
 
-_See code: [src/commands/auth/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/auth/delete.ts)_
+_See code: [src/commands/auth/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/auth/delete.ts)_
 
 ## `nex auth doctor`
 
@@ -1699,7 +2065,7 @@ EXAMPLES
     $ nex auth doctor --json
 ```
 
-_See code: [src/commands/auth/doctor.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/auth/doctor.ts)_
+_See code: [src/commands/auth/doctor.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/auth/doctor.ts)_
 
 ## `nex auth list`
 
@@ -1732,7 +2098,7 @@ EXAMPLES
     $ nex auth list --json
 ```
 
-_See code: [src/commands/auth/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/auth/list.ts)_
+_See code: [src/commands/auth/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/auth/list.ts)_
 
 ## `nex auth open`
 
@@ -1772,7 +2138,7 @@ EXAMPLES
     $ nex auth open -a dev206299 --cdp http://127.0.0.1:9222
 ```
 
-_See code: [src/commands/auth/open.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/auth/open.ts)_
+_See code: [src/commands/auth/open.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/auth/open.ts)_
 
 ## `nex auth use ALIAS`
 
@@ -1800,7 +2166,7 @@ EXAMPLES
     $ nex auth use dev206299
 ```
 
-_See code: [src/commands/auth/use.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/auth/use.ts)_
+_See code: [src/commands/auth/use.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/auth/use.ts)_
 
 ## `nex autocomplete [SHELL]`
 
@@ -1839,8 +2205,8 @@ Batch create records on a ServiceNow instance from a JSON file.
 
 ```
 USAGE
-  $ nex batch create -f <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--transaction]
+  $ nex batch create -f <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--transaction]
 
 FLAGS
   -a, --auth=<value>  Auth alias to use.
@@ -1853,6 +2219,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -1876,7 +2245,7 @@ EXAMPLES
     $ nex batch create --file ./records.json --no-transaction --auth dev
 ```
 
-_See code: [src/commands/batch/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/batch/create.ts)_
+_See code: [src/commands/batch/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/batch/create.ts)_
 
 ## `nex batch update`
 
@@ -1884,8 +2253,9 @@ Batch update records on a ServiceNow instance from a JSON file.
 
 ```
 USAGE
-  $ nex batch update -f <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--stop-on-error]
+  $ nex batch update -f <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--stop-on-error]
 
 FLAGS
   -a, --auth=<value>   Auth alias to use.
@@ -1898,6 +2268,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -1921,7 +2294,7 @@ EXAMPLES
     $ nex batch update --file ./updates.json --stop-on-error --auth dev
 ```
 
-_See code: [src/commands/batch/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/batch/update.ts)_
+_See code: [src/commands/batch/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/batch/update.ts)_
 
 ## `nex behavior`
 
@@ -1929,11 +2302,12 @@ Discover table behavior: rules, UI actions/scripts, UI/data policies, workflows,
 
 ```
 USAGE
-  $ nex behavior -t <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--dependency-depth <value>]
-    [--details scripts|definitions|dependencies...] [--max-bytes <value>] [--scope <value>] [--category
-    business_rules|ui_actions|client_scripts|ui_policies|data_policies|workflows|flows|state_models...] [--cursor
-    <value>] [--include-inactive] [--include-inherited] [--limit <value>] [--name <value>] [--sys-id <value>...]
+  $ nex behavior -t <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--dependency-depth <value>] [--details scripts|definitions|dependencies...] [--max-bytes <value>] [--scope <value>]
+    [--category business_rules|ui_actions|client_scripts|ui_policies|data_policies|workflows|flows|state_models...]
+    [--cursor <value>] [--include-inactive] [--include-inherited] [--limit <value>] [--name <value>] [--sys-id
+    <value>...]
 
 FLAGS
   -a, --auth=<value>              Auth alias to use.
@@ -1960,6 +2334,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -1980,7 +2357,7 @@ EXAMPLES
   $ nex behavior --table change_request --category business_rules --details scripts --auth dev --json
 ```
 
-_See code: [src/commands/behavior/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/behavior/index.ts)_
+_See code: [src/commands/behavior/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/behavior/index.ts)_
 
 ## `nex behavior details`
 
@@ -1989,8 +2366,8 @@ Retrieve known behavior artifacts without rediscovery. Repeat --reference kind:s
 ```
 USAGE
   $ nex behavior details --reference <value>... [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
-    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--dependency-depth
-    <value>] [--details scripts|definitions|dependencies...] [--max-bytes <value>] [--scope <value>]
+    [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--dependency-depth <value>] [--details scripts|definitions|dependencies...] [--max-bytes <value>] [--scope <value>]
 
 FLAGS
   -a, --auth=<value>              Auth alias to use.
@@ -2008,6 +2385,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -2026,7 +2406,7 @@ EXAMPLES
   $ nex behavior details --reference business_rules:sys_script:0123456789abcdef0123456789abcdef --details scripts --auth dev --json
 ```
 
-_See code: [src/commands/behavior/details.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/behavior/details.ts)_
+_See code: [src/commands/behavior/details.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/behavior/details.ts)_
 
 ## `nex bulk delete`
 
@@ -2035,7 +2415,8 @@ Bulk delete records matching an encoded query.
 ```
 USAGE
   $ nex bulk delete -t <value> -q <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
-    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--confirm] [-l <value>]
+    [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--confirm] [-l <value>]
 
 FLAGS
   -a, --auth=<value>   Auth alias to use.
@@ -2051,6 +2432,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -2091,7 +2475,7 @@ EXAMPLES
     $ nex bulk delete --table u_staging --query "processed=true" --confirm --json --auth dev
 ```
 
-_See code: [src/commands/bulk/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/bulk/delete.ts)_
+_See code: [src/commands/bulk/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/bulk/delete.ts)_
 
 ## `nex bulk update`
 
@@ -2100,8 +2484,8 @@ Bulk update records matching an encoded query.
 ```
 USAGE
   $ nex bulk update -t <value> -q <value> -d <value> [-j] [-a <value>] [--cred-store] [--deny-execute]
-    [--deny-write] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--confirm]
-    [-l <value>]
+    [--deny-write] [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace]
+    [--read-only] [--confirm] [-l <value>]
 
 FLAGS
   -a, --auth=<value>   Auth alias to use.
@@ -2118,6 +2502,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -2161,7 +2548,57 @@ EXAMPLES
     $ nex bulk update --table incident --query "active=true" --data '{"state":"6"}' --confirm --json --auth dev
 ```
 
-_See code: [src/commands/bulk/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/bulk/update.ts)_
+_See code: [src/commands/bulk/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/bulk/update.ts)_
+
+## `nex elevation`
+
+Show the elevated privilege roles (e.g. security_admin) this user may elevate to, and which this run's session has.
+
+```
+USAGE
+  $ nex elevation [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+
+FLAGS
+  -a, --auth=<value>  Auth alias to use.
+
+GLOBAL FLAGS
+  --cred-store          Read credentials from @sonisoft/sn-credstore instead of the OS keyring. Use this in headless
+                        sessions (SSH, systemd, CI, agents) where the keyring cannot be unlocked.
+  --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
+                        flow runs and ATF runs for this invocation.
+  --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
+  --json                Format output as json.
+  --log-dir=<value>     Directory to write log files to. Implies --log-file.
+  --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
+                        (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
+                        stderr only.
+  --log-level=<option>  [default: info] Specify level for logging.
+                        <options: debug|warn|error|info|trace>
+  --read-only           Refuse every change to the instance — equivalent to --deny-write --deny-execute. Reads are
+                        unaffected.
+
+DESCRIPTION
+  Show the elevated privilege roles (e.g. security_admin) this user may elevate to, and which this run's session has.
+
+  Elevation lasts only for the server session that asked for it, and every nex run logs in afresh, so a run starts
+  unelevated. Pass --elevate <role> to any command to elevate its sessions for that run; with it, this command proves
+  the elevation took. The nex acl commands that change ACLs elevate to security_admin on their own.
+
+EXAMPLES
+  What this user may elevate to
+
+    $ nex elevation --auth dev
+
+  Elevate and show that it holds
+
+    $ nex elevation --elevate security_admin --auth dev
+```
+
+_See code: [src/commands/elevation/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/elevation/index.ts)_
 
 ## `nex exec SCOPE [FILE]`
 
@@ -2169,8 +2606,8 @@ Execute JavaScript on a ServiceNow instance remotely using Scripts - Background.
 
 ```
 USAGE
-  $ nex exec SCOPE [FILE] [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-p <value>]
+  $ nex exec SCOPE [FILE] [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-p <value>]
 
 ARGUMENTS
   SCOPE   Scope to execute script in: "global", the scope of an application developed on the instance (sys_app), or a
@@ -2187,6 +2624,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2298,7 +2738,7 @@ EXAMPLES
     $ nex exec global ./script.js --auth dev-instance --params '{"token":"abc123","env":"dev"}'
 ```
 
-_See code: [src/commands/exec/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/exec/index.ts)_
+_See code: [src/commands/exec/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/exec/index.ts)_
 
 ## `nex flow action`
 
@@ -2306,9 +2746,9 @@ Execute a Flow Designer action by scoped name.
 
 ```
 USAGE
-  $ nex flow action -n <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-i <value>] [-m
-    foreground|background] [--scope <value>] [--quick]
+  $ nex flow action -n <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-i <value>]
+    [-m foreground|background] [--scope <value>] [--quick]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
@@ -2326,6 +2766,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -2353,7 +2796,7 @@ EXAMPLES
       '{"table":"incident","values":{"short_description":"Test"}}' --auth dev
 ```
 
-_See code: [src/commands/flow/action.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/action.ts)_
+_See code: [src/commands/flow/action.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/action.ts)_
 
 ## `nex flow cancel`
 
@@ -2361,8 +2804,9 @@ Cancel a running or paused flow execution.
 
 ```
 USAGE
-  $ nex flow cancel -c <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-r <value>] [--scope <value>]
+  $ nex flow cancel -c <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-r <value>]
+    [--scope <value>]
 
 FLAGS
   -a, --auth=<value>        Auth alias to use.
@@ -2377,6 +2821,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -2401,7 +2848,7 @@ EXAMPLES
     $ nex flow cancel --context-id abc123def456 --reason "No longer needed" --auth dev
 ```
 
-_See code: [src/commands/flow/cancel.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/cancel.ts)_
+_See code: [src/commands/flow/cancel.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/cancel.ts)_
 
 ## `nex flow copy`
 
@@ -2410,7 +2857,8 @@ Copy an existing flow into a target scoped application.
 ```
 USAGE
   $ nex flow copy -s <value> -n <value> -t <value> [-j] [-a <value>] [--cred-store] [--deny-execute]
-    [--deny-write] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--deny-write] [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace]
+    [--read-only]
 
 FLAGS
   -a, --auth=<value>            Auth alias to use.
@@ -2426,6 +2874,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -2467,7 +2918,7 @@ EXAMPLES
       dev
 ```
 
-_See code: [src/commands/flow/copy.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/copy.ts)_
+_See code: [src/commands/flow/copy.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/copy.ts)_
 
 ## `nex flow debug`
 
@@ -2475,9 +2926,9 @@ Debug a flow or subflow interactively, step by step, as Workflow Studio's Test >
 
 ```
 USAGE
-  $ nex flow debug [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>] [--log-file]
-    [--log-level debug|warn|error|info|trace] [--read-only] [-b <value>] [-c <value> | -f <value> | -i <value> | --input
-    <value>...] [--timeout <value>]
+  $ nex flow debug [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...] [--log-dir
+    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-b <value>] [-c <value> | -f <value>
+    | -i <value> | --input <value>...] [--timeout <value>]
 
 FLAGS
   -a, --auth=<value>      Auth alias to use.
@@ -2496,6 +2947,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -2522,7 +2976,7 @@ EXAMPLES
   $ nex flow debug --context 0123456789abcdef0123456789abcdef --auth dev
 ```
 
-_See code: [src/commands/flow/debug/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/debug/index.ts)_
+_See code: [src/commands/flow/debug/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/debug/index.ts)_
 
 ## `nex flow debug break`
 
@@ -2530,9 +2984,9 @@ Set, add, remove, clear or list a debug run's breakpoints, by step number.
 
 ```
 USAGE
-  $ nex flow debug break -c <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--add <value> | -s <value> | --remove
-    <value> | --clear]
+  $ nex flow debug break -c <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--add <value>
+    | -s <value> | --remove <value> | --clear]
 
 FLAGS
   -a, --auth=<value>     Auth alias to use.
@@ -2548,6 +3002,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2573,7 +3030,7 @@ EXAMPLES
   $ nex flow debug break -c 0123456789abcdef0123456789abcdef --clear --auth dev
 ```
 
-_See code: [src/commands/flow/debug/break.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/debug/break.ts)_
+_See code: [src/commands/flow/debug/break.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/debug/break.ts)_
 
 ## `nex flow debug cancel`
 
@@ -2581,8 +3038,8 @@ End a debug run, and any subflow it stepped into, then read it back. Safe to rep
 
 ```
 USAGE
-  $ nex flow debug cancel -c <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+  $ nex flow debug cancel -c <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
 
 FLAGS
   -a, --auth=<value>     Auth alias to use.
@@ -2594,6 +3051,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2614,7 +3074,7 @@ EXAMPLES
   $ nex flow debug cancel --context 0123456789abcdef0123456789abcdef --auth dev
 ```
 
-_See code: [src/commands/flow/debug/cancel.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/debug/cancel.ts)_
+_See code: [src/commands/flow/debug/cancel.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/debug/cancel.ts)_
 
 ## `nex flow debug inspect`
 
@@ -2622,8 +3082,9 @@ Show a debug run without moving it: where it is, and each step's runtime inputs 
 
 ```
 USAGE
-  $ nex flow debug inspect -c <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--full] [--step <value>]
+  $ nex flow debug inspect -c <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--full]
+    [--step <value>]
 
 FLAGS
   -a, --auth=<value>     Auth alias to use.
@@ -2637,6 +3098,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2659,7 +3123,7 @@ EXAMPLES
   $ nex flow debug inspect -c 0123456789abcdef0123456789abcdef --step 1 --full --auth dev
 ```
 
-_See code: [src/commands/flow/debug/inspect.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/debug/inspect.ts)_
+_See code: [src/commands/flow/debug/inspect.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/debug/inspect.ts)_
 
 ## `nex flow debug list`
 
@@ -2667,8 +3131,9 @@ List debug runs that are still open on the instance (paused, waiting or running)
 
 ```
 USAGE
-  $ nex flow debug list [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
-    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--created-by <value>] [--limit <value>]
+  $ nex flow debug list [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--created-by <value>]
+    [--limit <value>]
 
 FLAGS
   -a, --auth=<value>        Auth alias to use.
@@ -2681,6 +3146,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2703,7 +3171,7 @@ EXAMPLES
   $ nex flow debug list --created-by admin --json --auth dev
 ```
 
-_See code: [src/commands/flow/debug/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/debug/list.ts)_
+_See code: [src/commands/flow/debug/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/debug/list.ts)_
 
 ## `nex flow debug resume`
 
@@ -2711,8 +3179,9 @@ Resume a paused debug run: run to the next breakpoint, or to the end.
 
 ```
 USAGE
-  $ nex flow debug resume -c <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--full] [--timeout <value>]
+  $ nex flow debug resume -c <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--full]
+    [--timeout <value>]
 
 FLAGS
   -a, --auth=<value>     Auth alias to use.
@@ -2726,6 +3195,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2743,7 +3215,7 @@ EXAMPLES
   $ nex flow debug resume --context 0123456789abcdef0123456789abcdef --auth dev
 ```
 
-_See code: [src/commands/flow/debug/resume.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/debug/resume.ts)_
+_See code: [src/commands/flow/debug/resume.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/debug/resume.ts)_
 
 ## `nex flow debug run`
 
@@ -2751,9 +3223,9 @@ Debug a flow or subflow to a breakpoint in one call, report every step's data th
 
 ```
 USAGE
-  $ nex flow debug run -f <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-b <value>] [--input <value>...] [-i
-    <value>] [--after cancel|resume|stay] [--full] [--timeout <value>]
+  $ nex flow debug run -f <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-b <value>]
+    [--input <value>...] [-i <value>] [--after cancel|resume|stay] [--full] [--timeout <value>]
 
 FLAGS
   -a, --auth=<value>      Auth alias to use.
@@ -2774,6 +3246,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2801,7 +3276,7 @@ EXAMPLES
   $ nex flow debug run -f 0123456789abcdef0123456789abcdef -i @inputs.json -b 2 --after resume --auth dev
 ```
 
-_See code: [src/commands/flow/debug/run.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/debug/run.ts)_
+_See code: [src/commands/flow/debug/run.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/debug/run.ts)_
 
 ## `nex flow debug skip-all`
 
@@ -2809,8 +3284,9 @@ Run a paused debug run to the end, ignoring its breakpoints (Workflow Studio's "
 
 ```
 USAGE
-  $ nex flow debug skip-all -c <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--timeout <value>]
+  $ nex flow debug skip-all -c <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--timeout
+    <value>]
 
 FLAGS
   -a, --auth=<value>     Auth alias to use.
@@ -2823,6 +3299,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2840,7 +3319,7 @@ EXAMPLES
   $ nex flow debug skip-all --context 0123456789abcdef0123456789abcdef --auth dev
 ```
 
-_See code: [src/commands/flow/debug/skip-all.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/debug/skip-all.ts)_
+_See code: [src/commands/flow/debug/skip-all.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/debug/skip-all.ts)_
 
 ## `nex flow debug start`
 
@@ -2848,9 +3327,9 @@ Start a Workflow Studio debug run (Test > Debug) of a flow or subflow, and leave
 
 ```
 USAGE
-  $ nex flow debug start -f <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-b <value>] [--input <value>...] [-i
-    <value>] [--timeout <value>]
+  $ nex flow debug start -f <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-b <value>]
+    [--input <value>...] [-i <value>] [--timeout <value>]
 
 FLAGS
   -a, --auth=<value>      Auth alias to use.
@@ -2867,6 +3346,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2895,7 +3377,7 @@ EXAMPLES
   $ nex flow debug start -f 0123456789abcdef0123456789abcdef -i @inputs.json --json --auth dev
 ```
 
-_See code: [src/commands/flow/debug/start.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/debug/start.ts)_
+_See code: [src/commands/flow/debug/start.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/debug/start.ts)_
 
 ## `nex flow debug step`
 
@@ -2903,9 +3385,9 @@ Run the paused step of a debug run and stop at the next one, then show where it 
 
 ```
 USAGE
-  $ nex flow debug step -c <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--full] [--into | --out] [--timeout
-    <value>]
+  $ nex flow debug step -c <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--full]
+    [--into | --out] [--timeout <value>]
 
 FLAGS
   -a, --auth=<value>     Auth alias to use.
@@ -2921,6 +3403,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -2944,7 +3429,7 @@ EXAMPLES
   $ nex flow debug step -c 0123456789abcdef0123456789abcdef --into --json --auth dev
 ```
 
-_See code: [src/commands/flow/debug/step.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/debug/step.ts)_
+_See code: [src/commands/flow/debug/step.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/debug/step.ts)_
 
 ## `nex flow definition`
 
@@ -2952,9 +3437,9 @@ Retrieve the read-only design-time definition of a flow, subflow, or action.
 
 ```
 USAGE
-  $ nex flow definition -i <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-t flow|subflow|action] [--scope
-    <value>]
+  $ nex flow definition -i <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-t
+    flow|subflow|action] [--scope <value>]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
@@ -2971,6 +3456,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -3018,7 +3506,7 @@ EXAMPLES
     $ nex flow definition -i 887dda5583237210fdb8f7b6feaad32c --type action --json --auth dev | jq .summary.steps
 ```
 
-_See code: [src/commands/flow/definition.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/definition.ts)_
+_See code: [src/commands/flow/definition.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/definition.ts)_
 
 ## `nex flow details`
 
@@ -3026,8 +3514,9 @@ Get rich execution details for a flow context.
 
 ```
 USAGE
-  $ nex flow details -c <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--scope <value>] [-d]
+  $ nex flow details -c <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--scope
+    <value>] [-d]
 
 FLAGS
   -a, --auth=<value>        Auth alias to use.
@@ -3042,6 +3531,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -3080,7 +3572,7 @@ EXAMPLES
     $ nex flow details -c d4e5f6789012345678abcdef01234567 --json --auth dev
 ```
 
-_See code: [src/commands/flow/details.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/details.ts)_
+_See code: [src/commands/flow/details.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/details.ts)_
 
 ## `nex flow error`
 
@@ -3088,8 +3580,9 @@ Retrieve error details from a failed flow execution.
 
 ```
 USAGE
-  $ nex flow error -c <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--scope <value>]
+  $ nex flow error -c <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--scope
+    <value>]
 
 FLAGS
   -a, --auth=<value>        Auth alias to use.
@@ -3103,6 +3596,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -3123,7 +3619,7 @@ EXAMPLES
     $ nex flow error --context-id abc123def456 --auth dev
 ```
 
-_See code: [src/commands/flow/error.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/error.ts)_
+_See code: [src/commands/flow/error.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/error.ts)_
 
 ## `nex flow logs`
 
@@ -3131,8 +3627,9 @@ Retrieve flow execution log entries for a given context.
 
 ```
 USAGE
-  $ nex flow logs -c <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-l <value>] [-o asc|desc]
+  $ nex flow logs -c <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-l <value>]
+    [-o asc|desc]
 
 FLAGS
   -a, --auth=<value>        Auth alias to use.
@@ -3148,6 +3645,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -3182,7 +3682,7 @@ EXAMPLES
     $ nex flow logs -c d4e5f6789012345678abcdef01234567 --json --auth dev
 ```
 
-_See code: [src/commands/flow/logs.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/logs.ts)_
+_See code: [src/commands/flow/logs.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/logs.ts)_
 
 ## `nex flow message`
 
@@ -3191,8 +3691,8 @@ Send a message to a paused flow execution.
 ```
 USAGE
   $ nex flow message -c <value> -m <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
-    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-p <value>] [--scope
-    <value>]
+    [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-p
+    <value>] [--scope <value>]
 
 FLAGS
   -a, --auth=<value>        Auth alias to use.
@@ -3208,6 +3708,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -3233,7 +3736,7 @@ EXAMPLES
     $ nex flow message --context-id abc123def456 --message "data_ready" --payload '{"status":"ok"}' --auth dev
 ```
 
-_See code: [src/commands/flow/message.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/message.ts)_
+_See code: [src/commands/flow/message.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/message.ts)_
 
 ## `nex flow outputs`
 
@@ -3241,8 +3744,9 @@ Retrieve outputs from a completed flow execution.
 
 ```
 USAGE
-  $ nex flow outputs -c <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--scope <value>]
+  $ nex flow outputs -c <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--scope
+    <value>]
 
 FLAGS
   -a, --auth=<value>        Auth alias to use.
@@ -3256,6 +3760,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -3280,7 +3787,7 @@ EXAMPLES
     $ nex flow outputs --context-id abc123def456 --json --auth dev
 ```
 
-_See code: [src/commands/flow/outputs.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/outputs.ts)_
+_See code: [src/commands/flow/outputs.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/outputs.ts)_
 
 ## `nex flow run`
 
@@ -3288,9 +3795,9 @@ Execute a published Flow Designer flow by scoped name.
 
 ```
 USAGE
-  $ nex flow run -n <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-i <value>] [-m
-    foreground|background] [--scope <value>] [--quick]
+  $ nex flow run -n <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-i <value>]
+    [-m foreground|background] [--scope <value>] [--quick]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
@@ -3308,6 +3815,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -3347,7 +3857,7 @@ EXAMPLES
     $ nex flow run --name global.my_flow --mode background --auth dev
 ```
 
-_See code: [src/commands/flow/run.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/run.ts)_
+_See code: [src/commands/flow/run.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/run.ts)_
 
 ## `nex flow status`
 
@@ -3355,8 +3865,9 @@ Get the status of a flow execution context.
 
 ```
 USAGE
-  $ nex flow status -c <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--scope <value>]
+  $ nex flow status -c <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--scope
+    <value>]
 
 FLAGS
   -a, --auth=<value>        Auth alias to use.
@@ -3370,6 +3881,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -3392,7 +3906,7 @@ EXAMPLES
     $ nex flow status --context-id abc123def456 --auth dev
 ```
 
-_See code: [src/commands/flow/status.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/status.ts)_
+_See code: [src/commands/flow/status.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/status.ts)_
 
 ## `nex flow subflow`
 
@@ -3400,9 +3914,9 @@ Execute a published Flow Designer subflow by scoped name.
 
 ```
 USAGE
-  $ nex flow subflow -n <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-i <value>] [-m
-    foreground|background] [--scope <value>] [--quick]
+  $ nex flow subflow -n <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-i <value>]
+    [-m foreground|background] [--scope <value>] [--quick]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
@@ -3420,6 +3934,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -3453,7 +3970,7 @@ EXAMPLES
     $ nex flow subflow --name x_myapp.process_record --inputs '{"table":"incident","sys_id":"abc123"}' --auth dev
 ```
 
-_See code: [src/commands/flow/subflow.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/subflow.ts)_
+_See code: [src/commands/flow/subflow.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/subflow.ts)_
 
 ## `nex flow test`
 
@@ -3462,8 +3979,8 @@ Test a Flow Designer flow without requiring it to be published.
 ```
 USAGE
   $ nex flow test -f <value> -o <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
-    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--scope <value>]
-    [--synchronous]
+    [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--scope <value>] [--synchronous]
 
 FLAGS
   -a, --auth=<value>        Auth alias to use.
@@ -3480,6 +3997,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -3517,7 +4037,7 @@ EXAMPLES
     $ nex flow test -f 887dda5583237210fdb8f7b6feaad32c -o '{"current":"abc123"}' --json --auth dev
 ```
 
-_See code: [src/commands/flow/test.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/flow/test.ts)_
+_See code: [src/commands/flow/test.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/test.ts)_
 
 ## `nex health check`
 
@@ -3525,9 +4045,10 @@ Run a consolidated health check on a ServiceNow instance.
 
 ```
 USAGE
-  $ nex health check [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
-    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--include-version] [--include-cluster]
-    [--include-stuck-jobs] [--include-semaphores] [--include-operational-counts] [--stuck-job-threshold <value>]
+  $ nex health check [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--include-version]
+    [--include-cluster] [--include-stuck-jobs] [--include-semaphores] [--include-operational-counts]
+    [--stuck-job-threshold <value>]
 
 FLAGS
   -a, --auth=<value>                     Auth alias to use.
@@ -3545,6 +4066,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -3588,7 +4112,7 @@ EXAMPLES
     $ nex health check --json --auth dev
 ```
 
-_See code: [src/commands/health/check.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/health/check.ts)_
+_See code: [src/commands/health/check.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/health/check.ts)_
 
 ## `nex help [COMMAND]`
 
@@ -3616,9 +4140,9 @@ Tail and monitor ServiceNow system logs in real-time with beautiful formatting.
 
 ```
 USAGE
-  $ nex log [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
-    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-o <value>] [-i <value>] [--no-color] [-f
-    <value>...]
+  $ nex log [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-o <value>] [-i <value>]
+    [--no-color] [-f <value>...]
 
 FLAGS
   -a, --auth=<value>       Auth alias to use.
@@ -3636,6 +4160,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -3725,7 +4252,7 @@ EXAMPLES
     $ nex log --no-color --auth dev-instance
 ```
 
-_See code: [src/commands/log/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/log/index.ts)_
+_See code: [src/commands/log/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/log/index.ts)_
 
 ## `nex metadata choice get`
 
@@ -3734,8 +4261,8 @@ Read a column's choice list in one language, in list order, with the column's di
 ```
 USAGE
   $ nex metadata choice get --column <value> --table <value> [--json] [-a <value>] [--cred-store] [--deny-execute]
-    [--deny-write] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--language
-    <value>]
+    [--deny-write] [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace]
+    [--read-only] [--language <value>]
 
 FLAGS
   -a, --auth=<value>      Auth alias to use.
@@ -3749,6 +4276,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -3773,7 +4303,7 @@ EXAMPLES
   $ nex metadata choice get --table x_acme_ticket --column severity --language fr --auth dev --read-only --json
 ```
 
-_See code: [src/commands/metadata/choice/get.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/metadata/choice/get.ts)_
+_See code: [src/commands/metadata/choice/get.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/metadata/choice/get.ts)_
 
 ## `nex metadata choice remove`
 
@@ -3782,7 +4312,7 @@ Remove a choice from a column's choice list through the choice form, and verify 
 ```
 USAGE
   $ nex metadata choice remove --update-set <value> --column <value> --table <value> --value <value> [--json] [-a <value>]
-    [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>] [--log-file] [--log-level
+    [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level
     debug|warn|error|info|trace] [--read-only] [--acknowledge-upgrade-skip] [--scope <value> | --scope-id <value>]
     [--confirm-in-use] [--language <value>]
 
@@ -3806,6 +4336,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -3829,7 +4362,7 @@ EXAMPLES
   $ nex metadata choice remove --table x_acme_ticket --column severity --value 4 --scope x_acme --update-set 0123456789abcdef0123456789abcdef --auth dev
 ```
 
-_See code: [src/commands/metadata/choice/remove.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/metadata/choice/remove.ts)_
+_See code: [src/commands/metadata/choice/remove.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/metadata/choice/remove.ts)_
 
 ## `nex metadata choice set`
 
@@ -3838,7 +4371,7 @@ Add a choice to a column's choice list, or change the one with that value, throu
 ```
 USAGE
   $ nex metadata choice set --update-set <value> --column <value> --table <value> --value <value> [--json] [-a <value>]
-    [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>] [--log-file] [--log-level
+    [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level
     debug|warn|error|info|trace] [--read-only] [--acknowledge-upgrade-skip] [--scope <value> | --scope-id <value>]
     [--hint <value>] [--inactive] [--label <value>] [--language <value>] [--sequence <value>]
 
@@ -3866,6 +4399,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -3896,7 +4432,7 @@ EXAMPLES
   $ nex metadata choice set --table cmn_cost_center --column u_tier --value gold --inactive --scope global --update-set 0123456789abcdef0123456789abcdef --auth dev
 ```
 
-_See code: [src/commands/metadata/choice/set.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/metadata/choice/set.ts)_
+_See code: [src/commands/metadata/choice/set.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/metadata/choice/set.ts)_
 
 ## `nex metadata column add`
 
@@ -3905,7 +4441,7 @@ Add a column to a table through the dictionary form and verify the column, its l
 ```
 USAGE
   $ nex metadata column add --update-set <value> --column <value> --label <value> --table <value> [--json] [-a <value>]
-    [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>] [--log-file] [--log-level
+    [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level
     debug|warn|error|info|trace] [--read-only] [--acknowledge-upgrade-skip] [--scope <value> | --scope-id <value>]
     [--max-length <value>] [--reference <value>] [--type <value>]
 
@@ -3932,6 +4468,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -3964,7 +4503,7 @@ EXAMPLES
   $ nex metadata column add --table cmn_cost_center --column approver --label Approver --type reference --reference sys_user --scope global --update-set 0123456789abcdef0123456789abcdef --auth dev
 ```
 
-_See code: [src/commands/metadata/column/add.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/metadata/column/add.ts)_
+_See code: [src/commands/metadata/column/add.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/metadata/column/add.ts)_
 
 ## `nex metadata column remove`
 
@@ -3973,7 +4512,7 @@ Remove a column through the dictionary form's Delete Column action, and verify w
 ```
 USAGE
   $ nex metadata column remove --update-set <value> --column <value> --confirm <value> --table <value> [--json] [-a <value>]
-    [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>] [--log-file] [--log-level
+    [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level
     debug|warn|error|info|trace] [--read-only] [--acknowledge-upgrade-skip] [--scope <value> | --scope-id <value>]
     [--acknowledge-data-loss] [--acknowledge-dependent-deletes]
 
@@ -3999,6 +4538,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -4035,7 +4577,7 @@ EXAMPLES
   $ nex metadata column remove --table cmn_cost_center --column u_tier --confirm cmn_cost_center.u_tier --scope global --update-set 0123456789abcdef0123456789abcdef --auth dev
 ```
 
-_See code: [src/commands/metadata/column/remove.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/metadata/column/remove.ts)_
+_See code: [src/commands/metadata/column/remove.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/metadata/column/remove.ts)_
 
 ## `nex metadata delete`
 
@@ -4044,9 +4586,9 @@ Delete one confirmed metadata record and verify absence and deletion capture.
 ```
 USAGE
   $ nex metadata delete --table <value> --confirm-sys-id <value> --confirm-table <value> --sys-id <value> [--json]
-    [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>] [--log-file] [--log-level
-    debug|warn|error|info|trace] [--read-only] [--acknowledge-upgrade-skip] [--scope <value> | --scope-id <value>]
-    [--update-set <value>] [--view <value>]
+    [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...] [--log-dir <value>] [--log-file]
+    [--log-level debug|warn|error|info|trace] [--read-only] [--acknowledge-upgrade-skip] [--scope <value> | --scope-id
+    <value>] [--update-set <value>] [--view <value>]
 
 FLAGS
   -a, --auth=<value>              Auth alias to use.
@@ -4068,6 +4610,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -4085,7 +4630,7 @@ EXAMPLES
   $ nex metadata delete --table sys_script_include --sys-id 0123456789abcdef0123456789abcdef --scope x_example_app --confirm-table sys_script_include --confirm-sys-id 0123456789abcdef0123456789abcdef --auth dev
 ```
 
-_See code: [src/commands/metadata/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/metadata/delete.ts)_
+_See code: [src/commands/metadata/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/metadata/delete.ts)_
 
 ## `nex metadata insert`
 
@@ -4094,7 +4639,7 @@ Insert application metadata through a form and verify scope and capture.
 ```
 USAGE
   $ nex metadata insert --table <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
-    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
     [--acknowledge-upgrade-skip] [--scope <value> | --scope-id <value>] [--update-set <value>] [--view <value>]
     [--fields <value> | --fields-file <value>] [--initial-query <value>] [--variable-field <value>] [--variables <value>
     | --variables-file <value>]
@@ -4123,6 +4668,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -4140,7 +4688,7 @@ EXAMPLES
   $ nex metadata insert --table sys_script_include --scope x_example_app --fields-file ./fields.json --auth dev
 ```
 
-_See code: [src/commands/metadata/insert.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/metadata/insert.ts)_
+_See code: [src/commands/metadata/insert.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/metadata/insert.ts)_
 
 ## `nex metadata layout get`
 
@@ -4149,7 +4697,7 @@ Read one form section layout in the Form Layout page notation that metadata layo
 ```
 USAGE
   $ nex metadata layout get --section <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
-    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
 
 FLAGS
   -a, --auth=<value>     Auth alias to use.
@@ -4161,6 +4709,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -4178,7 +4729,7 @@ EXAMPLES
   $ nex metadata layout get --section 0123456789abcdef0123456789abcdef --auth dev --read-only
 ```
 
-_See code: [src/commands/metadata/layout/get.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/metadata/layout/get.ts)_
+_See code: [src/commands/metadata/layout/get.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/metadata/layout/get.ts)_
 
 ## `nex metadata layout set`
 
@@ -4187,8 +4738,9 @@ Replace one form section layout through the Form Layout page and verify the orde
 ```
 USAGE
   $ nex metadata layout set --update-set <value> --section <value> [--json] [-a <value>] [--cred-store] [--deny-execute]
-    [--deny-write] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
-    [--acknowledge-upgrade-skip] [--scope <value> | --scope-id <value>] [--elements <value> | --elements-file <value>]
+    [--deny-write] [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace]
+    [--read-only] [--acknowledge-upgrade-skip] [--scope <value> | --scope-id <value>] [--elements <value> |
+    --elements-file <value>]
 
 FLAGS
   -a, --auth=<value>              Auth alias to use.
@@ -4210,6 +4762,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -4233,7 +4788,7 @@ EXAMPLES
   $ nex metadata layout set --section 0123456789abcdef0123456789abcdef --elements-file ./layout.json --scope-id 0123456789abcdef0123456789abcdef --update-set 0123456789abcdef0123456789abcdef --acknowledge-upgrade-skip --auth dev
 ```
 
-_See code: [src/commands/metadata/layout/set.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/metadata/layout/set.ts)_
+_See code: [src/commands/metadata/layout/set.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/metadata/layout/set.ts)_
 
 ## `nex metadata list-layout get`
 
@@ -4242,7 +4797,8 @@ Read a table's list columns for one view, in the order metadata list-layout set 
 ```
 USAGE
   $ nex metadata list-layout get --table <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
-    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--view <value>]
+    [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--view <value>]
 
 FLAGS
   -a, --auth=<value>   Auth alias to use.
@@ -4255,6 +4811,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -4277,7 +4836,7 @@ EXAMPLES
   $ nex metadata list-layout get --table incident --view ess --auth dev --read-only
 ```
 
-_See code: [src/commands/metadata/list-layout/get.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/metadata/list-layout/get.ts)_
+_See code: [src/commands/metadata/list-layout/get.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/metadata/list-layout/get.ts)_
 
 ## `nex metadata list-layout set`
 
@@ -4286,9 +4845,9 @@ Replace a table's list columns for one view through the List Layout page and ver
 ```
 USAGE
   $ nex metadata list-layout set --update-set <value> --table <value> [--json] [-a <value>] [--cred-store] [--deny-execute]
-    [--deny-write] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
-    [--acknowledge-upgrade-skip] [--scope <value> | --scope-id <value>] [--columns <value> | --columns-file <value>]
-    [--view <value>]
+    [--deny-write] [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace]
+    [--read-only] [--acknowledge-upgrade-skip] [--scope <value> | --scope-id <value>] [--columns <value> |
+    --columns-file <value>] [--view <value>]
 
 FLAGS
   -a, --auth=<value>              Auth alias to use.
@@ -4310,6 +4869,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -4333,7 +4895,7 @@ EXAMPLES
   $ nex metadata list-layout set --table sn_grc_indicator --columns-file ./columns.json --scope sn_grc --update-set 0123456789abcdef0123456789abcdef --acknowledge-upgrade-skip --auth dev
 ```
 
-_See code: [src/commands/metadata/list-layout/set.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/metadata/list-layout/set.ts)_
+_See code: [src/commands/metadata/list-layout/set.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/metadata/list-layout/set.ts)_
 
 ## `nex metadata update`
 
@@ -4342,10 +4904,10 @@ Update application metadata through a form and verify scope and capture.
 ```
 USAGE
   $ nex metadata update --table <value> --sys-id <value> [--json] [-a <value>] [--cred-store] [--deny-execute]
-    [--deny-write] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
-    [--acknowledge-upgrade-skip] [--scope <value> | --scope-id <value>] [--update-set <value>] [--view <value>]
-    [--fields <value> | --fields-file <value>] [--initial-query <value>] [--variable-field <value>] [--variables <value>
-    | --variables-file <value>]
+    [--deny-write] [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace]
+    [--read-only] [--acknowledge-upgrade-skip] [--scope <value> | --scope-id <value>] [--update-set <value>] [--view
+    <value>] [--fields <value> | --fields-file <value>] [--initial-query <value>] [--variable-field <value>]
+    [--variables <value> | --variables-file <value>]
 
 FLAGS
   -a, --auth=<value>              Auth alias to use.
@@ -4372,6 +4934,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -4389,7 +4954,7 @@ EXAMPLES
   $ nex metadata update --table sys_script_include --sys-id 0123456789abcdef0123456789abcdef --scope x_example_app --fields-file ./fields.json --auth dev
 ```
 
-_See code: [src/commands/metadata/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/metadata/update.ts)_
+_See code: [src/commands/metadata/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/metadata/update.ts)_
 
 ## `nex plugins`
 
@@ -4711,7 +5276,7 @@ EXAMPLES
   NEX_POLICY_DENY=all nex policy status
 ```
 
-_See code: [src/commands/policy/status.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/policy/status.ts)_
+_See code: [src/commands/policy/status.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/policy/status.ts)_
 
 ## `nex query`
 
@@ -4719,9 +5284,9 @@ Query any ServiceNow table using the Table API.
 
 ```
 USAGE
-  $ nex query -t <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-q <value>] [-f <value>] [-d] [-l
-    <value>]
+  $ nex query -t <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-q <value>]
+    [-f <value>] [-d] [-l <value>]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
@@ -4738,6 +5303,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -4775,7 +5343,7 @@ EXAMPLES
     $ nex query --table sys_user --query "active=true" --limit 5 --json --auth dev
 ```
 
-_See code: [src/commands/query/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/query/index.ts)_
+_See code: [src/commands/query/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/query/index.ts)_
 
 ## `nex query app`
 
@@ -4783,8 +5351,9 @@ Search for applications by name across scoped apps and plugins.
 
 ```
 USAGE
-  $ nex query app -s <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-a] [-l <value>]
+  $ nex query app -s <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-a] [-l
+    <value>]
 
 FLAGS
   -a, --active          Only show active applications
@@ -4799,6 +5368,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -4829,7 +5401,7 @@ EXAMPLES
     $ nex query app --search "HR" --active --auth dev
 ```
 
-_See code: [src/commands/query/app.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/query/app.ts)_
+_See code: [src/commands/query/app.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/query/app.ts)_
 
 ## `nex query columns`
 
@@ -4837,8 +5409,8 @@ List and search columns (fields) on a ServiceNow table.
 
 ```
 USAGE
-  $ nex query columns -t <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-s <value>]
+  $ nex query columns -t <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-s <value>]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
@@ -4852,6 +5424,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -4885,7 +5460,7 @@ EXAMPLES
     $ nex query columns --table incident --json --auth dev
 ```
 
-_See code: [src/commands/query/columns.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/query/columns.ts)_
+_See code: [src/commands/query/columns.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/query/columns.ts)_
 
 ## `nex query syslog`
 
@@ -4893,8 +5468,8 @@ Query ServiceNow system logs (one-shot, non-tailing).
 
 ```
 USAGE
-  $ nex query syslog [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
-    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-q <value>] [-l <value>]
+  $ nex query syslog [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-q <value>] [-l <value>]
 
 FLAGS
   -a, --auth=<value>   Auth alias to use.
@@ -4908,6 +5483,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -4943,7 +5521,7 @@ EXAMPLES
     $ nex query syslog --query "sourceLIKEincident" --json --auth dev
 ```
 
-_See code: [src/commands/query/syslog.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/query/syslog.ts)_
+_See code: [src/commands/query/syslog.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/query/syslog.ts)_
 
 ## `nex schema`
 
@@ -4951,9 +5529,9 @@ Discover and inspect a ServiceNow table schema including fields, types, and rela
 
 ```
 USAGE
-  $ nex schema -t <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--include-choices]
-    [--include-relationships] [--include-ui-policies] [--include-business-rules]
+  $ nex schema -t <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--include-choices] [--include-relationships] [--include-ui-policies] [--include-business-rules]
 
 FLAGS
   -a, --auth=<value>            Auth alias to use.
@@ -4970,6 +5548,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -5003,7 +5584,7 @@ EXAMPLES
     $ nex schema --table incident --include-choices --include-relationships --auth dev
 ```
 
-_See code: [src/commands/schema/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/schema/index.ts)_
+_See code: [src/commands/schema/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/schema/index.ts)_
 
 ## `nex schema field`
 
@@ -5012,7 +5593,7 @@ Get detailed information about a specific field on a ServiceNow table.
 ```
 USAGE
   $ nex schema field -t <value> -f <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
-    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
 
 FLAGS
   -a, --auth=<value>   Auth alias to use.
@@ -5026,6 +5607,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -5051,7 +5635,7 @@ EXAMPLES
     $ nex schema field --table incident --field priority --json --auth dev
 ```
 
-_See code: [src/commands/schema/field.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/schema/field.ts)_
+_See code: [src/commands/schema/field.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/schema/field.ts)_
 
 ## `nex schema validate-catalog`
 
@@ -5059,8 +5643,8 @@ Validate a ServiceNow catalog item configuration for common issues.
 
 ```
 USAGE
-  $ nex schema validate-catalog -s <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+  $ nex schema validate-catalog -s <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
@@ -5073,6 +5657,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -5098,7 +5685,7 @@ EXAMPLES
     $ nex schema validate-catalog --sys-id a1b2c3d4e5f6 --json --auth dev
 ```
 
-_See code: [src/commands/schema/validate-catalog.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/schema/validate-catalog.ts)_
+_See code: [src/commands/schema/validate-catalog.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/schema/validate-catalog.ts)_
 
 ## `nex scope`
 
@@ -5106,8 +5693,8 @@ Get the current application scope or list available applications.
 
 ```
 USAGE
-  $ nex scope [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
-    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-l]
+  $ nex scope [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-l]
 
 FLAGS
   -a, --auth=<value>  Auth alias to use.
@@ -5119,6 +5706,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -5146,7 +5736,7 @@ EXAMPLES
     $ nex scope -l --json --auth dev
 ```
 
-_See code: [src/commands/scope/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/scope/index.ts)_
+_See code: [src/commands/scope/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/scope/index.ts)_
 
 ## `nex scope set`
 
@@ -5154,8 +5744,8 @@ Set the current application scope on a ServiceNow instance.
 
 ```
 USAGE
-  $ nex scope set -a <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+  $ nex scope set -a <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
 
 FLAGS
   -a, --app-id=<value>  (required) 32-char sys_id of application
@@ -5167,6 +5757,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -5190,7 +5783,7 @@ EXAMPLES
     $ nex scope set -a abc123def456ghi789jkl012mno345pq --json --auth dev
 ```
 
-_See code: [src/commands/scope/set.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/scope/set.ts)_
+_See code: [src/commands/scope/set.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/scope/set.ts)_
 
 ## `nex script-sync pull`
 
@@ -5199,8 +5792,8 @@ Pull a script from a ServiceNow instance to a local file.
 ```
 USAGE
   $ nex script-sync pull -n <value> -t sys_script_include|sys_script|sys_ui_script|sys_ui_action|sys_script_client
-    [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>] [--log-file] [--log-level
-    debug|warn|error|info|trace] [--read-only] [-o <value>]
+    [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...] [--log-dir <value>]
+    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-o <value>]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
@@ -5215,6 +5808,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -5251,7 +5847,7 @@ EXAMPLES
     $ nex script-sync pull -n MyClientScript -t sys_script_client --json --auth dev-instance
 ```
 
-_See code: [src/commands/script-sync/pull.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/script-sync/pull.ts)_
+_See code: [src/commands/script-sync/pull.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/script-sync/pull.ts)_
 
 ## `nex script-sync push`
 
@@ -5260,8 +5856,8 @@ Push a local script file to a ServiceNow instance.
 ```
 USAGE
   $ nex script-sync push -n <value> -t sys_script_include|sys_script|sys_ui_script|sys_ui_action|sys_script_client -f
-    <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>] [--log-file]
-    [--log-level debug|warn|error|info|trace] [--read-only]
+    <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...] [--log-dir
+    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
 
 FLAGS
   -a, --auth=<value>   Auth alias to use.
@@ -5276,6 +5872,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -5313,7 +5912,7 @@ EXAMPLES
     $ nex script-sync push -n MyUIScript -t sys_ui_script -f ./scripts/ui-script.js --json --auth dev-instance
 ```
 
-_See code: [src/commands/script-sync/push.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/script-sync/push.ts)_
+_See code: [src/commands/script-sync/push.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/script-sync/push.ts)_
 
 ## `nex script-sync sync`
 
@@ -5321,8 +5920,8 @@ Synchronize all scripts in a directory with a ServiceNow instance.
 
 ```
 USAGE
-  $ nex script-sync sync -d <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-t
+  $ nex script-sync sync -d <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-t
     sys_script_include|sys_script|sys_ui_script|sys_ui_action|sys_script_client...]
 
 FLAGS
@@ -5337,6 +5936,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -5373,7 +5975,7 @@ EXAMPLES
     $ nex script-sync sync -d ./scripts --json --auth dev-instance
 ```
 
-_See code: [src/commands/script-sync/sync.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/script-sync/sync.ts)_
+_See code: [src/commands/script-sync/sync.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/script-sync/sync.ts)_
 
 ## `nex search`
 
@@ -5381,9 +5983,9 @@ Search platform code across a ServiceNow instance.
 
 ```
 USAGE
-  $ nex search -t <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-l <value>] [-s <value>] [-g <value>]
-    [--table <value>]
+  $ nex search -t <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-l <value>]
+    [-s <value>] [-g <value>] [--table <value>]
 
 FLAGS
   -a, --auth=<value>          Auth alias to use.
@@ -5399,6 +6001,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -5441,7 +6046,7 @@ EXAMPLES
     $ nex search --term "GlideRecord" --limit 10 --json --auth dev-instance
 ```
 
-_See code: [src/commands/search/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/search/index.ts)_
+_See code: [src/commands/search/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/search/index.ts)_
 
 ## `nex search add-table`
 
@@ -5450,7 +6055,8 @@ Add a table to a code search group on a ServiceNow instance.
 ```
 USAGE
   $ nex search add-table -f <value> -g <value> -t <value> [--json] [-a <value>] [--cred-store] [--deny-execute]
-    [--deny-write] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--deny-write] [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace]
+    [--read-only]
 
 FLAGS
   -a, --auth=<value>           Auth alias to use.
@@ -5464,6 +6070,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -5502,7 +6111,7 @@ EXAMPLES
       dev-instance
 ```
 
-_See code: [src/commands/search/add-table.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/search/add-table.ts)_
+_See code: [src/commands/search/add-table.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/search/add-table.ts)_
 
 ## `nex search groups`
 
@@ -5510,8 +6119,8 @@ List all available code search groups on a ServiceNow instance.
 
 ```
 USAGE
-  $ nex search groups [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
-    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+  $ nex search groups [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
 
 FLAGS
   -a, --auth=<value>  Auth alias to use.
@@ -5522,6 +6131,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -5552,7 +6164,7 @@ EXAMPLES
     $ nex search groups --json --auth dev-instance
 ```
 
-_See code: [src/commands/search/groups.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/search/groups.ts)_
+_See code: [src/commands/search/groups.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/search/groups.ts)_
 
 ## `nex search tables`
 
@@ -5560,8 +6172,8 @@ List tables configured for a specific code search group.
 
 ```
 USAGE
-  $ nex search tables -g <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+  $ nex search tables -g <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
 
 FLAGS
   -a, --auth=<value>          Auth alias to use.
@@ -5573,6 +6185,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -5604,7 +6219,7 @@ EXAMPLES
     $ nex search tables --search-group "Business Rules" --json --auth dev-instance
 ```
 
-_See code: [src/commands/search/tables.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/search/tables.ts)_
+_See code: [src/commands/search/tables.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/search/tables.ts)_
 
 ## `nex store install`
 
@@ -5613,8 +6228,8 @@ Install an application from the ServiceNow Store.
 ```
 USAGE
   $ nex store install -a <value> -v <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
-    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--demo-data] [--no-wait]
-    [--poll-interval <value>] [--timeout <value>]
+    [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--demo-data] [--no-wait] [--poll-interval <value>] [--timeout <value>]
 
 FLAGS
   -a, --app-id=<value>         (required) Store application sys_id
@@ -5631,6 +6246,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -5658,7 +6276,7 @@ EXAMPLES
     $ nex store install -a abc123 -v 1.0.0 --demo-data --auth dev
 ```
 
-_See code: [src/commands/store/install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/store/install.ts)_
+_See code: [src/commands/store/install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/store/install.ts)_
 
 ## `nex store repair APP`
 
@@ -5666,9 +6284,9 @@ Repair an installed store or company application: reinstall its installed versio
 
 ```
 USAGE
-  $ nex store repair APP [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
-    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--demo-data] [--no-wait] [--poll-interval
-    <value>] [--timeout <value>]
+  $ nex store repair APP [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--demo-data]
+    [--no-wait] [--poll-interval <value>] [--timeout <value>]
 
 ARGUMENTS
   APP  The installed application: its scope (e.g. x_acme_app) or its sys_store_app sys_id.
@@ -5687,6 +6305,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -5722,7 +6343,7 @@ EXAMPLES
     $ nex store repair x_acme_app --no-wait --auth dev
 ```
 
-_See code: [src/commands/store/repair.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/store/repair.ts)_
+_See code: [src/commands/store/repair.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/store/repair.ts)_
 
 ## `nex store search`
 
@@ -5730,8 +6351,8 @@ Search for applications in the ServiceNow Store.
 
 ```
 USAGE
-  $ nex store search [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
-    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--limit <value>] [--tab
+  $ nex store search [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--limit <value>] [--tab
     available_for_you|installed|updates] [-t <value>]
 
 FLAGS
@@ -5747,6 +6368,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -5774,7 +6398,7 @@ EXAMPLES
     $ nex store search --tab updates --limit 10 --auth dev
 ```
 
-_See code: [src/commands/store/search.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/store/search.ts)_
+_See code: [src/commands/store/search.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/store/search.ts)_
 
 ## `nex store update`
 
@@ -5783,8 +6407,8 @@ Update a ServiceNow Store application to a new version.
 ```
 USAGE
   $ nex store update -a <value> -v <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
-    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--no-wait]
-    [--poll-interval <value>] [--timeout <value>]
+    [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--no-wait] [--poll-interval <value>] [--timeout <value>]
 
 FLAGS
   -a, --app-id=<value>         (required) Store application sys_id
@@ -5800,6 +6424,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -5827,7 +6454,7 @@ EXAMPLES
     $ nex store update -a abc123 -v 2.0.0 --timeout 3600000 --auth dev
 ```
 
-_See code: [src/commands/store/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/store/update.ts)_
+_See code: [src/commands/store/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/store/update.ts)_
 
 ## `nex store validate`
 
@@ -5835,8 +6462,8 @@ Validate a batch installation definition file.
 
 ```
 USAGE
-  $ nex store validate -f <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+  $ nex store validate -f <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
 
 FLAGS
   -a, --auth=<value>  Auth alias to use.
@@ -5848,6 +6475,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -5867,7 +6497,7 @@ EXAMPLES
     $ nex store validate --file ./batch-definition.json --auth dev
 ```
 
-_See code: [src/commands/store/validate.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/store/validate.ts)_
+_See code: [src/commands/store/validate.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/store/validate.ts)_
 
 ## `nex task approve`
 
@@ -5875,8 +6505,8 @@ Approve a ServiceNow change request.
 
 ```
 USAGE
-  $ nex task approve -n <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-c <value>]
+  $ nex task approve -n <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-c <value>]
 
 FLAGS
   -a, --auth=<value>      Auth alias to use.
@@ -5889,6 +6519,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -5919,7 +6552,7 @@ EXAMPLES
     $ nex task approve -n CHG0010001 -c "Looks good, approved" --auth dev
 ```
 
-_See code: [src/commands/task/approve.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/task/approve.ts)_
+_See code: [src/commands/task/approve.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/task/approve.ts)_
 
 ## `nex task assign`
 
@@ -5928,8 +6561,8 @@ Assign a ServiceNow task to a user or group.
 ```
 USAGE
   $ nex task assign -n <value> -u <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
-    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-g <value>] [--table
-    <value>]
+    [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-g
+    <value>] [--table <value>]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
@@ -5944,6 +6577,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -5981,7 +6617,7 @@ EXAMPLES
     $ nex task assign --number CHG0010001 --table change_request --user admin --auth dev
 ```
 
-_See code: [src/commands/task/assign.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/task/assign.ts)_
+_See code: [src/commands/task/assign.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/task/assign.ts)_
 
 ## `nex task close`
 
@@ -5990,8 +6626,8 @@ Close a ServiceNow incident.
 ```
 USAGE
   $ nex task close --notes <value> -n <value> [--json] [-a <value>] [--cred-store] [--deny-execute]
-    [--deny-write] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
-    [--close-code <value>]
+    [--deny-write] [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace]
+    [--read-only] [--close-code <value>]
 
 FLAGS
   -a, --auth=<value>        Auth alias to use.
@@ -6005,6 +6641,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -6036,7 +6675,7 @@ EXAMPLES
     $ nex task close -n INC0010001 --notes "Closed" --close-code "Solved (Permanently)" --auth dev
 ```
 
-_See code: [src/commands/task/close.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/task/close.ts)_
+_See code: [src/commands/task/close.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/task/close.ts)_
 
 ## `nex task comment`
 
@@ -6045,8 +6684,8 @@ Add a comment or work note to a ServiceNow task.
 ```
 USAGE
   $ nex task comment -c <value> -n <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
-    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--table <value>]
-    [--work-note]
+    [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--table <value>] [--work-note]
 
 FLAGS
   -a, --auth=<value>     Auth alias to use.
@@ -6061,6 +6700,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -6097,7 +6739,7 @@ EXAMPLES
     $ nex task comment --number CHG0010001 --table change_request --comment "Approved" --auth dev
 ```
 
-_See code: [src/commands/task/comment.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/task/comment.ts)_
+_See code: [src/commands/task/comment.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/task/comment.ts)_
 
 ## `nex task find`
 
@@ -6105,8 +6747,9 @@ Find a ServiceNow task by its number.
 
 ```
 USAGE
-  $ nex task find -n <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--table <value>]
+  $ nex task find -n <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--table
+    <value>]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
@@ -6119,6 +6762,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -6154,7 +6800,7 @@ EXAMPLES
     $ nex task find -n INC0010001 --json --auth dev
 ```
 
-_See code: [src/commands/task/find.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/task/find.ts)_
+_See code: [src/commands/task/find.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/task/find.ts)_
 
 ## `nex task resolve`
 
@@ -6163,8 +6809,8 @@ Resolve a ServiceNow incident with resolution notes.
 ```
 USAGE
   $ nex task resolve --notes <value> -n <value> [--json] [-a <value>] [--cred-store] [--deny-execute]
-    [--deny-write] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
-    [--close-code <value>]
+    [--deny-write] [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace]
+    [--read-only] [--close-code <value>]
 
 FLAGS
   -a, --auth=<value>        Auth alias to use.
@@ -6178,6 +6824,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -6209,7 +6858,7 @@ EXAMPLES
     $ nex task resolve -n INC0010001 --notes "Fixed" --close-code "Solved (Permanently)" --auth dev
 ```
 
-_See code: [src/commands/task/resolve.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/task/resolve.ts)_
+_See code: [src/commands/task/resolve.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/task/resolve.ts)_
 
 ## `nex transaction kill`
 
@@ -6217,8 +6866,8 @@ Submit a request to terminate one active transaction. Platform acceptance does n
 
 ```
 USAGE
-  $ nex transaction kill -t <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--confirm]
+  $ nex transaction kill -t <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--confirm]
 
 FLAGS
   -a, --auth=<value>            Auth alias to use.
@@ -6231,6 +6880,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -6253,7 +6905,7 @@ EXAMPLES
   $ nex transaction kill --transaction-id 8f9a1234567890abcdef1234567890c1 --confirm --json --auth dev
 ```
 
-_See code: [src/commands/transaction/kill.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/transaction/kill.ts)_
+_See code: [src/commands/transaction/kill.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/transaction/kill.ts)_
 
 ## `nex transaction list`
 
@@ -6261,9 +6913,9 @@ List active transactions from all responding ServiceNow cluster nodes.
 
 ```
 USAGE
-  $ nex transaction list [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
-    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-l <value>] [--poll-interval-ms <value>] [-q
-    <value>] [--timeout-ms <value>]
+  $ nex transaction list [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-l <value>]
+    [--poll-interval-ms <value>] [-q <value>] [--timeout-ms <value>]
 
 FLAGS
   -a, --auth=<value>              Auth alias to use.
@@ -6278,6 +6930,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -6301,7 +6956,7 @@ EXAMPLES
   $ nex transaction list --timeout-ms 120000 --poll-interval-ms 2000 --auth dev
 ```
 
-_See code: [src/commands/transaction/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/transaction/list.ts)_
+_See code: [src/commands/transaction/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/transaction/list.ts)_
 
 ## `nex update-set`
 
@@ -6309,8 +6964,9 @@ List update sets on a ServiceNow instance.
 
 ```
 USAGE
-  $ nex update-set [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
-    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--limit <value>] [-q <value>]
+  $ nex update-set [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--limit <value>] [-q
+    <value>]
 
 FLAGS
   -a, --auth=<value>   Auth alias to use.
@@ -6323,6 +6979,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -6350,7 +7009,7 @@ EXAMPLES
     $ nex update-set --json --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/update-set/index.ts)_
+_See code: [src/commands/update-set/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/update-set/index.ts)_
 
 ## `nex update-set clone`
 
@@ -6359,7 +7018,7 @@ Clone an update set and its records.
 ```
 USAGE
   $ nex update-set clone -n <value> -s <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
-    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
@@ -6372,6 +7031,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -6395,7 +7057,7 @@ EXAMPLES
     $ nex update-set clone --source us-001 --name "Cloned Set" --json --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/clone.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/update-set/clone.ts)_
+_See code: [src/commands/update-set/clone.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/update-set/clone.ts)_
 
 ## `nex update-set complete SET`
 
@@ -6404,7 +7066,8 @@ Complete an update set after checking what it holds, and read the state back.
 ```
 USAGE
   $ nex update-set complete SET --expected-captures <value> [--json] [-a <value>] [--cred-store] [--deny-execute]
-    [--deny-write] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--deny-write] [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace]
+    [--read-only]
 
 ARGUMENTS
   SET  sys_id of the In progress, non-Default set to complete.
@@ -6419,6 +7082,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -6443,7 +7109,7 @@ EXAMPLES
   $ nex update-set complete 0123456789abcdef0123456789abcdef --expected-captures 3 --auth dev
 ```
 
-_See code: [src/commands/update-set/complete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/update-set/complete.ts)_
+_See code: [src/commands/update-set/complete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/update-set/complete.ts)_
 
 ## `nex update-set create`
 
@@ -6451,8 +7117,9 @@ Create a new update set.
 
 ```
 USAGE
-  $ nex update-set create -n <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--application <value>] [-d <value>]
+  $ nex update-set create -n <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--application
+    <value>] [-d <value>]
 
 FLAGS
   -a, --auth=<value>         Auth alias to use.
@@ -6467,6 +7134,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -6498,7 +7168,7 @@ EXAMPLES
     $ nex update-set create --name "STORY-123 Policy form" --application sn_compliance --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/update-set/create.ts)_
+_See code: [src/commands/update-set/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/update-set/create.ts)_
 
 ## `nex update-set current`
 
@@ -6506,8 +7176,8 @@ Get or set the current update set.
 
 ```
 USAGE
-  $ nex update-set current [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
-    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-s <value>]
+  $ nex update-set current [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-s <value>]
 
 FLAGS
   -a, --auth=<value>  Auth alias to use.
@@ -6519,6 +7189,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -6550,7 +7223,7 @@ EXAMPLES
     $ nex update-set current --json --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/current.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/update-set/current.ts)_
+_See code: [src/commands/update-set/current.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/update-set/current.ts)_
 
 ## `nex update-set export SET`
 
@@ -6558,8 +7231,9 @@ Export an update set to XML, as the platform's Export to XML does, and check the
 
 ```
 USAGE
-  $ nex update-set export SET [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
-    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--force] [--include-incomplete] [-o <value>]
+  $ nex update-set export SET [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--force]
+    [--include-incomplete] [-o <value>]
 
 ARGUMENTS
   SET  sys_id of a sys_update_set, or of a Retrieved Update Set (sys_remote_update_set).
@@ -6577,6 +7251,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -6607,7 +7284,7 @@ EXAMPLES
   $ nex update-set export 0123456789abcdef0123456789abcdef --output STORY-123.xml --force --auth dev
 ```
 
-_See code: [src/commands/update-set/export.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/update-set/export.ts)_
+_See code: [src/commands/update-set/export.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/update-set/export.ts)_
 
 ## `nex update-set inspect`
 
@@ -6615,8 +7292,8 @@ Inspect the components of an update set.
 
 ```
 USAGE
-  $ nex update-set inspect -s <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+  $ nex update-set inspect -s <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
@@ -6628,6 +7305,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -6651,7 +7331,7 @@ EXAMPLES
     $ nex update-set inspect --sys-id us-001 --json --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/inspect.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/update-set/inspect.ts)_
+_See code: [src/commands/update-set/inspect.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/update-set/inspect.ts)_
 
 ## `nex update-set move`
 
@@ -6660,8 +7340,8 @@ Move records between update sets.
 ```
 USAGE
   $ nex update-set move --target <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
-    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--records <value>]
-    [--source <value>]
+    [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--records <value>] [--source <value>]
 
 FLAGS
   -a, --auth=<value>     Auth alias to use.
@@ -6675,6 +7355,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -6702,7 +7385,7 @@ EXAMPLES
     $ nex update-set move --target us-002 --source us-001 --json --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/move.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/update-set/move.ts)_
+_See code: [src/commands/update-set/move.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/update-set/move.ts)_
 
 ## `nex update-set move-capture`
 
@@ -6711,7 +7394,7 @@ Move one capture (sys_update_xml) between two In progress sets of its own applic
 ```
 USAGE
   $ nex update-set move-capture --capture <value> --reason <value> --source <value> --target <value> [--json] [-a <value>]
-    [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>] [--log-file] [--log-level
+    [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level
     debug|warn|error|info|trace] [--read-only]
 
 FLAGS
@@ -6727,6 +7410,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -6748,7 +7434,7 @@ EXAMPLES
   $ nex update-set move-capture --capture 0123456789abcdef0123456789abcdef --source 0123456789abcdef0123456789abcdee --target 0123456789abcdef0123456789abcded --reason "STORY-123 belongs in the story set" --auth dev
 ```
 
-_See code: [src/commands/update-set/move-capture.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/update-set/move-capture.ts)_
+_See code: [src/commands/update-set/move-capture.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/update-set/move-capture.ts)_
 
 ## `nex update-set restore`
 
@@ -6757,8 +7443,8 @@ Put back the working set that nex update-set use reported as "previous".
 ```
 USAGE
   $ nex update-set restore --application <value> --update-set <value> [--json] [-a <value>] [--cred-store]
-    [--deny-execute] [--deny-write] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace]
-    [--read-only]
+    [--deny-execute] [--deny-write] [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level
+    debug|warn|error|info|trace] [--read-only]
 
 FLAGS
   -a, --auth=<value>         Auth alias to use.
@@ -6771,6 +7457,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -6790,7 +7479,7 @@ EXAMPLES
   $ nex update-set restore --application global --update-set 0123456789abcdef0123456789abcdef --auth dev
 ```
 
-_See code: [src/commands/update-set/restore.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/update-set/restore.ts)_
+_See code: [src/commands/update-set/restore.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/update-set/restore.ts)_
 
 ## `nex update-set use SET`
 
@@ -6798,8 +7487,8 @@ Make an update set your working set, for every later session, and read it back.
 
 ```
 USAGE
-  $ nex update-set use SET [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
-    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+  $ nex update-set use SET [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
 
 ARGUMENTS
   SET  sys_id of an In progress, non-Default update set.
@@ -6813,6 +7502,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -6834,7 +7526,7 @@ EXAMPLES
   $ nex update-set use 0123456789abcdef0123456789abcdef --json --auth dev
 ```
 
-_See code: [src/commands/update-set/use.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/update-set/use.ts)_
+_See code: [src/commands/update-set/use.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/update-set/use.ts)_
 
 ## `nex workflow activity add`
 
@@ -6843,10 +7535,10 @@ Add an activity to your checked-out draft of a legacy workflow.
 ```
 USAGE
   $ nex workflow activity add -n <value> -t <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
-    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--after-exit <value>]
-    [--exit <value>] [--from <value>] [--from-exit <value>] [--input <value>] [--insert-after <value> | --insert-on
-    <value>] [--stage <value>] [--to <value>] [--var <value>...] [--vars-file <value>] [-v <value>] [-w <value>] [--x
-    <value>] [--y <value>]
+    [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--after-exit <value>] [--exit <value>] [--from <value>] [--from-exit <value>] [--input <value>] [--insert-after
+    <value> | --insert-on <value>] [--stage <value>] [--to <value>] [--var <value>...] [--vars-file <value>] [-v
+    <value>] [-w <value>] [--x <value>] [--y <value>]
 
 FLAGS
   -a, --auth=<value>          Auth alias to use.
@@ -6874,6 +7566,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -6906,7 +7601,7 @@ EXAMPLES
       1 day" --to End --exit Approved --vars-file approval.json --auth dev
 ```
 
-_See code: [src/commands/workflow/activity/add.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/activity/add.ts)_
+_See code: [src/commands/workflow/activity/add.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/activity/add.ts)_
 
 ## `nex workflow activity remove`
 
@@ -6914,9 +7609,9 @@ Remove an activity, with its exits and variables, from your checked-out draft of
 
 ```
 USAGE
-  $ nex workflow activity remove -a <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--reconnect] [-v <value>] [-w
-    <value>]
+  $ nex workflow activity remove -a <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--reconnect]
+    [-v <value>] [-w <value>]
 
 FLAGS
   -a, --activity=<value>  (required) Activity name or sys_id
@@ -6931,6 +7626,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -6950,7 +7648,7 @@ EXAMPLES
     $ nex workflow activity remove -w "Laptop Request" --activity "Wait 1 day" --reconnect --auth dev
 ```
 
-_See code: [src/commands/workflow/activity/remove.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/activity/remove.ts)_
+_See code: [src/commands/workflow/activity/remove.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/activity/remove.ts)_
 
 ## `nex workflow activity update`
 
@@ -6958,9 +7656,10 @@ Change an activity on your checked-out draft of a legacy workflow. Variables you
 
 ```
 USAGE
-  $ nex workflow activity update -a <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--input <value>] [--rename <value>]
-    [--stage <value>] [--var <value>...] [--vars-file <value>] [-v <value>] [-w <value>] [--x <value>] [--y <value>]
+  $ nex workflow activity update -a <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--input
+    <value>] [--rename <value>] [--stage <value>] [--var <value>...] [--vars-file <value>] [-v <value>] [-w <value>]
+    [--x <value>] [--y <value>]
 
 FLAGS
   -a, --activity=<value>   (required) Activity name or sys_id
@@ -6981,6 +7680,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -7005,7 +7707,7 @@ EXAMPLES
     $ nex workflow activity update -w "Laptop Request" --activity "Notify" --x 400 --y 200 --auth dev
 ```
 
-_See code: [src/commands/workflow/activity/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/activity/update.ts)_
+_See code: [src/commands/workflow/activity/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/activity/update.ts)_
 
 ## `nex workflow checkout WORKFLOW`
 
@@ -7013,8 +7715,8 @@ Check out a legacy workflow for editing. Like the Workflow Editor, this creates 
 
 ```
 USAGE
-  $ nex workflow checkout WORKFLOW [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--force]
+  $ nex workflow checkout WORKFLOW [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--force]
 
 ARGUMENTS
   WORKFLOW  Workflow name or sys_id
@@ -7029,6 +7731,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -7053,7 +7758,7 @@ EXAMPLES
     $ nex workflow checkout "Laptop Request" --force --auth dev
 ```
 
-_See code: [src/commands/workflow/checkout.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/checkout.ts)_
+_See code: [src/commands/workflow/checkout.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/checkout.ts)_
 
 ## `nex workflow condition add`
 
@@ -7062,8 +7767,8 @@ Add an exit (condition) to an activity on your checked-out draft of a legacy wor
 ```
 USAGE
   $ nex workflow condition add -a <value> -c <value> -n <value> [--json] [-a <value>] [--cred-store] [--deny-execute]
-    [--deny-write] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--else]
-    [--error] [--order <value>] [-v <value>] [-w <value>]
+    [--deny-write] [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace]
+    [--read-only] [--else] [--error] [--order <value>] [-v <value>] [-w <value>]
 
 FLAGS
   -a, --activity=<value>   (required) Activity name or sys_id
@@ -7082,6 +7787,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -7105,7 +7813,7 @@ EXAMPLES
       "activity.result == 'backordered'" --auth dev
 ```
 
-_See code: [src/commands/workflow/condition/add.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/condition/add.ts)_
+_See code: [src/commands/workflow/condition/add.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/condition/add.ts)_
 
 ## `nex workflow condition remove`
 
@@ -7114,7 +7822,8 @@ Remove an exit (condition), and the transitions leaving from it, from an activit
 ```
 USAGE
   $ nex workflow condition remove -a <value> -e <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
-    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-v <value>] [-w <value>]
+    [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-v
+    <value>] [-w <value>]
 
 FLAGS
   -a, --activity=<value>  (required) Activity name or sys_id
@@ -7129,6 +7838,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -7148,7 +7860,7 @@ EXAMPLES
     $ nex workflow condition remove -w "Laptop Request" --activity "Manager approval" --exit Skipped --auth dev
 ```
 
-_See code: [src/commands/workflow/condition/remove.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/condition/remove.ts)_
+_See code: [src/commands/workflow/condition/remove.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/condition/remove.ts)_
 
 ## `nex workflow condition update`
 
@@ -7157,8 +7869,8 @@ Change an exit (condition) of an activity on your checked-out draft of a legacy 
 ```
 USAGE
   $ nex workflow condition update -a <value> -e <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
-    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-c <value>] [--order
-    <value>] [--rename <value>] [-v <value>] [-w <value>]
+    [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-c
+    <value>] [--order <value>] [--rename <value>] [-v <value>] [-w <value>]
 
 FLAGS
   -a, --activity=<value>   (required) Activity name or sys_id
@@ -7176,6 +7888,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -7196,7 +7911,7 @@ EXAMPLES
       "activity.result == 'backorder'" --auth dev
 ```
 
-_See code: [src/commands/workflow/condition/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/condition/update.ts)_
+_See code: [src/commands/workflow/condition/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/condition/update.ts)_
 
 ## `nex workflow convert [WORKFLOW]`
 
@@ -7204,9 +7919,9 @@ Plan the move of a legacy workflow to Flow Designer, and write a Fluent (now-sdk
 
 ```
 USAGE
-  $ nex workflow convert [WORKFLOW] [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--directory <value>] [-f <value>]
-    [--fluent <value>] [--force] [--plan <value>] [--version current|published|draft]
+  $ nex workflow convert [WORKFLOW] [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--directory
+    <value>] [-f <value>] [--fluent <value>] [--force] [--plan <value>] [--version current|published|draft]
 
 ARGUMENTS
   [WORKFLOW]  Workflow name or sys_id, or a version sys_id (or use --file)
@@ -7227,6 +7942,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -7259,7 +7977,7 @@ EXAMPLES
     $ nex workflow convert --file laptop.json --plan laptop.plan.json --fluent ./my-app
 ```
 
-_See code: [src/commands/workflow/convert.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/convert.ts)_
+_See code: [src/commands/workflow/convert.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/convert.ts)_
 
 ## `nex workflow create`
 
@@ -7267,8 +7985,8 @@ Create a complete workflow from a JSON specification file.
 
 ```
 USAGE
-  $ nex workflow create -s <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+  $ nex workflow create -s <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
 
 FLAGS
   -a, --auth=<value>  Auth alias to use.
@@ -7280,6 +7998,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -7303,7 +8024,7 @@ EXAMPLES
     $ nex workflow create -s ./workflow.json --json --auth dev
 ```
 
-_See code: [src/commands/workflow/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/create.ts)_
+_See code: [src/commands/workflow/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/create.ts)_
 
 ## `nex workflow definitions [TYPE]`
 
@@ -7311,9 +8032,9 @@ List workflow activity types, or describe one as this instance defines it.
 
 ```
 USAGE
-  $ nex workflow definitions [TYPE] [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-c <value>] [--core-only] [-n
-    <value>] [--sample <value> --usage] [--script]
+  $ nex workflow definitions [TYPE] [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-c <value>]
+    [--core-only] [-n <value>] [--sample <value> --usage] [--script]
 
 ARGUMENTS
   [TYPE]  Activity type name or sys_id to describe (omit to list types)
@@ -7333,6 +8054,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -7368,7 +8092,7 @@ EXAMPLES
     $ nex workflow definitions If --script --auth dev
 ```
 
-_See code: [src/commands/workflow/definitions.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/definitions.ts)_
+_See code: [src/commands/workflow/definitions.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/definitions.ts)_
 
 ## `nex workflow discard [WORKFLOW]`
 
@@ -7376,8 +8100,8 @@ Discard your checked-out draft of a legacy workflow, keeping the published versi
 
 ```
 USAGE
-  $ nex workflow discard [WORKFLOW] [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-v <value>]
+  $ nex workflow discard [WORKFLOW] [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-v <value>]
 
 ARGUMENTS
   [WORKFLOW]  Workflow name or sys_id (omit when using --version)
@@ -7392,6 +8116,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -7411,7 +8138,7 @@ EXAMPLES
     $ nex workflow discard "Laptop Request" --auth dev
 ```
 
-_See code: [src/commands/workflow/discard.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/discard.ts)_
+_See code: [src/commands/workflow/discard.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/discard.ts)_
 
 ## `nex workflow export WORKFLOW`
 
@@ -7419,9 +8146,9 @@ Export a legacy workflow version as one complete JSON definition. Read-only.
 
 ```
 USAGE
-  $ nex workflow export WORKFLOW [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-o <value>] [--version
-    current|published|draft]
+  $ nex workflow export WORKFLOW [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-o <value>]
+    [--version current|published|draft]
 
 ARGUMENTS
   WORKFLOW  Workflow name or sys_id, or a version sys_id
@@ -7438,6 +8165,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -7470,7 +8200,7 @@ EXAMPLES
     $ nex workflow export "Laptop Request" --version published -o laptop.json --auth dev
 ```
 
-_See code: [src/commands/workflow/export.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/export.ts)_
+_See code: [src/commands/workflow/export.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/export.ts)_
 
 ## `nex workflow list`
 
@@ -7478,9 +8208,9 @@ List legacy workflows with the state of their published and checked-out versions
 
 ```
 USAGE
-  $ nex workflow list [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
-    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--limit <value>] [-n <value>] [-q <value>] [-t
-    <value>]
+  $ nex workflow list [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--limit <value>] [-n
+    <value>] [-q <value>] [-t <value>]
 
 FLAGS
   -a, --auth=<value>   Auth alias to use.
@@ -7495,6 +8225,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -7518,7 +8251,7 @@ EXAMPLES
     $ nex workflow list --table sc_req_item --json --auth dev
 ```
 
-_See code: [src/commands/workflow/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/list.ts)_
+_See code: [src/commands/workflow/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/list.ts)_
 
 ## `nex workflow new`
 
@@ -7527,8 +8260,8 @@ Create a legacy workflow the way the Workflow Editor does: Begin and End joined 
 ```
 USAGE
   $ nex workflow new -n <value> -t <value> [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
-    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--condition <value>]
-    [--condition-type <value>] [-d <value>]
+    [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--condition <value>] [--condition-type <value>] [-d <value>]
 
 FLAGS
   -a, --auth=<value>            Auth alias to use.
@@ -7544,6 +8277,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -7564,7 +8300,7 @@ EXAMPLES
     $ nex workflow new --name "Laptop Request" --table sc_req_item --auth dev
 ```
 
-_See code: [src/commands/workflow/new.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/new.ts)_
+_See code: [src/commands/workflow/new.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/new.ts)_
 
 ## `nex workflow outline [WORKFLOW]`
 
@@ -7572,9 +8308,9 @@ Show a legacy workflow as a readable outline, a node list, a structural analysis
 
 ```
 USAGE
-  $ nex workflow outline [WORKFLOW] [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--all-values] [--analysis | --nodes |
-    --mermaid] [-f <value>] [--flow-hints] [--full-scripts] [--version current|published|draft]
+  $ nex workflow outline [WORKFLOW] [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--all-values]
+    [--analysis | --nodes | --mermaid] [-f <value>] [--flow-hints] [--full-scripts] [--version current|published|draft]
 
 ARGUMENTS
   [WORKFLOW]  Workflow name or sys_id, or a version sys_id (or use --file)
@@ -7597,6 +8333,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -7631,7 +8370,7 @@ EXAMPLES
     $ nex workflow outline --file laptop.json --flow-hints
 ```
 
-_See code: [src/commands/workflow/outline.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/outline.ts)_
+_See code: [src/commands/workflow/outline.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/outline.ts)_
 
 ## `nex workflow publish`
 
@@ -7639,9 +8378,9 @@ Publish a workflow version.
 
 ```
 USAGE
-  $ nex workflow publish [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
-    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--allow-warnings] [-s <value> -v <value>] [-w
-    <value> | ]
+  $ nex workflow publish [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--allow-warnings] [-s
+    <value> -v <value>] [-w <value> | ]
 
 FLAGS
   -a, --auth=<value>            Auth alias to use.
@@ -7656,6 +8395,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -7690,7 +8432,7 @@ EXAMPLES
     $ nex workflow publish --version-id wfv-001 --start-activity act-001 --auth dev
 ```
 
-_See code: [src/commands/workflow/publish.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/publish.ts)_
+_See code: [src/commands/workflow/publish.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/publish.ts)_
 
 ## `nex workflow show [WORKFLOW]`
 
@@ -7698,8 +8440,9 @@ Show a legacy workflow: its activities with their exits and variable values, and
 
 ```
 USAGE
-  $ nex workflow show [WORKFLOW] [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--vars] [-v <value>]
+  $ nex workflow show [WORKFLOW] [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--vars] [-v
+    <value>]
 
 ARGUMENTS
   [WORKFLOW]  Workflow name or sys_id (omit when using --version)
@@ -7715,6 +8458,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -7740,7 +8486,7 @@ EXAMPLES
     $ nex workflow show --version <version_sys_id> --no-vars --auth dev
 ```
 
-_See code: [src/commands/workflow/show.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/show.ts)_
+_See code: [src/commands/workflow/show.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/show.ts)_
 
 ## `nex workflow transition add`
 
@@ -7749,8 +8495,8 @@ Add a transition between two activities on your checked-out draft of a legacy wo
 ```
 USAGE
   $ nex workflow transition add --from <value> --to <value> [--json] [-a <value>] [--cred-store] [--deny-execute]
-    [--deny-write] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--exit
-    <value>] [-v <value>] [-w <value>]
+    [--deny-write] [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace]
+    [--read-only] [--exit <value>] [-v <value>] [-w <value>]
 
 FLAGS
   -a, --auth=<value>      Auth alias to use.
@@ -7766,6 +8512,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -7785,7 +8534,7 @@ EXAMPLES
     $ nex workflow transition add -w "Laptop Request" --from "Manager approval" --exit Rejected --to End --auth dev
 ```
 
-_See code: [src/commands/workflow/transition/add.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/transition/add.ts)_
+_See code: [src/commands/workflow/transition/add.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/transition/add.ts)_
 
 ## `nex workflow transition remove`
 
@@ -7793,9 +8542,9 @@ Remove a transition from your checked-out draft of a legacy workflow, by sys_id 
 
 ```
 USAGE
-  $ nex workflow transition remove [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir <value>]
-    [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--exit <value>] [--from <value> | --transition
-    <value>] [--to <value> | ] [-v <value>] [-w <value>]
+  $ nex workflow transition remove [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate <value>...]
+    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [--exit <value>] [--from
+    <value> | --transition <value>] [--to <value> | ] [-v <value>] [-w <value>]
 
 FLAGS
   -a, --auth=<value>        Auth alias to use.
@@ -7812,6 +8561,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -7835,7 +8587,7 @@ EXAMPLES
     $ nex workflow transition remove -w "Laptop Request" --transition <transition_sys_id> --auth dev
 ```
 
-_See code: [src/commands/workflow/transition/remove.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/transition/remove.ts)_
+_See code: [src/commands/workflow/transition/remove.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/transition/remove.ts)_
 
 ## `nex workflow validate [WORKFLOW]`
 
@@ -7843,8 +8595,8 @@ Run the Workflow Editor's validation on a workflow without publishing it.
 
 ```
 USAGE
-  $ nex workflow validate [WORKFLOW] [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--log-dir
-    <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-v <value>]
+  $ nex workflow validate [WORKFLOW] [--json] [-a <value>] [--cred-store] [--deny-execute] [--deny-write] [--elevate
+    <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-v <value>]
 
 ARGUMENTS
   [WORKFLOW]  Workflow name or sys_id (omit when using --version)
@@ -7859,6 +8611,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --json                Format output as json.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
@@ -7880,7 +8635,7 @@ EXAMPLES
     $ nex workflow validate "Hardware Request" --auth dev
 ```
 
-_See code: [src/commands/workflow/validate.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/workflow/validate.ts)_
+_See code: [src/commands/workflow/validate.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/validate.ts)_
 
 ## `nex xml export`
 
@@ -7889,7 +8644,8 @@ Export a single ServiceNow record as XML.
 ```
 USAGE
   $ nex xml export -t <value> -s <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
-    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-o <value>]
+    [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only] [-o
+    <value>]
 
 FLAGS
   -a, --auth=<value>    Auth alias to use.
@@ -7904,6 +8660,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -7939,7 +8698,7 @@ EXAMPLES
     $ nex xml export --table sys_script --sys-id abc123 --json --auth dev
 ```
 
-_See code: [src/commands/xml/export.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/xml/export.ts)_
+_See code: [src/commands/xml/export.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/xml/export.ts)_
 
 ## `nex xml import`
 
@@ -7948,7 +8707,7 @@ Import XML records into a ServiceNow instance.
 ```
 USAGE
   $ nex xml import -f <value> -t <value> [-j] [-a <value>] [--cred-store] [--deny-execute] [--deny-write]
-    [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
+    [--elevate <value>...] [--log-dir <value>] [--log-file] [--log-level debug|warn|error|info|trace] [--read-only]
 
 FLAGS
   -a, --auth=<value>   Auth alias to use.
@@ -7962,6 +8721,9 @@ GLOBAL FLAGS
   --deny-execute        Refuse background scripts, creating or updating scheduled jobs (deleting one needs only write),
                         flow runs and ATF runs for this invocation.
   --deny-write          Refuse any change to instance data for this invocation.
+  --elevate=<value>...  Elevate this run's ServiceNow sessions to an elevated privilege role (e.g. security_admin), as
+                        the Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so
+                        --read-only allows it.
   --log-dir=<value>     Directory to write log files to. Implies --log-file.
   --log-file            Write logs to a file. Defaults to $XDG_STATE_HOME/now-sdk-ext/logs
                         (~/.local/state/now-sdk-ext/logs). Off by default; without this, nex logs warnings and errors to
@@ -7992,7 +8754,7 @@ EXAMPLES
     $ nex xml import --file ./records.xml --table incident --json --auth dev
 ```
 
-_See code: [src/commands/xml/import.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.0/src/commands/xml/import.ts)_
+_See code: [src/commands/xml/import.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/xml/import.ts)_
 <!-- commandsstop -->
 
 ---

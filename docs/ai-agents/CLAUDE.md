@@ -80,6 +80,7 @@ These flags are available on every command:
 | `--log-level` | | string | Logging verbosity: `debug`, `info`, `warn`, `error`, `trace` (default: `info`) |
 | `--json` | `-j` | boolean | Output results as structured JSON instead of formatted text |
 | `--cred-store` | | boolean | Read credentials from `@sonisoft/sn-credstore` instead of the OS keyring. **Required in headless sessions** — see Authentication above. |
+| `--elevate` | | string (repeatable) | Elevate this run's sessions to an elevated privilege role, e.g. `security_admin`. Lasts for this run only. Not refused by `--read-only` (it changes no data); what the session then changes is. |
 
 ## Output Patterns
 
@@ -108,6 +109,14 @@ Every command at a glance:
 
 | Command | Description |
 |---------|-------------|
+| **ACL** (see [docs/acl.md](../acl.md)) | |
+| `nex acl list` | List ACLs with their roles (by table, name or scope) |
+| `nex acl show` | One ACL with its roles; `--json` includes the script |
+| `nex acl create` | Create an ACL with roles in an app and update set (elevates to security_admin; stages it inactive until the roles are right) |
+| `nex acl update` | Change an ACL's fields (elevates) |
+| `nex acl add-role` / `remove-role` | Change an ACL's roles (elevates) |
+| `nex acl delete` | Delete an ACL, `--confirm <sys_id>` (elevates) |
+| `nex elevation` | Roles this user may elevate to; with `--elevate`, proof it holds |
 | **Aggregate** | |
 | `nex aggregate count` | Count records in a table |
 | `nex aggregate group` | Grouped aggregate statistics (COUNT, AVG, MIN, MAX, SUM) |
@@ -220,6 +229,22 @@ Every command at a glance:
 ---
 
 ## Command Reference
+
+### ACL
+
+Access controls need the elevated `security_admin` role. Elevation is per session and every nex run logs in afresh,
+so it is per run: the `nex acl` write commands elevate on their own; any other command takes `--elevate security_admin`.
+Never write an ACL with `nex metadata` (it refuses) or a raw Table API call: `nex acl` removes the `snc_internal` role
+the platform adds to a role-less ACL, which otherwise lets every internal user pass. Give every write `--scope` and an
+`--update-set` of that app. On `partially_applied`, run `nex acl show <sys_id>` before anything else. Full guide:
+[docs/acl.md](../acl.md).
+
+```bash
+nex acl list --table incident --json --auth dev
+nex acl create --scope x_app --update-set <set> --operation write --table x_app_req --role x_app.admin --json --auth dev
+nex acl add-role <acl sys_id> itil --scope x_app --update-set <set> --auth dev
+nex acl delete <acl sys_id> --confirm <acl sys_id> --scope x_app --update-set <set> --auth dev
+```
 
 ### Aggregate
 
