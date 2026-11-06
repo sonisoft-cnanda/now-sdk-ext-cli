@@ -9,6 +9,7 @@ import {
   redactMessage,
 } from '@sonisoft/now-sdk-ext-core'
 
+import {elevationRemedy, isRoleElevationError} from '../common/authenticated-command.js'
 import {MetadataDisplayService, type MetadataFailure, MetadataInputError, projectMetadataError} from './metadata-display.service.js'
 
 // Values come from the instance: one line each, no control characters or markup.
@@ -33,16 +34,41 @@ const ACL_REMEDIATION: Record<string, string> = {
   type_not_found: 'No sys_security_type has that name (record, ui_page, rest_endpoint, client_callable_script_include, …).',
 }
 
+const READS = new Set(['acl list', 'acl show'])
+const READ_REMEDIATION = 'Check --scope/--scope-id: an active application\'s scope name, global, or a sys_scope sys_id. Then retry; a read changes nothing.'
+
+/** A metadata-writer error or a policy refusal, worded for nex acl. */
+function projectWriterError(error: unknown, context: {action: string; sysId?: unknown}): MetadataFailure {
+  const failure = projectMetadataError(error, {...context, table: 'sys_security_acl'})
+  if (failure.code === 'policy_refused') failure.message = 'ACL operation refused by policy.'
+  if (error instanceof MetadataScopeError) {
+    // list and show only read: a scope that does not resolve is not a refused write.
+    if (READS.has(context.action)) {
+      failure.message = `ACL read refused: ${error.code}.`
+      failure.remediation = [ACL_REMEDIATION[error.code] ?? READ_REMEDIATION]
+      delete failure.writeAttempted
+    } else if (ACL_REMEDIATION[error.code]) {
+      failure.remediation = [ACL_REMEDIATION[error.code]]
+    }
+  }
+
+  // A refusal after a create or delete carries the ACL it left behind.
+  const left = (error as {aclState?: unknown; aclSysId?: unknown;})
+  if (typeof left.aclSysId === 'string') failure.sysId = left.aclSysId
+  if (typeof left.aclState === 'string') failure.messages.push(`The ACL is ${left.aclState} (read back).`)
+  return failure
+}
+
 /** A failed nex acl command, as reported: the metadata failure shape, extended with ACL and elevation codes. */
 export function projectAclError(error: unknown, context: {action: string; sysId?: unknown}): MetadataFailure {
+  // An elevation that failed at a session renewal, mid-change (the cause of a partial create or delete).
+  if (isRoleElevationError(error)) {
+    return {action: context.action, code: error.code, message: cleanMessage(error.message), messages: [],
+      remediation: elevationRemedy(error), table: 'sys_security_acl', type: error.name}
+  }
+
   if (error instanceof MetadataVerificationError || error instanceof MetadataScopeError || error instanceof MetadataInputError || isPolicyRefusal(error)) {
-    const failure = projectMetadataError(error, {...context, table: 'sys_security_acl'})
-    // A refusal after a create or delete carries the ACL it left behind.
-    const left = (error as {aclState?: unknown; aclSysId?: unknown;})
-    if (failure.code === 'policy_refused') failure.message = 'ACL operation refused by policy.'
-    if (typeof left.aclSysId === 'string') failure.sysId = left.aclSysId
-    if (typeof left.aclState === 'string') failure.messages.push(`The ACL is ${left.aclState} (read back).`)
-    return failure
+    return projectWriterError(error, context)
   }
 
   if (error instanceof AclError) {

@@ -25,15 +25,16 @@ starts unelevated, and nothing is saved between runs. Two ways to elevate:
 - Any other command takes `--elevate <role>` (repeatable), e.g. a background script that changes ACLs:
   `nex exec global fix-acls.js --elevate security_admin`.
 
-`nex elevation --elevate security_admin` proves elevation works for a user and instance. When it fails, the error says
-why:
+`nex elevation --elevate security_admin` proves elevation works for a user and instance. When it fails, the error has
+a code and a suggestion, and with `--json` an `error.elevation` object (`code`, `roles`, `available`, `status`):
 
 | Code | What to do |
 | --- | --- |
-| `not_elevatable` | The user may not elevate to that role. In the base system only `admin` has `security_admin`. The message lists what the user may elevate to. |
+| `not_elevatable` | The user may not elevate to that role. In the base system only `admin` has `security_admin`. The suggestion and `error.elevation.available` list what the user may elevate to. |
 | `api_unavailable` | The instance does not offer the API: check that `glide.rest.apis.disabled` does not list "UI Impersonate API". |
 | `not_applied` | The instance accepted the request, but the session does not have the role. Compare by elevating in the UI. |
 | `invalid_role` | Not a role name. |
+| `request_failed` | Anything else reaching the API (connectivity, an unexpected status). Retry; `nex elevation` reads the state. |
 
 Elevating changes no data, so `--read-only`, `--deny-write` and `NEX_POLICY_DENY` do not refuse it. They still refuse
 what the elevated session tries to change: `nex acl create --read-only` elevates, then the ACL write is refused.
@@ -71,4 +72,5 @@ If a create or delete fails part way, the error (`partially_applied`) names the 
 `nex acl show <sys_id>` before retrying.
 
 `--json` returns the ACL as read back (`acl`, and `previous` for a change), every verified write with its capture,
-`removedAutomaticRoles` and `warnings`. Failures carry the same shape as `nex metadata` under `error.acl`.
+`removedAutomaticRoles` and `warnings`. Failures carry the same shape as `nex metadata` under `error.acl`, except an
+elevation failure at login, which comes under `error.elevation` as above.

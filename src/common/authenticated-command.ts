@@ -1,6 +1,6 @@
  
 
-import { Command, Flags, Interfaces } from '@oclif/core'
+import { Command, Errors, Flags, Interfaces } from '@oclif/core'
 import { logger as sdkLogger } from '@servicenow/sdk-cli/dist/logger/index.js';
 import { configureLogging, flushLogs, isPolicyRefusal, Logger, redactValue, resolveSessionCredentials, type RoleElevationError, ServiceNowInstance, ServiceNowSettingsInstance } from '@sonisoft/now-sdk-ext-core';
 
@@ -50,10 +50,12 @@ export abstract class AuthenticatedCommand<T extends typeof Command> extends Com
     // elevates as it logs in. It changes no instance data, so --read-only does not refuse it; what the elevated
     // session then changes is refused or permitted as usual.
     'elevate': Flags.string({
+      // Not greedy: `nex exec --elevate security_admin global fix.js` must leave the arguments to the command.
       description: 'Elevate this run\'s ServiceNow sessions to an elevated privilege role (e.g. security_admin), as the '
         + 'Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so --read-only allows it.',
       helpGroup: 'GLOBAL',
       multiple: true,
+      multipleNonGreedy: true,
       required: false,
     }),
     'log-dir': Flags.string({
@@ -110,7 +112,11 @@ protected instance!:ServiceNowInstance;
     if (isRoleElevationError(err)) {
       this.authLogger?.warn('Role elevation failed.', {code: err.code, roles: err.roles});
       await flushLogs();
-      this.error(err.message, {code: err.code, exit: 1, suggestions: elevationRemedy(err)});
+      // Through oclif's own catch, as a CLIError: that is what writes the --json error document.
+      const failure = new Errors.CLIError(err.message, {code: err.code, exit: 1, suggestions: elevationRemedy(err)});
+      Object.assign(failure, {elevation: {available: [...err.available], code: err.code, roles: [...err.roles],
+        ...(err.status === undefined ? {} : {status: err.status})}});
+      return super.catch(failure);
     }
 
     if (isPolicyRefusal(err)) {
@@ -238,15 +244,19 @@ protected instance!:ServiceNowInstance;
       this.failAuth(alias);
     }
 
-    const elevatedRoles = [...new Set([...((flags.elevate as string[] | undefined) ?? []),
-      ...((this.ctor as unknown as typeof AuthenticatedCommand).elevatedRoles ?? [])])]
-    const snSettings: ServiceNowSettingsInstance = {
-      alias: flags.auth,
+    this.instance = new ServiceNowInstance(this.instanceSettings(alias, credential));
+  }
+
+  /** The instance this run talks to: the alias's credential, and the roles every session elevates to. */
+  protected instanceSettings(alias: string, credential: unknown): ServiceNowSettingsInstance {
+    const elevatedRoles = [...new Set([...((this.ctor as unknown as typeof AuthenticatedCommand).elevatedRoles ?? []),
+      ...((this.flags.elevate as string[] | undefined) ?? [])])]
+    return {
+      alias: this.flags.auth as string | undefined,
       credential,
       credentialProvider: () => resolveSessionCredentials(alias),
       ...(elevatedRoles.length > 0 ? {elevatedRoles} : {}),
     }
-    this.instance = new ServiceNowInstance(snSettings);
   }
 
   /**

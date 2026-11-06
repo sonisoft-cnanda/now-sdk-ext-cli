@@ -1,7 +1,9 @@
 import {afterEach, describe, expect, it, jest} from '@jest/globals'
 import {Errors} from '@oclif/core'
+import {Args, Parser} from '@oclif/core'
 import {
   AclError,
+  MetadataScopeError,
   AclManager,
   AclPartialError,
   type AclRecord,
@@ -71,6 +73,12 @@ describe('nex acl commands', () => {
   it('every write command elevates to security_admin; reads do not', () => {
     for (const Ctor of [AclCreate, AclUpdate, AclDelete, AclAddRole, AclRemoveRole]) expect(Ctor.elevatedRoles).toEqual(['security_admin'])
     for (const Ctor of [AclList, AclShow, Elevation]) expect(Ctor.elevatedRoles).toEqual([])
+  })
+
+  it('update refuses to run with nothing to change', async () => {
+    const update = jest.spyOn(AclManager.prototype, 'update')
+    await expect(command(AclUpdate, {sys_id: ACL}, scope).target.run()).rejects.toThrow('Pass at least one change')
+    expect(update).not.toHaveBeenCalled()
   })
 
   it('update passes only the fields given, and --no-active', async () => {
@@ -166,10 +174,41 @@ describe('nex acl failures', () => {
     expect(error.message).toBe('ACL operation refused by policy.')
   })
 
-  it('leaves an elevation failure to the base handler', async () => {
-    const elevation = new RoleElevationError('not_elevatable', ['security_admin'], [])
-    const error = await caught(elevation)
-    expect(error).toBe(elevation)
+  it('reports an elevation failure through oclif\'s catch, with its code, roles and remediation (the --json error)', async () => {
+    const {Command} = await import('@oclif/core')
+    let thrown: (Errors.CLIError & {elevation?: unknown}) | undefined
+    jest.spyOn(Command.prototype as never, 'catch' as never).mockImplementation(async (e: unknown) => { thrown = e as never })
+    const {target} = command(AclCreate, {}, scope)
+    target.executing = true
+    await target.catch(new RoleElevationError('not_elevatable', ['security_admin'], ['x_app.auditor']))
+    expect(thrown).toBeInstanceOf(Errors.CLIError)
+    expect(thrown?.elevation).toEqual({available: ['x_app.auditor'], code: 'not_elevatable', roles: ['security_admin']})
+    expect((thrown as unknown as {code: string}).code).toBe('not_elevatable')
+    expect(thrown?.suggestions?.[0]).toContain('may elevate to: x_app.auditor')
+  })
+
+  it('nex metadata keeps an elevation failure\'s own code too', async () => {
+    const {Command} = await import('@oclif/core')
+    const {default: MetadataUpdate} = await import('../../../src/commands/metadata/update.js')
+    let thrown: unknown
+    jest.spyOn(Command.prototype as never, 'catch' as never).mockImplementation(async (e: unknown) => { thrown = e })
+    const {target} = command(MetadataUpdate, {}, {table: 'sys_script_include'})
+    target.executing = true
+    await target.catch(new RoleElevationError('api_unavailable', [], [], 404))
+    expect(thrown).toMatchObject({code: 'api_unavailable', elevation: {code: 'api_unavailable', status: 404}})
+  })
+
+  it('projects an elevation failure that was the failed step of a partial change', () => {
+    const failure = projectAclError(new AclPartialError(ACL, 'create', 'inactive', new RoleElevationError('not_applied', ['security_admin'])), {action: 'acl create'})
+    expect(failure.messages).toContain('Failed step: not_applied')
+  })
+
+  it('calls a refused read a read, with read advice', () => {
+    const failure = projectAclError(new MetadataScopeError('scope_unknown'), {action: 'acl list'})
+    expect(failure.message).toBe('ACL read refused: scope_unknown.')
+    expect(failure.remediation[0]).toContain('--scope')
+    expect(failure.writeAttempted).toBeUndefined()
+    expect(projectAclError(new MetadataScopeError('elevation_required'), {action: 'acl create'}).remediation[0]).toContain('security_admin')
   })
 
   it('remediates each elevation failure', () => {
@@ -177,6 +216,24 @@ describe('nex acl failures', () => {
     expect(elevationRemedy(new RoleElevationError('not_elevatable', ['admin'], []))[0]).toContain('may not elevate to any role')
     expect(elevationRemedy(new RoleElevationError('api_unavailable'))[0]).toContain('UI Impersonate API')
     expect(elevationRemedy(new RoleElevationError('invalid_role'))[0]).toContain('--elevate security_admin')
+  })
+})
+
+describe('--elevate', () => {
+  it('merges the flag with the command\'s own roles, once each, into the instance settings', () => {
+    const {target} = command(AclCreate, {}, {auth: 'dev', elevate: ['x_app.admin', 'security_admin']})
+    expect(target.instanceSettings('dev', {}).elevatedRoles).toEqual(['security_admin', 'x_app.admin'])
+    const list = command(AclList, {}, {auth: 'dev'}).target.instanceSettings('dev', {})
+    expect(list).not.toHaveProperty('elevatedRoles')
+    expect(command(AclList, {}, {elevate: ['security_admin']}).target.instanceSettings('dev', {}).elevatedRoles).toEqual(['security_admin'])
+  })
+
+  it('does not swallow the arguments that follow it', async () => {
+    const parsed = await Parser.parse(['--elevate', 'security_admin', 'global', 'fix.js'], {
+      args: {scope: Args.string(), file: Args.string()}, flags: {elevate: AuthenticatedCommand.baseFlags.elevate},
+    })
+    expect(parsed.flags.elevate).toEqual(['security_admin'])
+    expect(parsed.args).toEqual({file: 'fix.js', scope: 'global'})
   })
 })
 

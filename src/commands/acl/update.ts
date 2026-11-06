@@ -1,7 +1,7 @@
 import {Args, Flags} from '@oclif/core'
 import {type AclUpdateOptions} from '@sonisoft/now-sdk-ext-core'
 
-import {aclFieldFlags, aclTarget, aclTargetFlags, AclWriteCommand, scriptInput, sysIdArg} from '../../common/acl-command.js'
+import {aclFieldFlags, aclTarget, aclTargetFlags, AclWriteCommand, reject, scriptInput, sysIdArg} from '../../common/acl-command.js'
 import {type AclWriteSummary} from '../../services/acl-display.service.js'
 
 export default class AclUpdate extends AclWriteCommand<typeof AclUpdate> {
@@ -33,6 +33,11 @@ export default class AclUpdate extends AclWriteCommand<typeof AclUpdate> {
       ...(flags['decision-type'] === undefined ? {} : {decisionType: flags['decision-type']}),
       ...(flags.description === undefined ? {} : {description: flags.description}),
     }
+    if (Object.keys(options).every(key => ['scope', 'storeCustomization', 'updateSet'].includes(key))) {
+      reject('Pass at least one change: --active/--no-active, --operation, --condition, --script, --script-file, '
+        + '--admin-overrides/--no-admin-overrides, --decision-type or --description. Roles change with nex acl add-role / remove-role.')
+    }
+
     return this.report('updated', await this.manager().update(sysIdArg(this.args.sys_id), options))
   }
 }
