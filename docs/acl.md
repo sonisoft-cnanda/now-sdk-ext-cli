@@ -64,8 +64,10 @@ These are the platform's rules, seen on Australia:
 - **Deleting an ACL deletes its role rows**, each captured as a DELETE.
 - **An active record ACL can only be deleted once inactive**, so `nex acl delete` deactivates it first. If anything fails
   after that, it reactivates the ACL.
-- **A scoped application may not put a field ACL on another application's field.** The platform refuses, and the error
-  carries its reason. A table ACL on another application's table is allowed.
+- **ACLs on another application's table are outside the documented limits.** The docs ("Creation restrictions across
+  application scopes") allow only role-based field ACLs there: no table-level ACL, no `.*`, no condition or script.
+  On Australia the form refused a field ACL on another application's field, with its reason in the error, and saved a
+  table ACL on another application's table. Put an ACL in its table's application unless the risk is accepted.
 - **The platform writes the description itself** on first save. The output shows what was saved.
 
 If a create or delete fails part way, the error (`partially_applied`) names the ACL and its state as read back. Run
