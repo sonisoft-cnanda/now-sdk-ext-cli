@@ -68,10 +68,13 @@ Verification failures contain `verification: "failed"` and preserve `writeAttemp
 Missing evidence is omitted. It is not replaced with default values.
 
 Writing code needs execute as well as write (core 6.18.7): `--deny-execute`, `--read-only` and `NEX_POLICY_DENY=execute`
-refuse it before anything is sent. Code means a script column (script, script_plain, script_server, script_client,
-condition_string, html_script, xml, and the same types in an ATF step's variables), a `javascript:` value, or switching
-on a record that holds code. Core checks this on each call, against the record as stored. Other metadata stays a plain
-write. `nex script-sync push` and the watcher likewise need execute: a pushed script runs on the instance.
+refuse it before the form is submitted. Code means a script column (script, script_plain, script_server, script_client,
+condition_string, html_script, xml, inherited columns included, and the same types in a variable, by its model, for
+example an ATF step's inputs; a filled variable whose model is unknown counts), a `javascript:` value in any field,
+initial-query term or variable, an insert left active whose code columns are filled (a code column the form view does
+not show counts), or an update that turns active on for a record whose stored code is not blank. Core checks this on
+each call. Other metadata, and deletes, stay a plain write. `nex script-sync push` and `nex script-sync sync` likewise
+need execute: a pushed script runs on the instance.
 
 Each metadata POST runs once. A 401, uncertain response, or failed verification does not trigger a replay.
 The record can exist after failed verification.
