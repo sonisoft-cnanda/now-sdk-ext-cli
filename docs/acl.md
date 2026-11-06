@@ -39,6 +39,12 @@ a code and a suggestion, and with `--json` an `error.elevation` object (`code`, 
 Elevating changes no data, so `--read-only`, `--deny-write` and `NEX_POLICY_DENY` do not refuse it. They still refuse
 what the elevated session tries to change: `nex acl create --read-only` elevates, then the ACL write is refused.
 
+Code on an ACL needs `execute` as well as write, because the platform runs it at every check of the ACL: a `--script`
+(whether or not advanced is on) or a `javascript:` value in `--condition`. `--deny-execute` therefore refuses an
+`nex acl create` or `update` that sets code, and an `update` that switches on an ACL with code, changes its operation or
+turns admin overrides off. Role-only changes stay plain writes. (Core checks this in `nex acl` only: a Table API, XML or
+background-script write of the ACL tables would not be caught, which is one more reason to use `nex acl`.)
+
 ## Where writes go
 
 Every write takes the ACL's application, `--scope <name>` (or `global`) or `--scope-id`, and usually `--update-set`,
