@@ -46,6 +46,14 @@ an In progress set of that application. The set does not have to be your current
 left as they are. A Store application also needs `--acknowledge-upgrade-skip` and `--update-set`, as with
 `nex metadata`.
 
+**An ACL on another application's table or field is outside the documented limits, and nex does not check it.**
+ServiceNow's documentation ("Creation restrictions across application scopes") allows only role-based field ACLs on a
+table of another scope: no table-level ACL, no `.*`, no condition or script. What was seen on Australia, from a scoped
+application on Global tables: a table ACL on `cmn_location` saved; a field ACL on `sys_user.mobile_phone` was refused
+("outside field"). `nex acl create` inserts an ACL before adding its roles, so the platform judged it without roles;
+whether a role-based one would save was not tested. Whatever saves today may be refused or behave differently on a later
+release, so put an ACL in its table's application unless you accept that risk.
+
 `nex metadata insert|update|delete` refuses the ACL tables, even with `--elevate`. Use `nex acl`, which applies the
 platform's rules below.
 
@@ -64,8 +72,6 @@ These are the platform's rules, seen on Australia:
 - **Deleting an ACL deletes its role rows**, each captured as a DELETE.
 - **An active record ACL can only be deleted once inactive**, so `nex acl delete` deactivates it first. If anything fails
   after that, it reactivates the ACL.
-- **A scoped application may not put a field ACL on another application's field.** The platform refuses, and the error
-  carries its reason. A table ACL on another application's table is allowed.
 - **The platform writes the description itself** on first save. The output shows what was saved.
 
 If a create or delete fails part way, the error (`partially_applied`) names the ACL and its state as read back. Run

@@ -15,7 +15,7 @@ export const aclFieldFlags = {
   condition: Flags.string({description: 'Encoded query condition on the record.'}),
   'decision-type': Flags.option({description: 'allow (default) or deny, on a release with deny ACLs.', options: ['allow', 'deny'] as const})(),
   description: Flags.string({description: 'Description. The platform may write its own on first save.'}),
-  script: Flags.string({description: 'Script that sets answer. Turns on advanced, which the script needs to run.', exclusive: ['script-file']}),
+  script: Flags.string({description: 'Script that sets answer. Turns on advanced, which shows the script on the form; the platform runs it either way.', exclusive: ['script-file']}),
   'script-file': Flags.string({description: 'Read the script from a file.', exclusive: ['script']}),
 }
 

@@ -673,7 +673,7 @@ $ npm install -g @sonisoft/now-sdk-ext-cli
 $ nex COMMAND
 running command...
 $ nex (--version)
-@sonisoft/now-sdk-ext-cli/5.16.1 linux-x64 node-v26.8.1
+@sonisoft/now-sdk-ext-cli/5.17.0 linux-x64 node-v26.8.1
 $ nex --help [COMMAND]
 USAGE
   $ nex COMMAND
@@ -888,7 +888,7 @@ EXAMPLES
     $ nex acl add-role 0123456789abcdef0123456789abcdef itil --scope x_acme_app --auth dev
 ```
 
-_See code: [src/commands/acl/add-role.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/acl/add-role.ts)_
+_See code: [src/commands/acl/add-role.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/acl/add-role.ts)_
 
 ## `nex acl create`
 
@@ -917,7 +917,8 @@ FLAGS
   --role=<value>...           A role that passes the ACL. Repeatable: any one of them passes.
   --scope=<value>             Explicit application scope name, or literal global.
   --scope-id=<value>          Explicit application scope sys_id.
-  --script=<value>            Script that sets answer. Turns on advanced, which the script needs to run.
+  --script=<value>            Script that sets answer. Turns on advanced, which shows the script on the form; the
+                              platform runs it either way.
   --script-file=<value>       Read the script from a file.
   --table=<value>             Record ACLs: the table.
   --type=<value>              [default: record] ACL type (sys_security_type name).
@@ -945,7 +946,7 @@ EXAMPLES
       --auth dev
 ```
 
-_See code: [src/commands/acl/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/acl/create.ts)_
+_See code: [src/commands/acl/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/acl/create.ts)_
 
 ## `nex acl delete SYS_ID`
 
@@ -984,7 +985,7 @@ EXAMPLES
       --auth dev
 ```
 
-_See code: [src/commands/acl/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/acl/delete.ts)_
+_See code: [src/commands/acl/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/acl/delete.ts)_
 
 ## `nex acl list`
 
@@ -1039,7 +1040,7 @@ EXAMPLES
     $ nex acl list --scope x_acme_app --operation write --json --auth dev
 ```
 
-_See code: [src/commands/acl/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/acl/list.ts)_
+_See code: [src/commands/acl/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/acl/list.ts)_
 
 ## `nex acl remove-role ACL ROLE`
 
@@ -1078,7 +1079,7 @@ EXAMPLES
     $ nex acl remove-role 0123456789abcdef0123456789abcdef snc_internal --scope x_acme_app --auth dev
 ```
 
-_See code: [src/commands/acl/remove-role.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/acl/remove-role.ts)_
+_See code: [src/commands/acl/remove-role.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/acl/remove-role.ts)_
 
 ## `nex acl show SYS_ID`
 
@@ -1123,7 +1124,7 @@ EXAMPLES
     $ nex acl show 0123456789abcdef0123456789abcdef --auth dev
 ```
 
-_See code: [src/commands/acl/show.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/acl/show.ts)_
+_See code: [src/commands/acl/show.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/acl/show.ts)_
 
 ## `nex acl update SYS_ID`
 
@@ -1151,7 +1152,8 @@ FLAGS
   --operation=<value>         Operation name: read, write, create, delete, execute, …
   --scope=<value>             Explicit application scope name, or literal global.
   --scope-id=<value>          Explicit application scope sys_id.
-  --script=<value>            Script that sets answer. Turns on advanced, which the script needs to run.
+  --script=<value>            Script that sets answer. Turns on advanced, which shows the script on the form; the
+                              platform runs it either way.
   --script-file=<value>       Read the script from a file.
   --update-set=<value>        In progress update set in the requested scope. Required for a Store application.
 
@@ -1172,7 +1174,7 @@ EXAMPLES
     $ nex acl update 0123456789abcdef0123456789abcdef --scope x_acme_app --no-active --auth dev
 ```
 
-_See code: [src/commands/acl/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/acl/update.ts)_
+_See code: [src/commands/acl/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/acl/update.ts)_
 
 ## `nex aggregate count`
 
@@ -1231,7 +1233,7 @@ EXAMPLES
     $ nex aggregate count --table incident --query "active=true" --json --auth dev
 ```
 
-_See code: [src/commands/aggregate/count.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/aggregate/count.ts)_
+_See code: [src/commands/aggregate/count.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/aggregate/count.ts)_
 
 ## `nex aggregate group`
 
@@ -1303,7 +1305,7 @@ EXAMPLES
     $ nex aggregate group --table incident --group-by priority --count --having "count>10" --auth dev
 ```
 
-_See code: [src/commands/aggregate/group.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/aggregate/group.ts)_
+_See code: [src/commands/aggregate/group.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/aggregate/group.ts)_
 
 ## `nex aggregate query`
 
@@ -1370,7 +1372,7 @@ EXAMPLES
     $ nex aggregate query --table incident --sum reassignment_count --json --auth dev
 ```
 
-_See code: [src/commands/aggregate/query.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/aggregate/query.ts)_
+_See code: [src/commands/aggregate/query.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/aggregate/query.ts)_
 
 ## `nex app`
 
@@ -1438,7 +1440,7 @@ EXAMPLES
     $ nex app -u -i a1b2c3d4e5f6 -s x_my_custom_app -a dev-instance
 ```
 
-_See code: [src/commands/app/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/app/index.ts)_
+_See code: [src/commands/app/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/app/index.ts)_
 
 ## `nex app install`
 
@@ -1510,7 +1512,7 @@ EXAMPLES
     $ nex app install -b -d ./apps.json -a dev-instance --log-level debug
 ```
 
-_See code: [src/commands/app/install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/app/install.ts)_
+_See code: [src/commands/app/install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/app/install.ts)_
 
 ## `nex app repo-install`
 
@@ -1599,7 +1601,7 @@ EXAMPLES
     $ nex app repo-install -s x_my_app -a dev-instance --log-level debug
 ```
 
-_See code: [src/commands/app/repo-install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/app/repo-install.ts)_
+_See code: [src/commands/app/repo-install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/app/repo-install.ts)_
 
 ## `nex app repo-list`
 
@@ -1678,7 +1680,7 @@ EXAMPLES
     $ nex app repo-list -a dev-instance
 ```
 
-_See code: [src/commands/app/repo-list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/app/repo-list.ts)_
+_See code: [src/commands/app/repo-list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/app/repo-list.ts)_
 
 ## `nex app uninstall`
 
@@ -1744,7 +1746,7 @@ EXAMPLES
     $ nex app uninstall -i a1b2c3d4e5f6 -s x_my_custom_app -a dev-instance
 ```
 
-_See code: [src/commands/app/uninstall.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/app/uninstall.ts)_
+_See code: [src/commands/app/uninstall.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/app/uninstall.ts)_
 
 ## `nex atf`
 
@@ -1831,7 +1833,7 @@ EXAMPLES
     $ nex atf --suite-id e077e00b83103210621e78c6feaad383 --poll-interval 10000 --auth dev-instance
 ```
 
-_See code: [src/commands/atf/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/atf/index.ts)_
+_See code: [src/commands/atf/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/atf/index.ts)_
 
 ## `nex attachment get`
 
@@ -1878,7 +1880,7 @@ EXAMPLES
     $ nex attachment get -s att123 --json --auth dev
 ```
 
-_See code: [src/commands/attachment/get.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/attachment/get.ts)_
+_See code: [src/commands/attachment/get.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/attachment/get.ts)_
 
 ## `nex attachment list`
 
@@ -1928,7 +1930,7 @@ EXAMPLES
     $ nex attachment list -t incident -r abc123 --limit 50 --json --auth dev
 ```
 
-_See code: [src/commands/attachment/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/attachment/list.ts)_
+_See code: [src/commands/attachment/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/attachment/list.ts)_
 
 ## `nex attachment upload`
 
@@ -1979,7 +1981,7 @@ EXAMPLES
     $ nex attachment upload -t incident -r abc123 -f ./data.csv --content-type text/csv --auth dev
 ```
 
-_See code: [src/commands/attachment/upload.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/attachment/upload.ts)_
+_See code: [src/commands/attachment/upload.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/attachment/upload.ts)_
 
 ## `nex auth browser-session`
 
@@ -2002,7 +2004,7 @@ DESCRIPTION
   Create a verified Playwright cookie session using a stored SDK alias.
 ```
 
-_See code: [src/commands/auth/browser-session.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/auth/browser-session.ts)_
+_See code: [src/commands/auth/browser-session.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/auth/browser-session.ts)_
 
 ## `nex auth delete [ALIAS]`
 
@@ -2037,7 +2039,7 @@ EXAMPLES
     $ nex auth delete --all
 ```
 
-_See code: [src/commands/auth/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/auth/delete.ts)_
+_See code: [src/commands/auth/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/auth/delete.ts)_
 
 ## `nex auth doctor`
 
@@ -2065,7 +2067,7 @@ EXAMPLES
     $ nex auth doctor --json
 ```
 
-_See code: [src/commands/auth/doctor.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/auth/doctor.ts)_
+_See code: [src/commands/auth/doctor.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/auth/doctor.ts)_
 
 ## `nex auth list`
 
@@ -2098,7 +2100,7 @@ EXAMPLES
     $ nex auth list --json
 ```
 
-_See code: [src/commands/auth/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/auth/list.ts)_
+_See code: [src/commands/auth/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/auth/list.ts)_
 
 ## `nex auth open`
 
@@ -2138,7 +2140,7 @@ EXAMPLES
     $ nex auth open -a dev206299 --cdp http://127.0.0.1:9222
 ```
 
-_See code: [src/commands/auth/open.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/auth/open.ts)_
+_See code: [src/commands/auth/open.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/auth/open.ts)_
 
 ## `nex auth use ALIAS`
 
@@ -2166,7 +2168,7 @@ EXAMPLES
     $ nex auth use dev206299
 ```
 
-_See code: [src/commands/auth/use.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/auth/use.ts)_
+_See code: [src/commands/auth/use.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/auth/use.ts)_
 
 ## `nex autocomplete [SHELL]`
 
@@ -2245,7 +2247,7 @@ EXAMPLES
     $ nex batch create --file ./records.json --no-transaction --auth dev
 ```
 
-_See code: [src/commands/batch/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/batch/create.ts)_
+_See code: [src/commands/batch/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/batch/create.ts)_
 
 ## `nex batch update`
 
@@ -2294,7 +2296,7 @@ EXAMPLES
     $ nex batch update --file ./updates.json --stop-on-error --auth dev
 ```
 
-_See code: [src/commands/batch/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/batch/update.ts)_
+_See code: [src/commands/batch/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/batch/update.ts)_
 
 ## `nex behavior`
 
@@ -2357,7 +2359,7 @@ EXAMPLES
   $ nex behavior --table change_request --category business_rules --details scripts --auth dev --json
 ```
 
-_See code: [src/commands/behavior/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/behavior/index.ts)_
+_See code: [src/commands/behavior/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/behavior/index.ts)_
 
 ## `nex behavior details`
 
@@ -2406,7 +2408,7 @@ EXAMPLES
   $ nex behavior details --reference business_rules:sys_script:0123456789abcdef0123456789abcdef --details scripts --auth dev --json
 ```
 
-_See code: [src/commands/behavior/details.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/behavior/details.ts)_
+_See code: [src/commands/behavior/details.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/behavior/details.ts)_
 
 ## `nex bulk delete`
 
@@ -2475,7 +2477,7 @@ EXAMPLES
     $ nex bulk delete --table u_staging --query "processed=true" --confirm --json --auth dev
 ```
 
-_See code: [src/commands/bulk/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/bulk/delete.ts)_
+_See code: [src/commands/bulk/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/bulk/delete.ts)_
 
 ## `nex bulk update`
 
@@ -2548,7 +2550,7 @@ EXAMPLES
     $ nex bulk update --table incident --query "active=true" --data '{"state":"6"}' --confirm --json --auth dev
 ```
 
-_See code: [src/commands/bulk/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/bulk/update.ts)_
+_See code: [src/commands/bulk/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/bulk/update.ts)_
 
 ## `nex elevation`
 
@@ -2598,7 +2600,7 @@ EXAMPLES
     $ nex elevation --elevate security_admin --auth dev
 ```
 
-_See code: [src/commands/elevation/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/elevation/index.ts)_
+_See code: [src/commands/elevation/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/elevation/index.ts)_
 
 ## `nex exec SCOPE [FILE]`
 
@@ -2738,7 +2740,7 @@ EXAMPLES
     $ nex exec global ./script.js --auth dev-instance --params '{"token":"abc123","env":"dev"}'
 ```
 
-_See code: [src/commands/exec/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/exec/index.ts)_
+_See code: [src/commands/exec/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/exec/index.ts)_
 
 ## `nex flow action`
 
@@ -2796,7 +2798,7 @@ EXAMPLES
       '{"table":"incident","values":{"short_description":"Test"}}' --auth dev
 ```
 
-_See code: [src/commands/flow/action.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/action.ts)_
+_See code: [src/commands/flow/action.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/flow/action.ts)_
 
 ## `nex flow cancel`
 
@@ -2848,7 +2850,7 @@ EXAMPLES
     $ nex flow cancel --context-id abc123def456 --reason "No longer needed" --auth dev
 ```
 
-_See code: [src/commands/flow/cancel.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/cancel.ts)_
+_See code: [src/commands/flow/cancel.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/flow/cancel.ts)_
 
 ## `nex flow copy`
 
@@ -2918,7 +2920,7 @@ EXAMPLES
       dev
 ```
 
-_See code: [src/commands/flow/copy.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/copy.ts)_
+_See code: [src/commands/flow/copy.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/flow/copy.ts)_
 
 ## `nex flow debug`
 
@@ -2976,7 +2978,7 @@ EXAMPLES
   $ nex flow debug --context 0123456789abcdef0123456789abcdef --auth dev
 ```
 
-_See code: [src/commands/flow/debug/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/debug/index.ts)_
+_See code: [src/commands/flow/debug/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/flow/debug/index.ts)_
 
 ## `nex flow debug break`
 
@@ -3030,7 +3032,7 @@ EXAMPLES
   $ nex flow debug break -c 0123456789abcdef0123456789abcdef --clear --auth dev
 ```
 
-_See code: [src/commands/flow/debug/break.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/debug/break.ts)_
+_See code: [src/commands/flow/debug/break.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/flow/debug/break.ts)_
 
 ## `nex flow debug cancel`
 
@@ -3074,7 +3076,7 @@ EXAMPLES
   $ nex flow debug cancel --context 0123456789abcdef0123456789abcdef --auth dev
 ```
 
-_See code: [src/commands/flow/debug/cancel.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/debug/cancel.ts)_
+_See code: [src/commands/flow/debug/cancel.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/flow/debug/cancel.ts)_
 
 ## `nex flow debug inspect`
 
@@ -3123,7 +3125,7 @@ EXAMPLES
   $ nex flow debug inspect -c 0123456789abcdef0123456789abcdef --step 1 --full --auth dev
 ```
 
-_See code: [src/commands/flow/debug/inspect.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/debug/inspect.ts)_
+_See code: [src/commands/flow/debug/inspect.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/flow/debug/inspect.ts)_
 
 ## `nex flow debug list`
 
@@ -3171,7 +3173,7 @@ EXAMPLES
   $ nex flow debug list --created-by admin --json --auth dev
 ```
 
-_See code: [src/commands/flow/debug/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/debug/list.ts)_
+_See code: [src/commands/flow/debug/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/flow/debug/list.ts)_
 
 ## `nex flow debug resume`
 
@@ -3215,7 +3217,7 @@ EXAMPLES
   $ nex flow debug resume --context 0123456789abcdef0123456789abcdef --auth dev
 ```
 
-_See code: [src/commands/flow/debug/resume.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/debug/resume.ts)_
+_See code: [src/commands/flow/debug/resume.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/flow/debug/resume.ts)_
 
 ## `nex flow debug run`
 
@@ -3276,7 +3278,7 @@ EXAMPLES
   $ nex flow debug run -f 0123456789abcdef0123456789abcdef -i @inputs.json -b 2 --after resume --auth dev
 ```
 
-_See code: [src/commands/flow/debug/run.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/debug/run.ts)_
+_See code: [src/commands/flow/debug/run.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/flow/debug/run.ts)_
 
 ## `nex flow debug skip-all`
 
@@ -3319,7 +3321,7 @@ EXAMPLES
   $ nex flow debug skip-all --context 0123456789abcdef0123456789abcdef --auth dev
 ```
 
-_See code: [src/commands/flow/debug/skip-all.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/debug/skip-all.ts)_
+_See code: [src/commands/flow/debug/skip-all.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/flow/debug/skip-all.ts)_
 
 ## `nex flow debug start`
 
@@ -3377,7 +3379,7 @@ EXAMPLES
   $ nex flow debug start -f 0123456789abcdef0123456789abcdef -i @inputs.json --json --auth dev
 ```
 
-_See code: [src/commands/flow/debug/start.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/debug/start.ts)_
+_See code: [src/commands/flow/debug/start.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/flow/debug/start.ts)_
 
 ## `nex flow debug step`
 
@@ -3429,7 +3431,7 @@ EXAMPLES
   $ nex flow debug step -c 0123456789abcdef0123456789abcdef --into --json --auth dev
 ```
 
-_See code: [src/commands/flow/debug/step.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/debug/step.ts)_
+_See code: [src/commands/flow/debug/step.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/flow/debug/step.ts)_
 
 ## `nex flow definition`
 
@@ -3506,7 +3508,7 @@ EXAMPLES
     $ nex flow definition -i 887dda5583237210fdb8f7b6feaad32c --type action --json --auth dev | jq .summary.steps
 ```
 
-_See code: [src/commands/flow/definition.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/definition.ts)_
+_See code: [src/commands/flow/definition.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/flow/definition.ts)_
 
 ## `nex flow details`
 
@@ -3572,7 +3574,7 @@ EXAMPLES
     $ nex flow details -c d4e5f6789012345678abcdef01234567 --json --auth dev
 ```
 
-_See code: [src/commands/flow/details.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/details.ts)_
+_See code: [src/commands/flow/details.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/flow/details.ts)_
 
 ## `nex flow error`
 
@@ -3619,7 +3621,7 @@ EXAMPLES
     $ nex flow error --context-id abc123def456 --auth dev
 ```
 
-_See code: [src/commands/flow/error.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/error.ts)_
+_See code: [src/commands/flow/error.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/flow/error.ts)_
 
 ## `nex flow logs`
 
@@ -3682,7 +3684,7 @@ EXAMPLES
     $ nex flow logs -c d4e5f6789012345678abcdef01234567 --json --auth dev
 ```
 
-_See code: [src/commands/flow/logs.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/logs.ts)_
+_See code: [src/commands/flow/logs.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/flow/logs.ts)_
 
 ## `nex flow message`
 
@@ -3736,7 +3738,7 @@ EXAMPLES
     $ nex flow message --context-id abc123def456 --message "data_ready" --payload '{"status":"ok"}' --auth dev
 ```
 
-_See code: [src/commands/flow/message.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/message.ts)_
+_See code: [src/commands/flow/message.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/flow/message.ts)_
 
 ## `nex flow outputs`
 
@@ -3787,7 +3789,7 @@ EXAMPLES
     $ nex flow outputs --context-id abc123def456 --json --auth dev
 ```
 
-_See code: [src/commands/flow/outputs.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/outputs.ts)_
+_See code: [src/commands/flow/outputs.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/flow/outputs.ts)_
 
 ## `nex flow run`
 
@@ -3857,7 +3859,7 @@ EXAMPLES
     $ nex flow run --name global.my_flow --mode background --auth dev
 ```
 
-_See code: [src/commands/flow/run.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/run.ts)_
+_See code: [src/commands/flow/run.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/flow/run.ts)_
 
 ## `nex flow status`
 
@@ -3906,7 +3908,7 @@ EXAMPLES
     $ nex flow status --context-id abc123def456 --auth dev
 ```
 
-_See code: [src/commands/flow/status.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/status.ts)_
+_See code: [src/commands/flow/status.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/flow/status.ts)_
 
 ## `nex flow subflow`
 
@@ -3970,7 +3972,7 @@ EXAMPLES
     $ nex flow subflow --name x_myapp.process_record --inputs '{"table":"incident","sys_id":"abc123"}' --auth dev
 ```
 
-_See code: [src/commands/flow/subflow.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/subflow.ts)_
+_See code: [src/commands/flow/subflow.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/flow/subflow.ts)_
 
 ## `nex flow test`
 
@@ -4037,7 +4039,7 @@ EXAMPLES
     $ nex flow test -f 887dda5583237210fdb8f7b6feaad32c -o '{"current":"abc123"}' --json --auth dev
 ```
 
-_See code: [src/commands/flow/test.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/flow/test.ts)_
+_See code: [src/commands/flow/test.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/flow/test.ts)_
 
 ## `nex health check`
 
@@ -4112,7 +4114,7 @@ EXAMPLES
     $ nex health check --json --auth dev
 ```
 
-_See code: [src/commands/health/check.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/health/check.ts)_
+_See code: [src/commands/health/check.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/health/check.ts)_
 
 ## `nex help [COMMAND]`
 
@@ -4252,7 +4254,7 @@ EXAMPLES
     $ nex log --no-color --auth dev-instance
 ```
 
-_See code: [src/commands/log/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/log/index.ts)_
+_See code: [src/commands/log/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/log/index.ts)_
 
 ## `nex metadata choice get`
 
@@ -4303,7 +4305,7 @@ EXAMPLES
   $ nex metadata choice get --table x_acme_ticket --column severity --language fr --auth dev --read-only --json
 ```
 
-_See code: [src/commands/metadata/choice/get.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/metadata/choice/get.ts)_
+_See code: [src/commands/metadata/choice/get.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/metadata/choice/get.ts)_
 
 ## `nex metadata choice remove`
 
@@ -4362,7 +4364,7 @@ EXAMPLES
   $ nex metadata choice remove --table x_acme_ticket --column severity --value 4 --scope x_acme --update-set 0123456789abcdef0123456789abcdef --auth dev
 ```
 
-_See code: [src/commands/metadata/choice/remove.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/metadata/choice/remove.ts)_
+_See code: [src/commands/metadata/choice/remove.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/metadata/choice/remove.ts)_
 
 ## `nex metadata choice set`
 
@@ -4432,7 +4434,7 @@ EXAMPLES
   $ nex metadata choice set --table cmn_cost_center --column u_tier --value gold --inactive --scope global --update-set 0123456789abcdef0123456789abcdef --auth dev
 ```
 
-_See code: [src/commands/metadata/choice/set.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/metadata/choice/set.ts)_
+_See code: [src/commands/metadata/choice/set.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/metadata/choice/set.ts)_
 
 ## `nex metadata column add`
 
@@ -4503,7 +4505,7 @@ EXAMPLES
   $ nex metadata column add --table cmn_cost_center --column approver --label Approver --type reference --reference sys_user --scope global --update-set 0123456789abcdef0123456789abcdef --auth dev
 ```
 
-_See code: [src/commands/metadata/column/add.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/metadata/column/add.ts)_
+_See code: [src/commands/metadata/column/add.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/metadata/column/add.ts)_
 
 ## `nex metadata column remove`
 
@@ -4577,7 +4579,7 @@ EXAMPLES
   $ nex metadata column remove --table cmn_cost_center --column u_tier --confirm cmn_cost_center.u_tier --scope global --update-set 0123456789abcdef0123456789abcdef --auth dev
 ```
 
-_See code: [src/commands/metadata/column/remove.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/metadata/column/remove.ts)_
+_See code: [src/commands/metadata/column/remove.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/metadata/column/remove.ts)_
 
 ## `nex metadata delete`
 
@@ -4630,7 +4632,7 @@ EXAMPLES
   $ nex metadata delete --table sys_script_include --sys-id 0123456789abcdef0123456789abcdef --scope x_example_app --confirm-table sys_script_include --confirm-sys-id 0123456789abcdef0123456789abcdef --auth dev
 ```
 
-_See code: [src/commands/metadata/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/metadata/delete.ts)_
+_See code: [src/commands/metadata/delete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/metadata/delete.ts)_
 
 ## `nex metadata insert`
 
@@ -4688,7 +4690,7 @@ EXAMPLES
   $ nex metadata insert --table sys_script_include --scope x_example_app --fields-file ./fields.json --auth dev
 ```
 
-_See code: [src/commands/metadata/insert.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/metadata/insert.ts)_
+_See code: [src/commands/metadata/insert.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/metadata/insert.ts)_
 
 ## `nex metadata layout get`
 
@@ -4729,7 +4731,7 @@ EXAMPLES
   $ nex metadata layout get --section 0123456789abcdef0123456789abcdef --auth dev --read-only
 ```
 
-_See code: [src/commands/metadata/layout/get.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/metadata/layout/get.ts)_
+_See code: [src/commands/metadata/layout/get.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/metadata/layout/get.ts)_
 
 ## `nex metadata layout set`
 
@@ -4788,7 +4790,7 @@ EXAMPLES
   $ nex metadata layout set --section 0123456789abcdef0123456789abcdef --elements-file ./layout.json --scope-id 0123456789abcdef0123456789abcdef --update-set 0123456789abcdef0123456789abcdef --acknowledge-upgrade-skip --auth dev
 ```
 
-_See code: [src/commands/metadata/layout/set.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/metadata/layout/set.ts)_
+_See code: [src/commands/metadata/layout/set.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/metadata/layout/set.ts)_
 
 ## `nex metadata list-layout get`
 
@@ -4836,7 +4838,7 @@ EXAMPLES
   $ nex metadata list-layout get --table incident --view ess --auth dev --read-only
 ```
 
-_See code: [src/commands/metadata/list-layout/get.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/metadata/list-layout/get.ts)_
+_See code: [src/commands/metadata/list-layout/get.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/metadata/list-layout/get.ts)_
 
 ## `nex metadata list-layout set`
 
@@ -4895,7 +4897,7 @@ EXAMPLES
   $ nex metadata list-layout set --table sn_grc_indicator --columns-file ./columns.json --scope sn_grc --update-set 0123456789abcdef0123456789abcdef --acknowledge-upgrade-skip --auth dev
 ```
 
-_See code: [src/commands/metadata/list-layout/set.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/metadata/list-layout/set.ts)_
+_See code: [src/commands/metadata/list-layout/set.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/metadata/list-layout/set.ts)_
 
 ## `nex metadata update`
 
@@ -4954,7 +4956,7 @@ EXAMPLES
   $ nex metadata update --table sys_script_include --sys-id 0123456789abcdef0123456789abcdef --scope x_example_app --fields-file ./fields.json --auth dev
 ```
 
-_See code: [src/commands/metadata/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/metadata/update.ts)_
+_See code: [src/commands/metadata/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/metadata/update.ts)_
 
 ## `nex plugins`
 
@@ -5276,7 +5278,7 @@ EXAMPLES
   NEX_POLICY_DENY=all nex policy status
 ```
 
-_See code: [src/commands/policy/status.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/policy/status.ts)_
+_See code: [src/commands/policy/status.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/policy/status.ts)_
 
 ## `nex query`
 
@@ -5343,7 +5345,7 @@ EXAMPLES
     $ nex query --table sys_user --query "active=true" --limit 5 --json --auth dev
 ```
 
-_See code: [src/commands/query/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/query/index.ts)_
+_See code: [src/commands/query/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/query/index.ts)_
 
 ## `nex query app`
 
@@ -5401,7 +5403,7 @@ EXAMPLES
     $ nex query app --search "HR" --active --auth dev
 ```
 
-_See code: [src/commands/query/app.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/query/app.ts)_
+_See code: [src/commands/query/app.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/query/app.ts)_
 
 ## `nex query columns`
 
@@ -5460,7 +5462,7 @@ EXAMPLES
     $ nex query columns --table incident --json --auth dev
 ```
 
-_See code: [src/commands/query/columns.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/query/columns.ts)_
+_See code: [src/commands/query/columns.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/query/columns.ts)_
 
 ## `nex query syslog`
 
@@ -5521,7 +5523,7 @@ EXAMPLES
     $ nex query syslog --query "sourceLIKEincident" --json --auth dev
 ```
 
-_See code: [src/commands/query/syslog.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/query/syslog.ts)_
+_See code: [src/commands/query/syslog.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/query/syslog.ts)_
 
 ## `nex schema`
 
@@ -5584,7 +5586,7 @@ EXAMPLES
     $ nex schema --table incident --include-choices --include-relationships --auth dev
 ```
 
-_See code: [src/commands/schema/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/schema/index.ts)_
+_See code: [src/commands/schema/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/schema/index.ts)_
 
 ## `nex schema field`
 
@@ -5635,7 +5637,7 @@ EXAMPLES
     $ nex schema field --table incident --field priority --json --auth dev
 ```
 
-_See code: [src/commands/schema/field.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/schema/field.ts)_
+_See code: [src/commands/schema/field.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/schema/field.ts)_
 
 ## `nex schema validate-catalog`
 
@@ -5685,7 +5687,7 @@ EXAMPLES
     $ nex schema validate-catalog --sys-id a1b2c3d4e5f6 --json --auth dev
 ```
 
-_See code: [src/commands/schema/validate-catalog.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/schema/validate-catalog.ts)_
+_See code: [src/commands/schema/validate-catalog.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/schema/validate-catalog.ts)_
 
 ## `nex scope`
 
@@ -5736,7 +5738,7 @@ EXAMPLES
     $ nex scope -l --json --auth dev
 ```
 
-_See code: [src/commands/scope/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/scope/index.ts)_
+_See code: [src/commands/scope/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/scope/index.ts)_
 
 ## `nex scope set`
 
@@ -5783,7 +5785,7 @@ EXAMPLES
     $ nex scope set -a abc123def456ghi789jkl012mno345pq --json --auth dev
 ```
 
-_See code: [src/commands/scope/set.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/scope/set.ts)_
+_See code: [src/commands/scope/set.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/scope/set.ts)_
 
 ## `nex script-sync pull`
 
@@ -5847,7 +5849,7 @@ EXAMPLES
     $ nex script-sync pull -n MyClientScript -t sys_script_client --json --auth dev-instance
 ```
 
-_See code: [src/commands/script-sync/pull.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/script-sync/pull.ts)_
+_See code: [src/commands/script-sync/pull.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/script-sync/pull.ts)_
 
 ## `nex script-sync push`
 
@@ -5912,7 +5914,7 @@ EXAMPLES
     $ nex script-sync push -n MyUIScript -t sys_ui_script -f ./scripts/ui-script.js --json --auth dev-instance
 ```
 
-_See code: [src/commands/script-sync/push.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/script-sync/push.ts)_
+_See code: [src/commands/script-sync/push.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/script-sync/push.ts)_
 
 ## `nex script-sync sync`
 
@@ -5975,7 +5977,7 @@ EXAMPLES
     $ nex script-sync sync -d ./scripts --json --auth dev-instance
 ```
 
-_See code: [src/commands/script-sync/sync.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/script-sync/sync.ts)_
+_See code: [src/commands/script-sync/sync.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/script-sync/sync.ts)_
 
 ## `nex search`
 
@@ -6046,7 +6048,7 @@ EXAMPLES
     $ nex search --term "GlideRecord" --limit 10 --json --auth dev-instance
 ```
 
-_See code: [src/commands/search/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/search/index.ts)_
+_See code: [src/commands/search/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/search/index.ts)_
 
 ## `nex search add-table`
 
@@ -6111,7 +6113,7 @@ EXAMPLES
       dev-instance
 ```
 
-_See code: [src/commands/search/add-table.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/search/add-table.ts)_
+_See code: [src/commands/search/add-table.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/search/add-table.ts)_
 
 ## `nex search groups`
 
@@ -6164,7 +6166,7 @@ EXAMPLES
     $ nex search groups --json --auth dev-instance
 ```
 
-_See code: [src/commands/search/groups.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/search/groups.ts)_
+_See code: [src/commands/search/groups.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/search/groups.ts)_
 
 ## `nex search tables`
 
@@ -6219,7 +6221,7 @@ EXAMPLES
     $ nex search tables --search-group "Business Rules" --json --auth dev-instance
 ```
 
-_See code: [src/commands/search/tables.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/search/tables.ts)_
+_See code: [src/commands/search/tables.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/search/tables.ts)_
 
 ## `nex store install`
 
@@ -6276,7 +6278,7 @@ EXAMPLES
     $ nex store install -a abc123 -v 1.0.0 --demo-data --auth dev
 ```
 
-_See code: [src/commands/store/install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/store/install.ts)_
+_See code: [src/commands/store/install.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/store/install.ts)_
 
 ## `nex store repair APP`
 
@@ -6343,7 +6345,7 @@ EXAMPLES
     $ nex store repair x_acme_app --no-wait --auth dev
 ```
 
-_See code: [src/commands/store/repair.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/store/repair.ts)_
+_See code: [src/commands/store/repair.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/store/repair.ts)_
 
 ## `nex store search`
 
@@ -6398,7 +6400,7 @@ EXAMPLES
     $ nex store search --tab updates --limit 10 --auth dev
 ```
 
-_See code: [src/commands/store/search.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/store/search.ts)_
+_See code: [src/commands/store/search.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/store/search.ts)_
 
 ## `nex store update`
 
@@ -6454,7 +6456,7 @@ EXAMPLES
     $ nex store update -a abc123 -v 2.0.0 --timeout 3600000 --auth dev
 ```
 
-_See code: [src/commands/store/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/store/update.ts)_
+_See code: [src/commands/store/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/store/update.ts)_
 
 ## `nex store validate`
 
@@ -6497,7 +6499,7 @@ EXAMPLES
     $ nex store validate --file ./batch-definition.json --auth dev
 ```
 
-_See code: [src/commands/store/validate.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/store/validate.ts)_
+_See code: [src/commands/store/validate.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/store/validate.ts)_
 
 ## `nex task approve`
 
@@ -6552,7 +6554,7 @@ EXAMPLES
     $ nex task approve -n CHG0010001 -c "Looks good, approved" --auth dev
 ```
 
-_See code: [src/commands/task/approve.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/task/approve.ts)_
+_See code: [src/commands/task/approve.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/task/approve.ts)_
 
 ## `nex task assign`
 
@@ -6617,7 +6619,7 @@ EXAMPLES
     $ nex task assign --number CHG0010001 --table change_request --user admin --auth dev
 ```
 
-_See code: [src/commands/task/assign.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/task/assign.ts)_
+_See code: [src/commands/task/assign.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/task/assign.ts)_
 
 ## `nex task close`
 
@@ -6675,7 +6677,7 @@ EXAMPLES
     $ nex task close -n INC0010001 --notes "Closed" --close-code "Solved (Permanently)" --auth dev
 ```
 
-_See code: [src/commands/task/close.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/task/close.ts)_
+_See code: [src/commands/task/close.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/task/close.ts)_
 
 ## `nex task comment`
 
@@ -6739,7 +6741,7 @@ EXAMPLES
     $ nex task comment --number CHG0010001 --table change_request --comment "Approved" --auth dev
 ```
 
-_See code: [src/commands/task/comment.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/task/comment.ts)_
+_See code: [src/commands/task/comment.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/task/comment.ts)_
 
 ## `nex task find`
 
@@ -6800,7 +6802,7 @@ EXAMPLES
     $ nex task find -n INC0010001 --json --auth dev
 ```
 
-_See code: [src/commands/task/find.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/task/find.ts)_
+_See code: [src/commands/task/find.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/task/find.ts)_
 
 ## `nex task resolve`
 
@@ -6858,7 +6860,7 @@ EXAMPLES
     $ nex task resolve -n INC0010001 --notes "Fixed" --close-code "Solved (Permanently)" --auth dev
 ```
 
-_See code: [src/commands/task/resolve.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/task/resolve.ts)_
+_See code: [src/commands/task/resolve.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/task/resolve.ts)_
 
 ## `nex transaction kill`
 
@@ -6905,7 +6907,7 @@ EXAMPLES
   $ nex transaction kill --transaction-id 8f9a1234567890abcdef1234567890c1 --confirm --json --auth dev
 ```
 
-_See code: [src/commands/transaction/kill.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/transaction/kill.ts)_
+_See code: [src/commands/transaction/kill.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/transaction/kill.ts)_
 
 ## `nex transaction list`
 
@@ -6956,7 +6958,7 @@ EXAMPLES
   $ nex transaction list --timeout-ms 120000 --poll-interval-ms 2000 --auth dev
 ```
 
-_See code: [src/commands/transaction/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/transaction/list.ts)_
+_See code: [src/commands/transaction/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/transaction/list.ts)_
 
 ## `nex update-set`
 
@@ -7009,7 +7011,7 @@ EXAMPLES
     $ nex update-set --json --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/update-set/index.ts)_
+_See code: [src/commands/update-set/index.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/update-set/index.ts)_
 
 ## `nex update-set clone`
 
@@ -7057,7 +7059,7 @@ EXAMPLES
     $ nex update-set clone --source us-001 --name "Cloned Set" --json --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/clone.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/update-set/clone.ts)_
+_See code: [src/commands/update-set/clone.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/update-set/clone.ts)_
 
 ## `nex update-set complete SET`
 
@@ -7109,7 +7111,7 @@ EXAMPLES
   $ nex update-set complete 0123456789abcdef0123456789abcdef --expected-captures 3 --auth dev
 ```
 
-_See code: [src/commands/update-set/complete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/update-set/complete.ts)_
+_See code: [src/commands/update-set/complete.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/update-set/complete.ts)_
 
 ## `nex update-set create`
 
@@ -7168,7 +7170,7 @@ EXAMPLES
     $ nex update-set create --name "STORY-123 Policy form" --application sn_compliance --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/update-set/create.ts)_
+_See code: [src/commands/update-set/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/update-set/create.ts)_
 
 ## `nex update-set current`
 
@@ -7223,7 +7225,7 @@ EXAMPLES
     $ nex update-set current --json --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/current.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/update-set/current.ts)_
+_See code: [src/commands/update-set/current.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/update-set/current.ts)_
 
 ## `nex update-set export SET`
 
@@ -7284,7 +7286,7 @@ EXAMPLES
   $ nex update-set export 0123456789abcdef0123456789abcdef --output STORY-123.xml --force --auth dev
 ```
 
-_See code: [src/commands/update-set/export.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/update-set/export.ts)_
+_See code: [src/commands/update-set/export.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/update-set/export.ts)_
 
 ## `nex update-set inspect`
 
@@ -7331,7 +7333,7 @@ EXAMPLES
     $ nex update-set inspect --sys-id us-001 --json --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/inspect.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/update-set/inspect.ts)_
+_See code: [src/commands/update-set/inspect.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/update-set/inspect.ts)_
 
 ## `nex update-set move`
 
@@ -7385,7 +7387,7 @@ EXAMPLES
     $ nex update-set move --target us-002 --source us-001 --json --auth dev-instance
 ```
 
-_See code: [src/commands/update-set/move.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/update-set/move.ts)_
+_See code: [src/commands/update-set/move.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/update-set/move.ts)_
 
 ## `nex update-set move-capture`
 
@@ -7434,7 +7436,7 @@ EXAMPLES
   $ nex update-set move-capture --capture 0123456789abcdef0123456789abcdef --source 0123456789abcdef0123456789abcdee --target 0123456789abcdef0123456789abcded --reason "STORY-123 belongs in the story set" --auth dev
 ```
 
-_See code: [src/commands/update-set/move-capture.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/update-set/move-capture.ts)_
+_See code: [src/commands/update-set/move-capture.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/update-set/move-capture.ts)_
 
 ## `nex update-set restore`
 
@@ -7479,7 +7481,7 @@ EXAMPLES
   $ nex update-set restore --application global --update-set 0123456789abcdef0123456789abcdef --auth dev
 ```
 
-_See code: [src/commands/update-set/restore.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/update-set/restore.ts)_
+_See code: [src/commands/update-set/restore.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/update-set/restore.ts)_
 
 ## `nex update-set use SET`
 
@@ -7526,7 +7528,7 @@ EXAMPLES
   $ nex update-set use 0123456789abcdef0123456789abcdef --json --auth dev
 ```
 
-_See code: [src/commands/update-set/use.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/update-set/use.ts)_
+_See code: [src/commands/update-set/use.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/update-set/use.ts)_
 
 ## `nex workflow activity add`
 
@@ -7601,7 +7603,7 @@ EXAMPLES
       1 day" --to End --exit Approved --vars-file approval.json --auth dev
 ```
 
-_See code: [src/commands/workflow/activity/add.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/activity/add.ts)_
+_See code: [src/commands/workflow/activity/add.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/workflow/activity/add.ts)_
 
 ## `nex workflow activity remove`
 
@@ -7648,7 +7650,7 @@ EXAMPLES
     $ nex workflow activity remove -w "Laptop Request" --activity "Wait 1 day" --reconnect --auth dev
 ```
 
-_See code: [src/commands/workflow/activity/remove.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/activity/remove.ts)_
+_See code: [src/commands/workflow/activity/remove.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/workflow/activity/remove.ts)_
 
 ## `nex workflow activity update`
 
@@ -7707,7 +7709,7 @@ EXAMPLES
     $ nex workflow activity update -w "Laptop Request" --activity "Notify" --x 400 --y 200 --auth dev
 ```
 
-_See code: [src/commands/workflow/activity/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/activity/update.ts)_
+_See code: [src/commands/workflow/activity/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/workflow/activity/update.ts)_
 
 ## `nex workflow checkout WORKFLOW`
 
@@ -7758,7 +7760,7 @@ EXAMPLES
     $ nex workflow checkout "Laptop Request" --force --auth dev
 ```
 
-_See code: [src/commands/workflow/checkout.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/checkout.ts)_
+_See code: [src/commands/workflow/checkout.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/workflow/checkout.ts)_
 
 ## `nex workflow condition add`
 
@@ -7813,7 +7815,7 @@ EXAMPLES
       "activity.result == 'backordered'" --auth dev
 ```
 
-_See code: [src/commands/workflow/condition/add.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/condition/add.ts)_
+_See code: [src/commands/workflow/condition/add.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/workflow/condition/add.ts)_
 
 ## `nex workflow condition remove`
 
@@ -7860,7 +7862,7 @@ EXAMPLES
     $ nex workflow condition remove -w "Laptop Request" --activity "Manager approval" --exit Skipped --auth dev
 ```
 
-_See code: [src/commands/workflow/condition/remove.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/condition/remove.ts)_
+_See code: [src/commands/workflow/condition/remove.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/workflow/condition/remove.ts)_
 
 ## `nex workflow condition update`
 
@@ -7911,7 +7913,7 @@ EXAMPLES
       "activity.result == 'backorder'" --auth dev
 ```
 
-_See code: [src/commands/workflow/condition/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/condition/update.ts)_
+_See code: [src/commands/workflow/condition/update.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/workflow/condition/update.ts)_
 
 ## `nex workflow convert [WORKFLOW]`
 
@@ -7977,7 +7979,7 @@ EXAMPLES
     $ nex workflow convert --file laptop.json --plan laptop.plan.json --fluent ./my-app
 ```
 
-_See code: [src/commands/workflow/convert.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/convert.ts)_
+_See code: [src/commands/workflow/convert.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/workflow/convert.ts)_
 
 ## `nex workflow create`
 
@@ -8024,7 +8026,7 @@ EXAMPLES
     $ nex workflow create -s ./workflow.json --json --auth dev
 ```
 
-_See code: [src/commands/workflow/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/create.ts)_
+_See code: [src/commands/workflow/create.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/workflow/create.ts)_
 
 ## `nex workflow definitions [TYPE]`
 
@@ -8092,7 +8094,7 @@ EXAMPLES
     $ nex workflow definitions If --script --auth dev
 ```
 
-_See code: [src/commands/workflow/definitions.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/definitions.ts)_
+_See code: [src/commands/workflow/definitions.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/workflow/definitions.ts)_
 
 ## `nex workflow discard [WORKFLOW]`
 
@@ -8138,7 +8140,7 @@ EXAMPLES
     $ nex workflow discard "Laptop Request" --auth dev
 ```
 
-_See code: [src/commands/workflow/discard.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/discard.ts)_
+_See code: [src/commands/workflow/discard.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/workflow/discard.ts)_
 
 ## `nex workflow export WORKFLOW`
 
@@ -8200,7 +8202,7 @@ EXAMPLES
     $ nex workflow export "Laptop Request" --version published -o laptop.json --auth dev
 ```
 
-_See code: [src/commands/workflow/export.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/export.ts)_
+_See code: [src/commands/workflow/export.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/workflow/export.ts)_
 
 ## `nex workflow list`
 
@@ -8251,7 +8253,7 @@ EXAMPLES
     $ nex workflow list --table sc_req_item --json --auth dev
 ```
 
-_See code: [src/commands/workflow/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/list.ts)_
+_See code: [src/commands/workflow/list.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/workflow/list.ts)_
 
 ## `nex workflow new`
 
@@ -8300,7 +8302,7 @@ EXAMPLES
     $ nex workflow new --name "Laptop Request" --table sc_req_item --auth dev
 ```
 
-_See code: [src/commands/workflow/new.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/new.ts)_
+_See code: [src/commands/workflow/new.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/workflow/new.ts)_
 
 ## `nex workflow outline [WORKFLOW]`
 
@@ -8370,7 +8372,7 @@ EXAMPLES
     $ nex workflow outline --file laptop.json --flow-hints
 ```
 
-_See code: [src/commands/workflow/outline.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/outline.ts)_
+_See code: [src/commands/workflow/outline.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/workflow/outline.ts)_
 
 ## `nex workflow publish`
 
@@ -8432,7 +8434,7 @@ EXAMPLES
     $ nex workflow publish --version-id wfv-001 --start-activity act-001 --auth dev
 ```
 
-_See code: [src/commands/workflow/publish.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/publish.ts)_
+_See code: [src/commands/workflow/publish.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/workflow/publish.ts)_
 
 ## `nex workflow show [WORKFLOW]`
 
@@ -8486,7 +8488,7 @@ EXAMPLES
     $ nex workflow show --version <version_sys_id> --no-vars --auth dev
 ```
 
-_See code: [src/commands/workflow/show.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/show.ts)_
+_See code: [src/commands/workflow/show.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/workflow/show.ts)_
 
 ## `nex workflow transition add`
 
@@ -8534,7 +8536,7 @@ EXAMPLES
     $ nex workflow transition add -w "Laptop Request" --from "Manager approval" --exit Rejected --to End --auth dev
 ```
 
-_See code: [src/commands/workflow/transition/add.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/transition/add.ts)_
+_See code: [src/commands/workflow/transition/add.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/workflow/transition/add.ts)_
 
 ## `nex workflow transition remove`
 
@@ -8587,7 +8589,7 @@ EXAMPLES
     $ nex workflow transition remove -w "Laptop Request" --transition <transition_sys_id> --auth dev
 ```
 
-_See code: [src/commands/workflow/transition/remove.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/transition/remove.ts)_
+_See code: [src/commands/workflow/transition/remove.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/workflow/transition/remove.ts)_
 
 ## `nex workflow validate [WORKFLOW]`
 
@@ -8635,7 +8637,7 @@ EXAMPLES
     $ nex workflow validate "Hardware Request" --auth dev
 ```
 
-_See code: [src/commands/workflow/validate.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/workflow/validate.ts)_
+_See code: [src/commands/workflow/validate.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/workflow/validate.ts)_
 
 ## `nex xml export`
 
@@ -8698,7 +8700,7 @@ EXAMPLES
     $ nex xml export --table sys_script --sys-id abc123 --json --auth dev
 ```
 
-_See code: [src/commands/xml/export.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/xml/export.ts)_
+_See code: [src/commands/xml/export.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/xml/export.ts)_
 
 ## `nex xml import`
 
@@ -8754,7 +8756,7 @@ EXAMPLES
     $ nex xml import --file ./records.xml --table incident --json --auth dev
 ```
 
-_See code: [src/commands/xml/import.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.16.1/src/commands/xml/import.ts)_
+_See code: [src/commands/xml/import.ts](https://github.com/sonisoft-cnanda/now-sdk-ext-cli/blob/v5.17.0/src/commands/xml/import.ts)_
 <!-- commandsstop -->
 
 ---

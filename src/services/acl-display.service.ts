@@ -121,7 +121,7 @@ export class AclDisplayService {
       `Admin overrides: ${acl.adminOverrides ? 'yes' : 'no'}${acl.decisionType ? `; decision: ${clean(acl.decisionType)}` : ''}`,
       `Condition: ${clean(acl.condition) || '(none)'}`,
       // The script is shown as a size here; --json carries it.
-      `Script: ${script ? `${script.split('\n').length} line(s)${acl.advanced ? '' : ' (not run: advanced is off)'}` : '(none)'}`,
+      `Script: ${script ? `${script.split('\n').length} line(s)${acl.advanced ? '' : ' (advanced off: hidden on the form, still runs)'}` : '(none)'}`,
       ...(acl.description ? [`Description: ${clean(acl.description)}`] : []),
     ]
   }
