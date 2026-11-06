@@ -2,7 +2,7 @@
 
 import { Command, Flags, Interfaces } from '@oclif/core'
 import { logger as sdkLogger } from '@servicenow/sdk-cli/dist/logger/index.js';
-import { configureLogging, flushLogs, isPolicyRefusal, Logger, redactValue, resolveSessionCredentials, ServiceNowInstance, ServiceNowSettingsInstance } from '@sonisoft/now-sdk-ext-core';
+import { configureLogging, flushLogs, isPolicyRefusal, Logger, redactValue, resolveSessionCredentials, type RoleElevationError, ServiceNowInstance, ServiceNowSettingsInstance } from '@sonisoft/now-sdk-ext-core';
 
 import { LogFactory } from '../util/log-factory.js';
 import { installCliPolicy, type PolicyFlags } from './policy.js';
@@ -46,6 +46,16 @@ export abstract class AuthenticatedCommand<T extends typeof Command> extends Com
       helpGroup: 'GLOBAL',
       required: false,
     }),
+    // Elevation is per server session and ends with it, so it is asked for per run: every session this run opens
+    // elevates as it logs in. It changes no instance data, so --read-only does not refuse it; what the elevated
+    // session then changes is refused or permitted as usual.
+    'elevate': Flags.string({
+      description: 'Elevate this run\'s ServiceNow sessions to an elevated privilege role (e.g. security_admin), as the '
+        + 'Elevate Role dialog does. Repeatable. Lasts only for this run. Changes no data, so --read-only allows it.',
+      helpGroup: 'GLOBAL',
+      multiple: true,
+      required: false,
+    }),
     'log-dir': Flags.string({
       description: 'Directory to write log files to. Implies --log-file.',
       helpGroup: 'GLOBAL',
@@ -75,7 +85,9 @@ export abstract class AuthenticatedCommand<T extends typeof Command> extends Com
       required: false,
     }),
   }
-// add the --json flag
+/** Roles a command always needs elevated (e.g. security_admin to change ACLs), added to --elevate. */
+    static elevatedRoles: string[] = []
+    // add the --json flag
     static enableJsonFlag = true
 protected _logger!: Logger;
     protected args!: Args<T>;
@@ -95,6 +107,12 @@ protected instance!:ServiceNowInstance;
     // A refusal is a decision, not a crash. Render it as the CLI's own error with
     // remediation, rather than letting a stack trace reach the user for something they
     // asked for by passing a flag. Handled first, before the generic path below.
+    if (isRoleElevationError(err)) {
+      this.authLogger?.warn('Role elevation failed.', {code: err.code, roles: err.roles});
+      await flushLogs();
+      this.error(err.message, {code: err.code, exit: 1, suggestions: elevationRemedy(err)});
+    }
+
     if (isPolicyRefusal(err)) {
       this.authLogger?.warn("Refused by policy.", {message: err.message});
       await flushLogs();
@@ -220,10 +238,13 @@ protected instance!:ServiceNowInstance;
       this.failAuth(alias);
     }
 
+    const elevatedRoles = [...new Set([...((flags.elevate as string[] | undefined) ?? []),
+      ...((this.ctor as unknown as typeof AuthenticatedCommand).elevatedRoles ?? [])])]
     const snSettings: ServiceNowSettingsInstance = {
       alias: flags.auth,
       credential,
       credentialProvider: () => resolveSessionCredentials(alias),
+      ...(elevatedRoles.length > 0 ? {elevatedRoles} : {}),
     }
     this.instance = new ServiceNowInstance(snSettings);
   }
@@ -279,5 +300,40 @@ protected instance!:ServiceNowInstance;
 
     const detail = cause instanceof Error ? cause.message : `No credentials found for alias "${alias}".`;
     this.error(detail, {suggestions});
+  }
+}
+
+/**
+ * A failed elevation, recognised by name: commands' unit tests mock core with a fixed export list, so the base command
+ * imports no value it does not need.
+ */
+export function isRoleElevationError(error: unknown): error is RoleElevationError {
+  return error instanceof Error && error.name === 'RoleElevationError' && typeof (error as {code?: unknown}).code === 'string'
+}
+
+/** What to do about a failed elevation, by its code. */
+export function elevationRemedy(error: RoleElevationError): string[] {
+  switch (error.code) {
+    case 'api_unavailable': {
+      return ['The instance does not offer the elevate API: check that glide.rest.apis.disabled does not list "UI Impersonate API", and that the user has UI access.']
+    }
+
+    case 'invalid_role': {
+      return ['Pass a role name, e.g. --elevate security_admin.']
+    }
+
+    case 'not_applied': {
+      return ['The instance accepted the elevation but the session does not have the role. Elevate from the UI once to compare, and check glide.security.strict_elevate_privilege.']
+    }
+
+    case 'not_elevatable': {
+      return [error.available.length > 0
+        ? `This user may elevate to: ${error.available.join(', ')}. Run nex elevation to see them.`
+        : 'This user may not elevate to any role. Only a user assigned an elevated privilege role (security_admin is assigned to the base admin) can elevate.']
+    }
+
+    default: {
+      return ['Check connectivity and retry. Run nex elevation to read the elevation state.']
+    }
   }
 }
