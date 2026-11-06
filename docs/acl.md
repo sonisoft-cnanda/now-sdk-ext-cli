@@ -42,7 +42,7 @@ what the elevated session tries to change: `nex acl create --read-only` elevates
 Code on an ACL needs `execute` as well as write, because the platform runs it at every check of the ACL: a `--script`
 (whether or not advanced is on) or a `javascript:` value in `--condition`. `--deny-execute` therefore refuses an
 `nex acl create` or `update` that sets code, and an `update` that switches on an ACL with code, changes its operation or
-turns admin overrides off. Role-only changes stay plain writes. (Core checks this in `nex acl` only: a Table API, XML or
+turns admin overrides off. Other changes stay plain writes. (Core checks this in `nex acl` only: a Table API, XML or
 background-script write of the ACL tables would not be caught, which is one more reason to use `nex acl`.)
 
 ## Where writes go
