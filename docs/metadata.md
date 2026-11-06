@@ -67,6 +67,12 @@ The `error.metadata` object contains the stable failure code, action, known iden
 Verification failures contain `verification: "failed"` and preserve `writeAttempted`, including `false` for a pre-submit session change.
 Missing evidence is omitted. It is not replaced with default values.
 
+Writing code needs execute as well as write (core 6.18.7): `--deny-execute`, `--read-only` and `NEX_POLICY_DENY=execute`
+refuse it before anything is sent. Code means a script column (script, script_plain, script_server, script_client,
+condition_string, html_script, xml, and the same types in an ATF step's variables), a `javascript:` value, or switching
+on a record that holds code. Core checks this on each call, against the record as stored. Other metadata stays a plain
+write. `nex script-sync push` and the watcher likewise need execute: a pushed script runs on the instance.
+
 Each metadata POST runs once. A 401, uncertain response, or failed verification does not trigger a replay.
 The record can exist after failed verification.
 Read its exact table/ID and capture evidence before deciding on retry or cleanup.
